@@ -269,7 +269,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             )
             if collector:
                 collector.end_phase(items_out=0)
-        except ImportError as exc:
+        except (ImportError, OSError) as exc:
             logger.warning("Phase 3 skipped: %s", exc)
             if collector:
                 collector.end_phase(status="skipped", error_message=str(exc)[:500])

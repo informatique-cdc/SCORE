@@ -1,7 +1,7 @@
 """Tests for chat views: home, ask, conversations, system prompt."""
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.contrib.auth.models import User
@@ -48,9 +48,13 @@ class TestChatHome:
 
 @pytest.mark.django_db
 class TestChatAsk:
+    @patch("chat.views.get_llm_client")
     @patch("chat.views.ask_documents")
-    def test_returns_answer(self, mock_ask, chat_setup):
+    def test_returns_answer(self, mock_ask, mock_llm, chat_setup):
         user, tenant, project = chat_setup
+        mock_resp = MagicMock()
+        mock_resp.content = "Test Title"
+        mock_llm.return_value.chat.return_value = mock_resp
         mock_ask.return_value = {
             "answer": "Test answer",
             "sources": [{"title": "doc1"}],
@@ -67,9 +71,13 @@ class TestChatAsk:
         assert data["answer"] == "Test answer"
         assert "conversation_id" in data
 
+    @patch("chat.views.get_llm_client")
     @patch("chat.views.ask_documents")
-    def test_creates_conversation(self, mock_ask, chat_setup):
+    def test_creates_conversation(self, mock_ask, mock_llm, chat_setup):
         user, tenant, project = chat_setup
+        mock_resp = MagicMock()
+        mock_resp.content = "Test Title"
+        mock_llm.return_value.chat.return_value = mock_resp
         mock_ask.return_value = {"answer": "Hi", "sources": [], "suggestions": []}
         client = _client(user, tenant, project)
         client.post(
@@ -114,9 +122,13 @@ class TestChatAsk:
 
 @pytest.mark.django_db
 class TestConversationMessages:
+    @patch("chat.views.get_llm_client")
     @patch("chat.views.ask_documents")
-    def test_returns_messages(self, mock_ask, chat_setup):
+    def test_returns_messages(self, mock_ask, mock_llm, chat_setup):
         user, tenant, project = chat_setup
+        mock_resp = MagicMock()
+        mock_resp.content = "Test Title"
+        mock_llm.return_value.chat.return_value = mock_resp
         mock_ask.return_value = {"answer": "Reply", "sources": [], "suggestions": []}
         client = _client(user, tenant, project)
 
