@@ -252,7 +252,7 @@ class TestAnalysisPipelineIntegration:
             assert key in stats
 
         analysis_job.refresh_from_db()
-        assert analysis_job.current_phase == AnalysisJob.Phase.CONTRADICTIONS
+        assert analysis_job.current_phase == AnalysisJob.Phase.HALLUCINATION
 
         assert mock_llm.chat_batch_or_concurrent.called or mock_llm.chat_concurrent.called
 
@@ -309,7 +309,7 @@ class TestAnalysisPipelineIntegration:
 
         assert isinstance(stats, dict)
         analysis_job.refresh_from_db()
-        assert analysis_job.current_phase == AnalysisJob.Phase.CONTRADICTIONS
+        assert analysis_job.current_phase == AnalysisJob.Phase.HALLUCINATION
 
     def test_pipeline_phase_failure_propagates(
         self, mock_llm_vs, pipeline_data, tenant, project, analysis_job

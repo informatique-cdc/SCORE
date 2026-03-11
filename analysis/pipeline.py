@@ -7,9 +7,9 @@ import logging
 
 from django.utils import timezone
 
+from analysis.constants import AUDIT_AXIS_LABELS
 from analysis.tasks import (
     ANALYSIS_PHASE_ORDER,
-    AUDIT_AXIS_LABELS,
     UNIFIED_PROGRESS,
     _build_effective_config,
     _cleanup_phase,
