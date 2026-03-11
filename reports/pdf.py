@@ -1,4 +1,5 @@
 """PDF report generation using xhtml2pdf."""
+
 import logging
 import math
 
@@ -53,23 +54,24 @@ def _radar_axes(dimensions, cx=140, cy=140, r=110):
             anchor = "start"
         else:
             anchor = "middle"
-        axes.append({
-            "x": round(cx + r * cos_a, 1),
-            "y": round(cy + r * sin_a, 1),
-            "lx": round(lx, 1),
-            "ly": round(cy + (r + 20) * sin_a + 4, 1),
-            "name": dim.get("name", ""),
-            "score": dim.get("score"),
-            "anchor": anchor,
-        })
+        axes.append(
+            {
+                "x": round(cx + r * cos_a, 1),
+                "y": round(cy + r * sin_a, 1),
+                "lx": round(lx, 1),
+                "ly": round(cy + (r + 20) * sin_a + 4, 1),
+                "name": dim.get("name", ""),
+                "score": dim.get("score"),
+                "anchor": anchor,
+            }
+        )
     return axes
 
 
 def _radar_grid_rings(cx=140, cy=140, r=110, steps=4):
     """Return list of (radius, label) for concentric grid circles."""
     return [
-        {"r": round(r * (i + 1) / steps, 1), "label": (i + 1) * 100 // steps}
-        for i in range(steps)
+        {"r": round(r * (i + 1) / steps, 1), "label": (i + 1) * 100 // steps} for i in range(steps)
     ]
 
 
@@ -94,9 +96,7 @@ def _findings_summary(dup_groups, contradictions, gaps, hallucinations=None):
     # Dup actions
     action_counts = {}
     for g in dup_groups:
-        action_counts[g.recommended_action] = (
-            action_counts.get(g.recommended_action, 0) + 1
-        )
+        action_counts[g.recommended_action] = action_counts.get(g.recommended_action, 0) + 1
 
     # Contradiction severity
     contra_sev = {"high": 0, "medium": 0, "low": 0}
@@ -120,9 +120,7 @@ def _findings_summary(dup_groups, contradictions, gaps, hallucinations=None):
         if h.severity in hallu_sev:
             hallu_sev[h.severity] += 1
 
-    total_findings = (
-        len(dup_groups) + len(contradictions) + len(gaps) + len(hallucinations)
-    )
+    total_findings = len(dup_groups) + len(contradictions) + len(gaps) + len(hallucinations)
 
     return {
         "total": total_findings,
@@ -144,18 +142,14 @@ def gather_pdf_context(job):
     project = job.project
 
     # --- Connectors ---
-    connectors = list(
-        ConnectorConfig.objects.filter(project=project).order_by("name")
-    )
+    connectors = list(ConnectorConfig.objects.filter(project=project).order_by("name"))
 
     # --- SCORE ---
     ds = compute_score(project)
     score_detail = compute_score_detail(project)
 
     # --- Duplicates ---
-    dup_groups = list(
-        DuplicateGroup.objects.filter(analysis_job=job).order_by("-created_at")
-    )
+    dup_groups = list(DuplicateGroup.objects.filter(analysis_job=job).order_by("-created_at"))
     # Fetch all pairs with connector info in one query
     dup_pairs = list(
         DuplicatePair.objects.filter(group__analysis_job=job)
@@ -188,14 +182,11 @@ def gather_pdf_context(job):
     contradictions_low = [c for c in contradictions if c.severity == "low"]
 
     # --- Gaps ---
-    gaps = list(
-        GapReport.objects.filter(analysis_job=job).order_by("coverage_score")
-    )
+    gaps = list(GapReport.objects.filter(analysis_job=job).order_by("coverage_score"))
 
     # --- Hallucination risks ---
     hallucinations = list(
-        HallucinationReport.objects.filter(analysis_job=job)
-        .order_by("-risk_score")
+        HallucinationReport.objects.filter(analysis_job=job).order_by("-risk_score")
     )
     hallucinations_high = [h for h in hallucinations if h.severity == "high"]
     hallucinations_medium = [h for h in hallucinations if h.severity == "medium"]

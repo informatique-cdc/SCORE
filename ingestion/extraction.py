@@ -8,6 +8,7 @@ Extracts plain text + heading structure from:
   - Markdown
   - Plain text
 """
+
 import io
 import logging
 import re
@@ -39,7 +40,9 @@ def extract_text(content: bytes | str, content_type: str) -> ExtractedText:
     ct = content_type.lower()
     try:
         if "html" in ct:
-            return _extract_html(content if isinstance(content, str) else content.decode("utf-8", errors="replace"))
+            return _extract_html(
+                content if isinstance(content, str) else content.decode("utf-8", errors="replace")
+            )
         elif "pdf" in ct:
             return _extract_pdf(content if isinstance(content, bytes) else content.encode())
         elif "wordprocessingml" in ct or ct == "application/docx":
@@ -47,10 +50,14 @@ def extract_text(content: bytes | str, content_type: str) -> ExtractedText:
         elif "presentationml" in ct or ct == "application/pptx":
             return _extract_pptx(content if isinstance(content, bytes) else content.encode())
         elif "markdown" in ct or ct == "text/markdown":
-            return _extract_markdown(content if isinstance(content, str) else content.decode("utf-8", errors="replace"))
+            return _extract_markdown(
+                content if isinstance(content, str) else content.decode("utf-8", errors="replace")
+            )
         else:
             # Plain text fallback
-            text = content if isinstance(content, str) else content.decode("utf-8", errors="replace")
+            text = (
+                content if isinstance(content, str) else content.decode("utf-8", errors="replace")
+            )
             return ExtractedText(text=text.strip(), word_count=len(text.split()))
     except (ValueError, UnicodeDecodeError, KeyError, OSError) as e:
         logger.error("Text extraction failed for content_type=%s: %s", content_type, e)

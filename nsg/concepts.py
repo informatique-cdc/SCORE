@@ -21,9 +21,7 @@ def _get_nlp(model_name: str = "en_core_web_sm") -> "spacy.Language":
     try:
         import spacy as _spacy
     except ImportError as exc:
-        raise ImportError(
-            "spaCy is required. Install it with: pip install spacy"
-        ) from exc
+        raise ImportError("spaCy is required. Install it with: pip install spacy") from exc
     try:
         nlp = _spacy.load(model_name)
     except OSError as exc:
@@ -39,6 +37,7 @@ def _get_nlp(model_name: str = "en_core_web_sm") -> "spacy.Language":
 # Text chunking
 # ------------------------------------------------------------------
 
+
 def chunk_text(text: str, max_chars: int = 800) -> list[str]:
     """Split *text* into chunks that respect sentence boundaries.
 
@@ -47,7 +46,7 @@ def chunk_text(text: str, max_chars: int = 800) -> list[str]:
     the budget it is hard-wrapped with :func:`textwrap.wrap`.
     """
     # Rough sentence split – handles ". ", "! ", "? " and newlines.
-    raw_sentences = re.split(r'(?<=[.!?])\s+|\n+', text.strip())
+    raw_sentences = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
     sentences = [s.strip() for s in raw_sentences if s.strip()]
 
     chunks: list[str] = []
@@ -81,10 +80,19 @@ def chunk_text(text: str, max_chars: int = 800) -> list[str]:
 # Concept extraction
 # ------------------------------------------------------------------
 
-_STOP_CONCEPTS = STOPWORDS_ALL | frozenset({
-    # Extra pronouns / demonstratives not in the shared list
-    "ceci", "cela", "ça", "celui", "celle", "ceux", "celles", "quoi",
-})
+_STOP_CONCEPTS = STOPWORDS_ALL | frozenset(
+    {
+        # Extra pronouns / demonstratives not in the shared list
+        "ceci",
+        "cela",
+        "ça",
+        "celui",
+        "celle",
+        "ceux",
+        "celles",
+        "quoi",
+    }
+)
 
 
 def normalize_concept(concept: str) -> str:
@@ -93,21 +101,31 @@ def normalize_concept(concept: str) -> str:
     c = re.sub(r"\s+", " ", c)
     # Strip leading determiners / articles (English + French).
     c = re.sub(
-        r"^(the|a|an"                           # EN
-        r"|le|la|les|l'"                         # FR definite
-        r"|un|une|des"                           # FR indefinite
-        r"|du|de la|de l'|de|d'|au|aux"          # FR contracted
+        r"^(the|a|an"  # EN
+        r"|le|la|les|l'"  # FR definite
+        r"|un|une|des"  # FR indefinite
+        r"|du|de la|de l'|de|d'|au|aux"  # FR contracted
         r")(?:\s+|$)",
-        "", c,
+        "",
+        c,
     )
     # Handle elided French articles glued to the word (l'exemple → exemple)
     c = re.sub(r"^[ldnm]'", "", c)
     return c
 
 
-_FUNCTION_POS = frozenset({
-    "DET", "ADP", "PRON", "AUX", "PUNCT", "CCONJ", "SCONJ", "PART",
-})
+_FUNCTION_POS = frozenset(
+    {
+        "DET",
+        "ADP",
+        "PRON",
+        "AUX",
+        "PUNCT",
+        "CCONJ",
+        "SCONJ",
+        "PART",
+    }
+)
 
 
 def extract_concepts(text: str, spacy_model: str = "en_core_web_sm") -> list[str]:

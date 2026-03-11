@@ -4,6 +4,7 @@ Confluence connector.
 Requires: pip install atlassian-python-api
 Config keys: url, space_key, username (optional — can use credential_ref for API token)
 """
+
 import logging
 import os
 from datetime import datetime
@@ -57,7 +58,9 @@ class ConfluenceConnector(BaseConnector):
 
         while True:
             results = client.get_all_pages_from_space(
-                self._space_key, start=start, limit=limit,
+                self._space_key,
+                start=start,
+                limit=limit,
                 expand="version,history.lastUpdated",
             )
             if not results:
@@ -66,15 +69,17 @@ class ConfluenceConnector(BaseConnector):
                 version = page.get("version", {})
                 history = page.get("history", {})
                 last_updated = history.get("lastUpdated", {})
-                docs.append({
-                    "source_id": page["id"],
-                    "title": page["title"],
-                    "source_version": str(version.get("number", "")),
-                    "source_url": f"{self._url}/wiki/spaces/{self._space_key}/pages/{page['id']}",
-                    "source_modified_at": last_updated.get("when", ""),
-                    "author": last_updated.get("by", {}).get("displayName", ""),
-                    "content_type": "text/html",
-                })
+                docs.append(
+                    {
+                        "source_id": page["id"],
+                        "title": page["title"],
+                        "source_version": str(version.get("number", "")),
+                        "source_url": f"{self._url}/wiki/spaces/{self._space_key}/pages/{page['id']}",
+                        "source_modified_at": last_updated.get("when", ""),
+                        "author": last_updated.get("by", {}).get("displayName", ""),
+                        "content_type": "text/html",
+                    }
+                )
             if len(results) < limit:
                 break
             start += limit

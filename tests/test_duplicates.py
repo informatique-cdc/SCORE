@@ -1,4 +1,5 @@
 """Tests for duplicate detection scoring logic."""
+
 import pytest
 from unittest.mock import MagicMock
 

@@ -1,4 +1,5 @@
 """Tests for analysis.contradictions — ContradictionDetector."""
+
 import json
 from datetime import timedelta
 from unittest.mock import MagicMock
@@ -26,10 +27,13 @@ def _make_detector(tenant, analysis_job, project, **overrides):
     det.similarity_threshold = overrides.get("similarity_threshold", 0.70)
     det.max_neighbors = overrides.get("max_neighbors", 10)
     det.staleness_days = overrides.get("staleness_days", 180)
-    det.authority_rules = overrides.get("authority_rules", {
-        "source_weights": {"generic": 0.5},
-        "recency_bias": True,
-    })
+    det.authority_rules = overrides.get(
+        "authority_rules",
+        {
+            "source_weights": {"generic": 0.5},
+            "recency_bias": True,
+        },
+    )
     return det
 
 
@@ -41,14 +45,26 @@ def _create_claim_pair(tenant, project, connector, analysis_job, *, same_doc=Fal
     chunk_b = make_chunk(tenant, doc_b, 1 if same_doc else 0, "Policy X is inactive.")
 
     claim_a = Claim.objects.create(
-        tenant=tenant, project=project, document=doc_a, chunk=chunk_a,
-        subject="Policy X", predicate="is", object_value="active",
-        raw_text="Policy X is active.", has_embedding=True,
+        tenant=tenant,
+        project=project,
+        document=doc_a,
+        chunk=chunk_a,
+        subject="Policy X",
+        predicate="is",
+        object_value="active",
+        raw_text="Policy X is active.",
+        has_embedding=True,
     )
     claim_b = Claim.objects.create(
-        tenant=tenant, project=project, document=doc_b, chunk=chunk_b,
-        subject="Policy X", predicate="is", object_value="inactive",
-        raw_text="Policy X is inactive.", has_embedding=True,
+        tenant=tenant,
+        project=project,
+        document=doc_b,
+        chunk=chunk_b,
+        subject="Policy X",
+        predicate="is",
+        object_value="inactive",
+        raw_text="Policy X is inactive.",
+        has_embedding=True,
     )
     return claim_a, claim_b
 
@@ -57,16 +73,19 @@ def _create_claim_pair(tenant, project, connector, analysis_job, *, same_doc=Fal
 # Run method tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestContradictionDetectorRun:
     def test_finds_contradictions(self, tenant, project, connector, analysis_job):
         claim_a, claim_b = _create_claim_pair(tenant, project, connector, analysis_job)
 
-        det = _make_detector(tenant, analysis_job, project, similarity_threshold=0.5, max_neighbors=1)
+        det = _make_detector(
+            tenant, analysis_job, project, similarity_threshold=0.5, max_neighbors=1
+        )
         # Use similar embeddings so they pass the threshold
         base_vec = random_embedding()
         noise = np.random.randn(1536).astype(np.float32) * 0.01
-        similar_vec = (base_vec + noise)
+        similar_vec = base_vec + noise
         similar_vec = similar_vec / (np.linalg.norm(similar_vec) + 1e-10)
 
         det.vec_store.get_all_claim_embeddings_for_tenant.return_value = {
@@ -74,12 +93,16 @@ class TestContradictionDetectorRun:
             str(claim_b.id): similar_vec,
         }
         det.llm.chat_batch_or_concurrent.return_value = [
-            make_llm_response(json.dumps({
-                "classification": "contradiction",
-                "confidence": 0.95,
-                "severity": "high",
-                "evidence": "Claims directly conflict.",
-            })),
+            make_llm_response(
+                json.dumps(
+                    {
+                        "classification": "contradiction",
+                        "confidence": 0.95,
+                        "severity": "high",
+                        "evidence": "Claims directly conflict.",
+                    }
+                )
+            ),
         ]
 
         results = det.run()
@@ -90,10 +113,16 @@ class TestContradictionDetectorRun:
 
     def test_skips_same_document_claims(self, tenant, project, connector, analysis_job):
         claim_a, claim_b = _create_claim_pair(
-            tenant, project, connector, analysis_job, same_doc=True,
+            tenant,
+            project,
+            connector,
+            analysis_job,
+            same_doc=True,
         )
 
-        det = _make_detector(tenant, analysis_job, project, similarity_threshold=0.0, max_neighbors=1)
+        det = _make_detector(
+            tenant, analysis_job, project, similarity_threshold=0.0, max_neighbors=1
+        )
         base_vec = random_embedding()
         det.vec_store.get_all_claim_embeddings_for_tenant.return_value = {
             str(claim_a.id): base_vec,
@@ -109,9 +138,15 @@ class TestContradictionDetectorRun:
         doc = make_document(tenant, project, connector, title="Solo")
         chunk = make_chunk(tenant, doc, 0, "Only one claim.")
         Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="x", predicate="y", object_value="z",
-            raw_text="Only one.", has_embedding=True,
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="x",
+            predicate="y",
+            object_value="z",
+            raw_text="Only one.",
+            has_embedding=True,
         )
 
         det = _make_detector(tenant, analysis_job, project)
@@ -121,7 +156,9 @@ class TestContradictionDetectorRun:
     def test_below_similarity_threshold_skipped(self, tenant, project, connector, analysis_job):
         claim_a, claim_b = _create_claim_pair(tenant, project, connector, analysis_job)
 
-        det = _make_detector(tenant, analysis_job, project, similarity_threshold=0.99, max_neighbors=1)
+        det = _make_detector(
+            tenant, analysis_job, project, similarity_threshold=0.99, max_neighbors=1
+        )
         # Orthogonal vectors
         vec_a = np.zeros(1536, dtype=np.float32)
         vec_a[0] = 1.0
@@ -141,17 +178,28 @@ class TestContradictionDetectorRun:
     def test_low_confidence_skipped(self, tenant, project, connector, analysis_job):
         claim_a, claim_b = _create_claim_pair(tenant, project, connector, analysis_job)
 
-        det = _make_detector(tenant, analysis_job, project, confidence_threshold=0.9, similarity_threshold=0.0, max_neighbors=1)
+        det = _make_detector(
+            tenant,
+            analysis_job,
+            project,
+            confidence_threshold=0.9,
+            similarity_threshold=0.0,
+            max_neighbors=1,
+        )
         base_vec = random_embedding()
         det.vec_store.get_all_claim_embeddings_for_tenant.return_value = {
             str(claim_a.id): base_vec,
             str(claim_b.id): base_vec.copy(),
         }
         det.llm.chat_batch_or_concurrent.return_value = [
-            make_llm_response(json.dumps({
-                "classification": "contradiction",
-                "confidence": 0.3,
-            })),
+            make_llm_response(
+                json.dumps(
+                    {
+                        "classification": "contradiction",
+                        "confidence": 0.3,
+                    }
+                )
+            ),
         ]
 
         results = det.run()
@@ -160,17 +208,23 @@ class TestContradictionDetectorRun:
     def test_unrelated_classification_skipped(self, tenant, project, connector, analysis_job):
         claim_a, claim_b = _create_claim_pair(tenant, project, connector, analysis_job)
 
-        det = _make_detector(tenant, analysis_job, project, similarity_threshold=0.0, max_neighbors=1)
+        det = _make_detector(
+            tenant, analysis_job, project, similarity_threshold=0.0, max_neighbors=1
+        )
         base_vec = random_embedding()
         det.vec_store.get_all_claim_embeddings_for_tenant.return_value = {
             str(claim_a.id): base_vec,
             str(claim_b.id): base_vec.copy(),
         }
         det.llm.chat_batch_or_concurrent.return_value = [
-            make_llm_response(json.dumps({
-                "classification": "unrelated",
-                "confidence": 0.95,
-            })),
+            make_llm_response(
+                json.dumps(
+                    {
+                        "classification": "unrelated",
+                        "confidence": 0.95,
+                    }
+                )
+            ),
         ]
 
         results = det.run()
@@ -179,7 +233,9 @@ class TestContradictionDetectorRun:
     def test_malformed_json_skipped(self, tenant, project, connector, analysis_job):
         claim_a, claim_b = _create_claim_pair(tenant, project, connector, analysis_job)
 
-        det = _make_detector(tenant, analysis_job, project, similarity_threshold=0.0, max_neighbors=1)
+        det = _make_detector(
+            tenant, analysis_job, project, similarity_threshold=0.0, max_neighbors=1
+        )
         base_vec = random_embedding()
         det.vec_store.get_all_claim_embeddings_for_tenant.return_value = {
             str(claim_a.id): base_vec,
@@ -196,6 +252,7 @@ class TestContradictionDetectorRun:
 # ---------------------------------------------------------------------------
 # Authority determination
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestDetermineAuthority:
@@ -226,13 +283,25 @@ class TestDetermineAuthority:
         chunk_a = make_chunk(tenant, doc_a, 0, "Old fact.")
         chunk_b = make_chunk(tenant, doc_b, 0, "New fact.")
         claim_a = Claim.objects.create(
-            tenant=tenant, project=project, document=doc_a, chunk=chunk_a,
-            subject="x", predicate="y", object_value="z", raw_text="Old.",
+            tenant=tenant,
+            project=project,
+            document=doc_a,
+            chunk=chunk_a,
+            subject="x",
+            predicate="y",
+            object_value="z",
+            raw_text="Old.",
             has_embedding=True,
         )
         claim_b = Claim.objects.create(
-            tenant=tenant, project=project, document=doc_b, chunk=chunk_b,
-            subject="x", predicate="y", object_value="w", raw_text="New.",
+            tenant=tenant,
+            project=project,
+            document=doc_b,
+            chunk=chunk_b,
+            subject="x",
+            predicate="y",
+            object_value="w",
+            raw_text="New.",
             has_embedding=True,
         )
 
@@ -252,6 +321,7 @@ class TestDetermineAuthority:
 # Severity adjustment
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestSeverityAdjustment:
     def test_escalation_for_stale_doc(self, tenant, project, connector, analysis_job):
@@ -265,12 +335,24 @@ class TestSeverityAdjustment:
         chunk_a = make_chunk(tenant, doc_a, 0, "Stale claim.")
         chunk_b = make_chunk(tenant, doc_b, 0, "Fresh claim.")
         claim_a = Claim.objects.create(
-            tenant=tenant, project=project, document=doc_a, chunk=chunk_a,
-            subject="x", predicate="y", object_value="z", raw_text="Stale.",
+            tenant=tenant,
+            project=project,
+            document=doc_a,
+            chunk=chunk_a,
+            subject="x",
+            predicate="y",
+            object_value="z",
+            raw_text="Stale.",
         )
         claim_b = Claim.objects.create(
-            tenant=tenant, project=project, document=doc_b, chunk=chunk_b,
-            subject="x", predicate="y", object_value="w", raw_text="Fresh.",
+            tenant=tenant,
+            project=project,
+            document=doc_b,
+            chunk=chunk_b,
+            subject="x",
+            predicate="y",
+            object_value="w",
+            raw_text="Fresh.",
         )
 
         det = _make_detector(tenant, analysis_job, project, staleness_days=180)
@@ -289,12 +371,24 @@ class TestSeverityAdjustment:
         chunk_a = make_chunk(tenant, doc_a, 0, "A claim.")
         chunk_b = make_chunk(tenant, doc_b, 0, "B claim.")
         claim_a = Claim.objects.create(
-            tenant=tenant, project=project, document=doc_a, chunk=chunk_a,
-            subject="x", predicate="y", object_value="z", raw_text="A.",
+            tenant=tenant,
+            project=project,
+            document=doc_a,
+            chunk=chunk_a,
+            subject="x",
+            predicate="y",
+            object_value="z",
+            raw_text="A.",
         )
         claim_b = Claim.objects.create(
-            tenant=tenant, project=project, document=doc_b, chunk=chunk_b,
-            subject="x", predicate="y", object_value="w", raw_text="B.",
+            tenant=tenant,
+            project=project,
+            document=doc_b,
+            chunk=chunk_b,
+            subject="x",
+            predicate="y",
+            object_value="w",
+            raw_text="B.",
         )
 
         det = _make_detector(tenant, analysis_job, project, staleness_days=180)

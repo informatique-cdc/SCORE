@@ -4,6 +4,7 @@ Claims extraction from document chunks.
 Extracts atomic factual claims in structured form (subject, predicate, object)
 for contradiction/outdated detection. Uses LLM with structured JSON output.
 """
+
 import json
 import logging
 from datetime import date
@@ -28,7 +29,9 @@ class ClaimsExtractor:
         self.on_progress = on_progress
         self.llm = get_llm_client()
         self.vec_store = get_vector_store()
-        self.config = config if config is not None else settings.ANALYSIS_CONFIG.get("contradiction", {})
+        self.config = (
+            config if config is not None else settings.ANALYSIS_CONFIG.get("contradiction", {})
+        )
         self.max_claims_per_chunk = self.config.get("max_claims_per_chunk", 5)
 
     def extract_all(self) -> int:
@@ -51,8 +54,11 @@ class ClaimsExtractor:
             logger.info("[claims] All documents already have claims extracted")
             return 0
 
-        logger.info("[claims] %d documents to process (%d already done)",
-                     len(docs_to_process), len(docs) - len(docs_to_process))
+        logger.info(
+            "[claims] %d documents to process (%d already done)",
+            len(docs_to_process),
+            len(docs) - len(docs_to_process),
+        )
 
         # Collect all chunks across all documents in one query
         all_chunks = list(
@@ -74,9 +80,14 @@ class ClaimsExtractor:
         ]
 
         # Single batched LLM call across all documents
-        logger.info("[claims] Step 1/3: Extracting claims from %d chunks across %d documents (LLM batch)...",
-                     len(all_chunks), len(docs_to_process))
-        responses = self.llm.chat_batch_or_concurrent(prompts, json_mode=True, on_progress=self.on_progress)
+        logger.info(
+            "[claims] Step 1/3: Extracting claims from %d chunks across %d documents (LLM batch)...",
+            len(all_chunks),
+            len(docs_to_process),
+        )
+        responses = self.llm.chat_batch_or_concurrent(
+            prompts, json_mode=True, on_progress=self.on_progress
+        )
         logger.info("[claims] Step 1/3 done: %d responses received", len(responses))
 
         # Parse responses and create Claim objects
@@ -99,27 +110,35 @@ class ClaimsExtractor:
                     except (ValueError, TypeError):
                         pass
 
-                all_claims.append(Claim(
-                    tenant=self.tenant,
-                    project=self.project,
-                    document=chunk.document,
-                    chunk=chunk,
-                    subject=str(rc.get("subject") or "")[:500],
-                    predicate=str(rc.get("predicate") or "")[:500],
-                    object_value=str(rc.get("object") or "")[:1000],
-                    qualifiers=rc.get("qualifiers") or {},
-                    claim_date=claim_date,
-                    raw_text=str(rc.get("raw_text") or "")[:2000],
-                ))
+                all_claims.append(
+                    Claim(
+                        tenant=self.tenant,
+                        project=self.project,
+                        document=chunk.document,
+                        chunk=chunk,
+                        subject=str(rc.get("subject") or "")[:500],
+                        predicate=str(rc.get("predicate") or "")[:500],
+                        object_value=str(rc.get("object") or "")[:1000],
+                        qualifiers=rc.get("qualifiers") or {},
+                        claim_date=claim_date,
+                        raw_text=str(rc.get("raw_text") or "")[:2000],
+                    )
+                )
 
         if all_claims:
-            logger.info("[claims] Step 2/3 done: %d claims parsed, saving to DB...", len(all_claims))
+            logger.info(
+                "[claims] Step 2/3 done: %d claims parsed, saving to DB...", len(all_claims)
+            )
             Claim.objects.bulk_create(all_claims)
             logger.info("[claims] Step 3/3: Embedding %d claims...", len(all_claims))
             self._embed_claims(all_claims)
             logger.info("[claims] Step 3/3 done: embeddings stored")
 
-        logger.info("[claims] Complete: %d claims across %d documents", len(all_claims), len(docs_to_process))
+        logger.info(
+            "[claims] Complete: %d claims across %d documents",
+            len(all_claims),
+            len(docs_to_process),
+        )
         return len(all_claims)
 
     def _embed_claims(self, claims: list[Claim]):

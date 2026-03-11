@@ -4,6 +4,7 @@ Multi-tenant models.
 Every data-bearing model in SCORE has a FK to Tenant.
 TenantMembership links users to tenants with role-based access.
 """
+
 import uuid
 
 from django.conf import settings
@@ -76,9 +77,7 @@ class TenantScopedManager(models.Manager):
 class TenantScopedModel(models.Model):
     """Abstract base for all tenant-scoped models."""
 
-    tenant = models.ForeignKey(
-        Tenant, on_delete=models.CASCADE, related_name="%(class)s_set"
-    )
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="%(class)s_set")
 
     objects = TenantScopedManager()
 
@@ -112,7 +111,9 @@ class ProjectMembership(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="project_memberships"
     )
-    role = models.CharField(max_length=10, choices=TenantMembership.Role.choices, default=TenantMembership.Role.VIEWER)
+    role = models.CharField(
+        max_length=10, choices=TenantMembership.Role.choices, default=TenantMembership.Role.VIEWER
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -146,12 +147,17 @@ class AuditLog(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(
-        Tenant, on_delete=models.CASCADE, related_name="audit_logs",
-        null=True, blank=True,
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name="audit_logs",
+        null=True,
+        blank=True,
     )
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, related_name="audit_logs",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="audit_logs",
     )
     action = models.CharField(max_length=30, choices=Action.choices)
     target_type = models.CharField(max_length=50, blank=True, default="")
@@ -202,8 +208,11 @@ class ProjectScopedModel(TenantScopedModel):
     """Abstract base for models scoped to a project within a tenant."""
 
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name="%(class)s_set",
-        null=True, blank=True,
+        Project,
+        on_delete=models.CASCADE,
+        related_name="%(class)s_set",
+        null=True,
+        blank=True,
     )
 
     objects = ProjectScopedManager()

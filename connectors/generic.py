@@ -11,6 +11,7 @@ Config keys:
   - file_patterns: list of glob patterns to include (default: ["*"])
   - recursive: whether to recurse into subdirectories (default: True)
 """
+
 import hashlib
 import logging
 from datetime import datetime, timezone
@@ -23,8 +24,19 @@ from .base import BaseConnector, RawDocument, register_connector
 logger = logging.getLogger(__name__)
 
 SUPPORTED_EXTENSIONS = {
-    ".txt", ".md", ".html", ".htm", ".pdf", ".docx", ".pptx",
-    ".csv", ".json", ".xml", ".rst", ".yaml", ".yml",
+    ".txt",
+    ".md",
+    ".html",
+    ".htm",
+    ".pdf",
+    ".docx",
+    ".pptx",
+    ".csv",
+    ".json",
+    ".xml",
+    ".rst",
+    ".yaml",
+    ".yml",
 }
 
 
@@ -77,28 +89,32 @@ class GenericConnector(BaseConnector):
             rel_path = fp.relative_to(base)
             modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
 
-            docs.append({
-                "source_id": str(rel_path),
-                "title": fp.name,
-                "source_version": f"{stat.st_mtime:.0f}-{stat.st_size}",
-                "source_url": str(fp),
-                "source_modified_at": modified.isoformat(),
-                "content_type": self._guess_content_type(fp.suffix),
-                "path": str(rel_path.parent),
-            })
+            docs.append(
+                {
+                    "source_id": str(rel_path),
+                    "title": fp.name,
+                    "source_version": f"{stat.st_mtime:.0f}-{stat.st_size}",
+                    "source_url": str(fp),
+                    "source_modified_at": modified.isoformat(),
+                    "content_type": self._guess_content_type(fp.suffix),
+                    "path": str(rel_path.parent),
+                }
+            )
 
         return docs
 
     def _list_http(self) -> list[dict]:
         """List documents from HTTP source. Returns single doc for direct URLs."""
         # For a direct file URL, return it as a single document
-        docs = [{
-            "source_id": self._base_path,
-            "title": self._base_path.split("/")[-1] or "document",
-            "source_version": "",
-            "source_url": self._base_path,
-            "content_type": "",
-        }]
+        docs = [
+            {
+                "source_id": self._base_path,
+                "title": self._base_path.split("/")[-1] or "document",
+                "source_version": "",
+                "source_url": self._base_path,
+                "content_type": "",
+            }
+        ]
         return docs
 
     def fetch_document(self, source_id: str) -> RawDocument:

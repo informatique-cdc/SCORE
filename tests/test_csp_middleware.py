@@ -1,4 +1,5 @@
 """Tests for ContentSecurityPolicyMiddleware."""
+
 from unittest.mock import patch, MagicMock
 
 import pytest

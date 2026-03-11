@@ -1,4 +1,5 @@
 """Tests for chunking module."""
+
 import pytest
 
 from ingestion.chunking import chunk_document, count_tokens, Chunk

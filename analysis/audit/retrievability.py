@@ -1,4 +1,5 @@
 """Axe 5 — Retrievability: BM25 index, query generation, IR evaluation."""
+
 import collections
 import logging
 import re
@@ -25,8 +26,9 @@ class RetrievabilityAxis(BaseAuditAxis):
         )
 
         docs = list(
-            Document.objects.filter(project=self.project, status="ready")
-            .values_list("id", "title", "path")
+            Document.objects.filter(project=self.project, status="ready").values_list(
+                "id", "title", "path"
+            )
         )
 
         if len(chunks) < 5:
@@ -76,12 +78,14 @@ class RetrievabilityAxis(BaseAuditAxis):
             top_scores = [scores[i] for i in ranked_indices[:top_k]]
             if not any(s > 0 for s in top_scores):
                 zero_results += 1
-                eval_results.append({
-                    "query": query_text[:100],
-                    "expected_doc": str(expected_doc_id),
-                    "found_at": -1,
-                    "recalls": {str(k): 0 for k in recall_k_values},
-                })
+                eval_results.append(
+                    {
+                        "query": query_text[:100],
+                        "expected_doc": str(expected_doc_id),
+                        "found_at": -1,
+                        "recalls": {str(k): 0 for k in recall_k_values},
+                    }
+                )
                 reciprocal_ranks.append(0)
                 continue
 
@@ -100,12 +104,14 @@ class RetrievabilityAxis(BaseAuditAxis):
             rr = 1.0 / found_at if found_at > 0 else 0
             reciprocal_ranks.append(rr)
 
-            eval_results.append({
-                "query": query_text[:100],
-                "expected_doc": str(expected_doc_id),
-                "found_at": found_at,
-                "recalls": recalls,
-            })
+            eval_results.append(
+                {
+                    "query": query_text[:100],
+                    "expected_doc": str(expected_doc_id),
+                    "found_at": found_at,
+                    "recalls": recalls,
+                }
+            )
 
         total_queries = len(eval_results)
         if total_queries == 0:
@@ -117,13 +123,13 @@ class RetrievabilityAxis(BaseAuditAxis):
 
         recall_at_k = {}
         for k in recall_k_values:
-            recall_at_k[str(k)] = sum(
-                r["recalls"].get(str(k), 0) for r in eval_results
-            ) / total_queries
+            recall_at_k[str(k)] = (
+                sum(r["recalls"].get(str(k), 0) for r in eval_results) / total_queries
+            )
 
         # Diversity: how many unique docs appear in top-10 across all queries
         all_top10_docs = set()
-        for query_text, _ in queries[:len(eval_results)]:
+        for query_text, _ in queries[: len(eval_results)]:
             tokens = re.findall(r"\w+", query_text.lower())
             if tokens:
                 scores = bm25.get_scores(tokens)
@@ -159,7 +165,10 @@ class RetrievabilityAxis(BaseAuditAxis):
 
         # Chart data
         # Recall@k curve
-        recall_curve = [{"k": int(k), "recall": round(v, 4)} for k, v in sorted(recall_at_k.items(), key=lambda x: int(x[0]))]
+        recall_curve = [
+            {"k": int(k), "recall": round(v, 4)}
+            for k, v in sorted(recall_at_k.items(), key=lambda x: int(x[0]))
+        ]
 
         # Results per query histogram
         found_ranks = [r["found_at"] for r in eval_results if r["found_at"] > 0]
@@ -176,9 +185,7 @@ class RetrievabilityAxis(BaseAuditAxis):
                 doc_miss_count[did] += 1
 
         # Top zero-result queries
-        zero_result_queries = [
-            r["query"] for r in eval_results if r["found_at"] == -1
-        ][:20]
+        zero_result_queries = [r["query"] for r in eval_results if r["found_at"] == -1][:20]
 
         chart_data = {
             "recall_curve": recall_curve,
@@ -225,8 +232,10 @@ class RetrievabilityAxis(BaseAuditAxis):
 
             try:
                 vectorizer = TfidfVectorizer(
-                    ngram_range=(2, 2), max_features=5000,
-                    min_df=1, max_df=0.9,
+                    ngram_range=(2, 2),
+                    max_features=5000,
+                    min_df=1,
+                    max_df=0.9,
                 )
                 tfidf = vectorizer.fit_transform(texts)
                 feature_names = vectorizer.get_feature_names_out()
@@ -262,7 +271,11 @@ class RetrievabilityAxis(BaseAuditAxis):
         for i in range(bins):
             lo = mn + i * step
             hi = mn + (i + 1) * step
-            cnt = sum(1 for v in values if lo <= v < hi) if i < bins - 1 else sum(1 for v in values if lo <= v <= hi)
+            cnt = (
+                sum(1 for v in values if lo <= v < hi)
+                if i < bins - 1
+                else sum(1 for v in values if lo <= v <= hi)
+            )
             if cnt > 0 or i == 0:
                 result.append({"bin_start": round(lo, 1), "bin_end": round(hi, 1), "count": cnt})
         return result

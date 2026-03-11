@@ -1,4 +1,5 @@
 """Chat views: page rendering, RAG API, and conversation management."""
+
 import logging
 
 from django.contrib.auth.decorators import login_required
@@ -40,16 +41,24 @@ def chat_home(request):
     custom_system_prompt = config.system_prompt if config else ""
 
     # Check if the project has any documents to chat about
-    has_documents = Document.objects.filter(
-        project=request.project,
-    ).exclude(status=Document.Status.DELETED).exists()
+    has_documents = (
+        Document.objects.filter(
+            project=request.project,
+        )
+        .exclude(status=Document.Status.DELETED)
+        .exists()
+    )
 
-    return render(request, "chat/home.html", {
-        "conversations": conversations,
-        "default_system_prompt": get_prompt("CHAT_QA_SYSTEM"),
-        "custom_system_prompt": custom_system_prompt,
-        "has_documents": has_documents,
-    })
+    return render(
+        request,
+        "chat/home.html",
+        {
+            "conversations": conversations,
+            "default_system_prompt": get_prompt("CHAT_QA_SYSTEM"),
+            "custom_system_prompt": custom_system_prompt,
+            "has_documents": has_documents,
+        },
+    )
 
 
 @login_required
@@ -137,7 +146,9 @@ def chat_ask(request):
     # Guard against empty answer (content filter, model refusal, etc.)
     if not result.get("answer", "").strip():
         logger.warning("Empty answer from RAG pipeline, returning fallback")
-        result["answer"] = str(_("Je n'ai pas pu générer de réponse. Veuillez reformuler votre question."))
+        result["answer"] = str(
+            _("Je n'ai pas pu générer de réponse. Veuillez reformuler votre question.")
+        )
 
     # Save assistant message
     Message.objects.create(
@@ -226,12 +237,14 @@ def conversation_messages(request, pk):
         user=request.user,
     )
     messages = conversation.messages.values("role", "content", "sources", "suggestions")
-    return JsonResponse({
-        "conversation_id": str(conversation.id),
-        "title": conversation.title,
-        "tools": conversation.tools or [],
-        "messages": list(messages),
-    })
+    return JsonResponse(
+        {
+            "conversation_id": str(conversation.id),
+            "title": conversation.title,
+            "tools": conversation.tools or [],
+            "messages": list(messages),
+        }
+    )
 
 
 @login_required

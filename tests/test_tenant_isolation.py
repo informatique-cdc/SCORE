@@ -1,4 +1,5 @@
 """Cross-tenant data isolation tests and end-to-end integration tests."""
+
 import json
 
 import pytest
@@ -94,9 +95,7 @@ class TestViewIsolation:
         user_a, t_a, p_a, _ = tenant_a
         _, t_b, p_b, _ = tenant_b
 
-        job_b = AnalysisJob.objects.create(
-            tenant=t_b, project=p_b, status="completed"
-        )
+        job_b = AnalysisJob.objects.create(tenant=t_b, project=p_b, status="completed")
 
         client = _client(user_a, t_a, p_a)
         resp = client.get(f"/analysis/{job_b.id}/")
@@ -106,9 +105,7 @@ class TestViewIsolation:
         user_a, t_a, p_a, _ = tenant_a
         _, t_b, p_b, _ = tenant_b
 
-        job_b = AnalysisJob.objects.create(
-            tenant=t_b, project=p_b, status="completed"
-        )
+        job_b = AnalysisJob.objects.create(tenant=t_b, project=p_b, status="completed")
 
         client = _client(user_a, t_a, p_a)
         resp = client.post(f"/analysis/{job_b.id}/delete/")
@@ -127,9 +124,7 @@ class TestViewIsolation:
         user_a, t_a, p_a, _ = tenant_a
         user_b, t_b, p_b, _ = tenant_b
 
-        conv = Conversation.objects.create(
-            tenant=t_b, project=p_b, user=user_b, title="Secret"
-        )
+        conv = Conversation.objects.create(tenant=t_b, project=p_b, user=user_b, title="Secret")
 
         client = _client(user_a, t_a, p_a)
         resp = client.get(f"/chat/conversations/{conv.id}/messages/")
@@ -161,10 +156,14 @@ class TestAnalysisDataIsolation:
         job_b = AnalysisJob.objects.create(tenant=t_b, project=p_b, status="completed")
 
         DuplicateGroup.objects.create(
-            tenant=t_a, project=p_a, analysis_job=job_a,
+            tenant=t_a,
+            project=p_a,
+            analysis_job=job_a,
         )
         DuplicateGroup.objects.create(
-            tenant=t_b, project=p_b, analysis_job=job_b,
+            tenant=t_b,
+            project=p_b,
+            analysis_job=job_b,
         )
 
         assert DuplicateGroup.objects.for_tenant(t_a).count() == 1
@@ -182,12 +181,8 @@ class TestChatIsolation:
         user_a, t_a, p_a, _ = tenant_a
         user_b, t_b, p_b, _ = tenant_b
 
-        conv_a = Conversation.objects.create(
-            tenant=t_a, project=p_a, user=user_a, title="A's chat"
-        )
-        conv_b = Conversation.objects.create(
-            tenant=t_b, project=p_b, user=user_b, title="B's chat"
-        )
+        conv_a = Conversation.objects.create(tenant=t_a, project=p_a, user=user_a, title="A's chat")
+        conv_b = Conversation.objects.create(tenant=t_b, project=p_b, user=user_b, title="B's chat")
 
         user_a_convs = Conversation.objects.filter(user=user_a)
         assert conv_a in user_a_convs
@@ -244,7 +239,9 @@ class TestEndToEndFlow:
             make_document(tenant, project, connector, title=f"ResDoc{i}", status="ready")
 
         job = AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         client = _client(user, tenant, project)
 
@@ -301,12 +298,14 @@ class TestEndToEndFlow:
         client = _client(user, tenant, project)
         resp = client.post(
             "/dashboard/feedback/",
-            json.dumps({
-                "type": "feedback",
-                "area": "analysis",
-                "subject": "Test feedback",
-                "description": "This is a test.",
-            }),
+            json.dumps(
+                {
+                    "type": "feedback",
+                    "area": "analysis",
+                    "subject": "Test feedback",
+                    "description": "This is a test.",
+                }
+            ),
             content_type="application/json",
         )
         assert resp.status_code == 200
@@ -316,7 +315,9 @@ class TestEndToEndFlow:
         user, tenant, project, connector = tenant_a
         make_document(tenant, project, connector, title="ExpDoc", status="ready")
         job = AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         client = _client(user, tenant, project)
 

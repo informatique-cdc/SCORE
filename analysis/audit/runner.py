@@ -1,4 +1,5 @@
 """Celery task: run all 6 audit axes sequentially."""
+
 import logging
 
 from celery import shared_task
@@ -102,7 +103,9 @@ def run_audit(self, audit_job_id: str):
 
             logger.info(
                 "Audit axis %s complete: score=%.1f duration=%.1fs",
-                axis_key, score, duration,
+                axis_key,
+                score,
+                duration,
             )
 
         # Compute overall
@@ -117,7 +120,9 @@ def run_audit(self, audit_job_id: str):
 
         logger.info(
             "Audit complete for project=%s: score=%.1f grade=%s",
-            project, overall, job.overall_grade,
+            project,
+            overall,
+            job.overall_grade,
         )
 
     except Exception as exc:

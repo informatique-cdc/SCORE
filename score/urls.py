@@ -16,5 +16,7 @@ urlpatterns = [
     path("tenants/", include("tenants.urls")),
     path("chat/", include("chat.urls")),
     # Root redirect
-    path("", lambda r: __import__("django.shortcuts", fromlist=["redirect"]).redirect("/dashboard/")),
+    path(
+        "", lambda r: __import__("django.shortcuts", fromlist=["redirect"]).redirect("/dashboard/")
+    ),
 ]

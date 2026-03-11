@@ -79,9 +79,7 @@ class Migration(migrations.Migration):
                         fields=["tenant", "-created_at"],
                         name="tenants_aud_tenant__40f760_idx",
                     ),
-                    models.Index(
-                        fields=["action"], name="tenants_aud_action_d5e708_idx"
-                    ),
+                    models.Index(fields=["action"], name="tenants_aud_action_d5e708_idx"),
                 ],
             },
         ),

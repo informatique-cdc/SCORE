@@ -1,4 +1,5 @@
 """Integration tests for the analysis pipeline with mocked LLM/vector store."""
+
 import importlib
 import json
 from unittest.mock import MagicMock, patch
@@ -11,6 +12,7 @@ from tests.conftest import make_chunk, make_document, make_llm_response, random_
 # ---------------------------------------------------------------------------
 # Mock factories
 # ---------------------------------------------------------------------------
+
 
 def _mock_llm_client():
     """Build a mock LLMClient that returns valid JSON for every phase."""
@@ -28,74 +30,124 @@ def _mock_llm_client():
     llm.embed.side_effect = _embed
 
     def _chat(user_message, system="", temperature=0.0, max_tokens=4096, json_mode=False):
-        return make_llm_response(json.dumps({
-            "taxonomy": [{"category": "General", "clusters": [0]}],
-        }))
+        return make_llm_response(
+            json.dumps(
+                {
+                    "taxonomy": [{"category": "General", "clusters": [0]}],
+                }
+            )
+        )
 
     llm.chat.side_effect = _chat
 
-    def _chat_batch(prompts, system="", temperature=0.0, max_tokens=4096,
-                    json_mode=False, max_workers=None, on_progress=None):
+    def _chat_batch(
+        prompts,
+        system="",
+        temperature=0.0,
+        max_tokens=4096,
+        json_mode=False,
+        max_workers=None,
+        on_progress=None,
+    ):
         responses = []
         for i, prompt in enumerate(prompts):
             lower_sys = system.lower()
             prompt.lower() if prompt else ""
             if "doublon" in lower_sys or "duplicate" in lower_sys:
-                resp = make_llm_response(json.dumps({
-                    "results": [{"pair_index": 0, "classification": "duplicate",
-                                 "confidence": 0.95, "evidence": "Same content.",
-                                 "recommended_action": "merge"}],
-                }))
+                resp = make_llm_response(
+                    json.dumps(
+                        {
+                            "results": [
+                                {
+                                    "pair_index": 0,
+                                    "classification": "duplicate",
+                                    "confidence": 0.95,
+                                    "evidence": "Same content.",
+                                    "recommended_action": "merge",
+                                }
+                            ],
+                        }
+                    )
+                )
             elif "affirmation" in lower_sys or "claim" in lower_sys:
-                resp = make_llm_response(json.dumps({
-                    "claims": [{
-                        "subject": "System",
-                        "predicate": "supports",
-                        "object": "feature X",
-                        "qualifiers": {},
-                        "date": None,
-                        "raw_text": "The system supports feature X.",
-                    }],
-                }))
+                resp = make_llm_response(
+                    json.dumps(
+                        {
+                            "claims": [
+                                {
+                                    "subject": "System",
+                                    "predicate": "supports",
+                                    "object": "feature X",
+                                    "qualifiers": {},
+                                    "date": None,
+                                    "raw_text": "The system supports feature X.",
+                                }
+                            ],
+                        }
+                    )
+                )
             elif "contradiction" in lower_sys:
-                resp = make_llm_response(json.dumps({
-                    "classification": "unrelated",
-                    "confidence": 0.3,
-                    "evidence": "No contradiction found.",
-                    "severity": "low",
-                }))
+                resp = make_llm_response(
+                    json.dumps(
+                        {
+                            "classification": "unrelated",
+                            "confidence": 0.3,
+                            "evidence": "No contradiction found.",
+                            "severity": "low",
+                        }
+                    )
+                )
             elif "cluster" in lower_sys or "résumé" in lower_sys or "summary" in lower_sys:
-                resp = make_llm_response(json.dumps({
-                    "label": f"Cluster {i}",
-                    "summary": "A topic cluster about documents.",
-                    "key_concepts": ["concept_a", "concept_b"],
-                    "content_purpose": "Technical documentation",
-                }))
+                resp = make_llm_response(
+                    json.dumps(
+                        {
+                            "label": f"Cluster {i}",
+                            "summary": "A topic cluster about documents.",
+                            "key_concepts": ["concept_a", "concept_b"],
+                            "content_purpose": "Technical documentation",
+                        }
+                    )
+                )
             elif "question" in lower_sys:
-                resp = make_llm_response(json.dumps({
-                    "questions": [
-                        {"question": "What is covered?", "importance": "medium"},
-                    ],
-                }))
+                resp = make_llm_response(
+                    json.dumps(
+                        {
+                            "questions": [
+                                {"question": "What is covered?", "importance": "medium"},
+                            ],
+                        }
+                    )
+                )
             elif "couverture" in lower_sys or "coverage" in lower_sys:
-                resp = make_llm_response(json.dumps({
-                    "answered": True, "confidence": 0.9,
-                    "explanation": "Well covered.",
-                }))
+                resp = make_llm_response(
+                    json.dumps(
+                        {
+                            "answered": True,
+                            "confidence": 0.9,
+                            "explanation": "Well covered.",
+                        }
+                    )
+                )
             elif "adjacent" in lower_sys or "gap" in lower_sys:
                 resp = make_llm_response(json.dumps({"has_gap": False}))
             else:
                 # Default: return claims (ClaimsExtractor has no system prompt)
-                resp = make_llm_response(json.dumps({
-                    "claims": [{
-                        "subject": "System",
-                        "predicate": "supports",
-                        "object": "feature X",
-                        "qualifiers": {},
-                        "date": None,
-                        "raw_text": "The system supports feature X.",
-                    }],
-                }))
+                resp = make_llm_response(
+                    json.dumps(
+                        {
+                            "claims": [
+                                {
+                                    "subject": "System",
+                                    "predicate": "supports",
+                                    "object": "feature X",
+                                    "qualifiers": {},
+                                    "date": None,
+                                    "raw_text": "The system supports feature X.",
+                                }
+                            ],
+                        }
+                    )
+                )
             responses.append(resp)
         if on_progress:
             on_progress(len(prompts), len(prompts))
@@ -113,13 +165,13 @@ def _mock_vec_store():
     vs._trace_local = MagicMock()
     vs._trace_local.trace = None
 
-    vs.get_chunk_embeddings_batch.side_effect = (
-        lambda chunk_ids: {cid: random_embedding() for cid in chunk_ids}
-    )
+    vs.get_chunk_embeddings_batch.side_effect = lambda chunk_ids: {
+        cid: random_embedding() for cid in chunk_ids
+    }
     vs.get_all_vectors_for_tenant.return_value = []
-    vs.search_batch.side_effect = (
-        lambda query_vectors, tenant_id, k=10, project_id=None: [[] for _ in query_vectors]
-    )
+    vs.search_batch.side_effect = lambda query_vectors, tenant_id, k=10, project_id=None: [
+        [] for _ in query_vectors
+    ]
     vs.search_claims.return_value = []
     vs.upsert_claims_batch.return_value = None
     vs.get_all_claim_embeddings_for_tenant.return_value = {}
@@ -163,7 +215,9 @@ def pipeline_data(tenant, project, connector):
     docs = []
     for i in range(3):
         doc = make_document(
-            tenant, project, connector,
+            tenant,
+            project,
+            connector,
             title=f"Document {i}",
             source_url=f"https://example.com/doc{i}",
         )
@@ -177,12 +231,14 @@ def pipeline_data(tenant, project, connector):
 # Tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db(transaction=True)
 class TestAnalysisPipelineIntegration:
     """End-to-end test of run_analysis_phases with mocked LLM + vector store."""
 
-    def test_full_analysis_pipeline(self, mock_llm_vs, pipeline_data,
-                                    tenant, project, analysis_job):
+    def test_full_analysis_pipeline(
+        self, mock_llm_vs, pipeline_data, tenant, project, analysis_job
+    ):
         """Run all 7 analysis phases and verify DB results."""
         from analysis.models import AnalysisJob
         from analysis.pipeline import run_analysis_phases
@@ -200,8 +256,9 @@ class TestAnalysisPipelineIntegration:
 
         assert mock_llm.chat_batch_or_concurrent.called or mock_llm.chat_concurrent.called
 
-    def test_pipeline_creates_claims(self, mock_llm_vs, pipeline_data,
-                                     tenant, project, analysis_job):
+    def test_pipeline_creates_claims(
+        self, mock_llm_vs, pipeline_data, tenant, project, analysis_job
+    ):
         """Verify pipeline creates claim records."""
         from analysis.models import Claim
         from analysis.pipeline import run_analysis_phases
@@ -211,8 +268,9 @@ class TestAnalysisPipelineIntegration:
         claim_count = Claim.objects.filter(project=project).count()
         assert claim_count > 0, "Claims extraction should create claims"
 
-    def test_pipeline_with_trace_collector(self, mock_llm_vs, pipeline_data,
-                                           tenant, project, analysis_job):
+    def test_pipeline_with_trace_collector(
+        self, mock_llm_vs, pipeline_data, tenant, project, analysis_job
+    ):
         """Pipeline records phase traces when collector is provided."""
         from django.utils import timezone
 
@@ -221,8 +279,10 @@ class TestAnalysisPipelineIntegration:
         from analysis.trace import TraceCollector
 
         pipeline_trace = PipelineTrace.objects.create(
-            tenant=tenant, project=project,
-            analysis_job=analysis_job, started_at=timezone.now(),
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            started_at=timezone.now(),
         )
         collector = TraceCollector(pipeline_trace)
 
@@ -235,8 +295,9 @@ class TestAnalysisPipelineIntegration:
         pipeline_trace.refresh_from_db()
         assert pipeline_trace.completed_at is not None
 
-    def test_pipeline_resume_from_clustering(self, mock_llm_vs, pipeline_data,
-                                              tenant, project, analysis_job):
+    def test_pipeline_resume_from_clustering(
+        self, mock_llm_vs, pipeline_data, tenant, project, analysis_job
+    ):
         """Resume skips earlier phases and runs from the specified phase."""
         from analysis.models import AnalysisJob
         from analysis.pipeline import run_analysis_phases
@@ -250,8 +311,9 @@ class TestAnalysisPipelineIntegration:
         analysis_job.refresh_from_db()
         assert analysis_job.current_phase == AnalysisJob.Phase.CONTRADICTIONS
 
-    def test_pipeline_phase_failure_propagates(self, mock_llm_vs, pipeline_data,
-                                                tenant, project, analysis_job):
+    def test_pipeline_phase_failure_propagates(
+        self, mock_llm_vs, pipeline_data, tenant, project, analysis_job
+    ):
         """If a phase raises, the exception propagates."""
         from analysis.pipeline import run_analysis_phases
 
@@ -273,12 +335,22 @@ class TestAuditPipelineIntegration:
 
         mock_axis_instance = MagicMock()
         mock_axis_instance.execute.return_value = (
-            75.0, {"metric": 1}, {"chart": []}, {"detail": "ok"}, 0.5
+            75.0,
+            {"metric": 1},
+            {"chart": []},
+            {"detail": "ok"},
+            0.5,
         )
 
         mock_mod = MagicMock()
-        for attr in ("HygieneAxis", "StructureAxis", "CoverageAxis",
-                     "CoherenceAxis", "RetrievabilityAxis", "GovernanceAxis"):
+        for attr in (
+            "HygieneAxis",
+            "StructureAxis",
+            "CoverageAxis",
+            "CoherenceAxis",
+            "RetrievabilityAxis",
+            "GovernanceAxis",
+        ):
             getattr(mock_mod, attr).return_value = mock_axis_instance
 
         with patch("importlib.import_module", return_value=mock_mod):

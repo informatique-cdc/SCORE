@@ -1,4 +1,5 @@
 """Tests for tenants/context_processors.py — tenant_context and onboarding."""
+
 import pytest
 from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory
@@ -83,7 +84,8 @@ class TestOnboardingSteps:
     def test_all_done_returns_none(self, tenant, project, connector):
         make_document(tenant, project, connector, title="D", status="ready")
         AnalysisJob.objects.create(
-            tenant=tenant, project=project,
+            tenant=tenant,
+            project=project,
             status=AnalysisJob.Status.COMPLETED,
         )
         result = _get_onboarding_steps(tenant, project)

@@ -4,6 +4,7 @@ Base connector interface and registry.
 Each connector implements `list_documents()` and `fetch_content()`.
 Documents are yielded as RawDocument dataclasses for the ingestion pipeline.
 """
+
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -56,7 +57,9 @@ class BaseConnector(ABC):
         """Fetch full content of a single document."""
         ...
 
-    def list_changed_documents(self, known_versions: dict[str, str]) -> tuple[list[dict], list[str]]:
+    def list_changed_documents(
+        self, known_versions: dict[str, str]
+    ) -> tuple[list[dict], list[str]]:
         """
         Compare source documents against known versions.
         Returns (new_or_changed, deleted_source_ids).
@@ -81,9 +84,11 @@ _REGISTRY: dict[str, type[BaseConnector]] = {}
 
 def register_connector(name: str):
     """Decorator to register a connector class."""
+
     def decorator(cls):
         _REGISTRY[name] = cls
         return cls
+
     return decorator
 
 
@@ -91,5 +96,7 @@ def get_connector(connector_type: str, config: dict, credential: str = "") -> Ba
     """Instantiate a connector by type name."""
     cls = _REGISTRY.get(connector_type)
     if cls is None:
-        raise ValueError(f"Unknown connector type: {connector_type}. Available: {list(_REGISTRY.keys())}")
+        raise ValueError(
+            f"Unknown connector type: {connector_type}. Available: {list(_REGISTRY.keys())}"
+        )
     return cls(config=config, credential=credential)

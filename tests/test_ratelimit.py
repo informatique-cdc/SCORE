@@ -1,4 +1,5 @@
 """Tests for score/ratelimit.py — per-user rate limiting decorator."""
+
 import pytest
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -17,9 +18,11 @@ def clear_cache():
 
 def _make_view():
     """Create a simple view decorated with ratelimit."""
+
     @ratelimit(max_calls=3, period=60)
     def my_view(request):
         return HttpResponse("ok")
+
     return my_view
 
 

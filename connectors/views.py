@@ -1,4 +1,5 @@
 """Connector management views."""
+
 import logging
 import mimetypes
 from pathlib import Path
@@ -27,17 +28,18 @@ logger = logging.getLogger(__name__)
 
 def _has_active_ingestion_jobs(project):
     """Return True if there are any running/queued ingestion jobs for this project."""
-    return IngestionJob.objects.filter(project=project).filter(
-        status__in=[IngestionJob.Status.QUEUED, IngestionJob.Status.RUNNING]
-    ).exists()
+    return (
+        IngestionJob.objects.filter(project=project)
+        .filter(status__in=[IngestionJob.Status.QUEUED, IngestionJob.Status.RUNNING])
+        .exists()
+    )
 
 
 def _connector_jobs_context(connector):
     """Build context dict for the connector jobs table partial."""
     jobs = IngestionJob.objects.filter(connector=connector).order_by("-created_at")[:10]
     should_poll = any(
-        j.status in (IngestionJob.Status.QUEUED, IngestionJob.Status.RUNNING)
-        for j in jobs
+        j.status in (IngestionJob.Status.QUEUED, IngestionJob.Status.RUNNING) for j in jobs
     )
     return {
         "connector": connector,
@@ -53,11 +55,15 @@ def connector_list(request):
     connectors = ConnectorConfig.objects.filter(project=request.project).annotate(
         doc_count=Count("documents", filter=~models.Q(documents__status=Document.Status.DELETED)),
     )
-    return render(request, "connectors/list.html", {
-        "connectors": connectors,
-        "connector_types": ConnectorConfig.ConnectorType.choices,
-        "should_poll": _has_active_ingestion_jobs(request.project),
-    })
+    return render(
+        request,
+        "connectors/list.html",
+        {
+            "connectors": connectors,
+            "connector_types": ConnectorConfig.ConnectorType.choices,
+            "should_poll": _has_active_ingestion_jobs(request.project),
+        },
+    )
 
 
 @login_required
@@ -80,9 +86,13 @@ def connector_create(request):
         )
         return redirect("connector-list")
 
-    return render(request, "connectors/create.html", {
-        "connector_types": ConnectorConfig.ConnectorType.choices,
-    })
+    return render(
+        request,
+        "connectors/create.html",
+        {
+            "connector_types": ConnectorConfig.ConnectorType.choices,
+        },
+    )
 
 
 def _connector_source_path(connector):
@@ -101,9 +111,7 @@ def _connector_source_path(connector):
 
 def _connector_doc_stats(connector):
     """Compute document statistics for a connector."""
-    docs_qs = Document.objects.filter(connector=connector).exclude(
-        status=Document.Status.DELETED
-    )
+    docs_qs = Document.objects.filter(connector=connector).exclude(status=Document.Status.DELETED)
     status_counts = dict(
         docs_qs.values_list("status").annotate(n=Count("id")).values_list("status", "n")
     )
@@ -126,9 +134,11 @@ def connector_detail(request, pk):
     connector = get_object_or_404(ConnectorConfig, pk=pk, project=request.project)
 
     # Documents (paginated)
-    docs_qs = Document.objects.filter(connector=connector).exclude(
-        status=Document.Status.DELETED
-    ).order_by("-source_modified_at")
+    docs_qs = (
+        Document.objects.filter(connector=connector)
+        .exclude(status=Document.Status.DELETED)
+        .order_by("-source_modified_at")
+    )
     paginator = Paginator(docs_qs, 25)
     page = paginator.get_page(request.GET.get("page"))
 
@@ -176,16 +186,16 @@ def connector_delete(request, pk):
     connector = get_object_or_404(ConnectorConfig, pk=pk, project=request.project)
 
     # Clean up vectors (not managed by Django ORM)
-    doc_ids = list(
-        Document.objects.filter(connector=connector).values_list("id", flat=True)
-    )
+    doc_ids = list(Document.objects.filter(connector=connector).values_list("id", flat=True))
     if doc_ids:
         store = get_vector_store()
         store.delete_by_documents([str(d) for d in doc_ids])
 
     log_audit(
-        tenant=request.tenant, user=request.user,
-        action=AuditLog.Action.CONNECTOR_DELETED, target=connector,
+        tenant=request.tenant,
+        user=request.user,
+        action=AuditLog.Action.CONNECTOR_DELETED,
+        target=connector,
         detail={"doc_count": len(doc_ids)},
     )
     logger.info("Deleting connector=%s (%s) with %d documents", connector.name, pk, len(doc_ids))
@@ -201,11 +211,15 @@ def connector_cards_partial(request):
     connectors = ConnectorConfig.objects.filter(project=request.project).annotate(
         doc_count=Count("documents", filter=~models.Q(documents__status=Document.Status.DELETED)),
     )
-    return render(request, "connectors/_connector_cards.html", {
-        "connectors": connectors,
-        "connector_types": ConnectorConfig.ConnectorType.choices,
-        "should_poll": _has_active_ingestion_jobs(request.project),
-    })
+    return render(
+        request,
+        "connectors/_connector_cards.html",
+        {
+            "connectors": connectors,
+            "connector_types": ConnectorConfig.ConnectorType.choices,
+            "should_poll": _has_active_ingestion_jobs(request.project),
+        },
+    )
 
 
 @login_required
@@ -243,25 +257,26 @@ def document_content(request, pk, doc_pk):
             parts.append(f"<h5 class='mt-3 mb-2'>{escape(heading_text)}</h5>")
         parts.append(f"<p data-chunk-index='{chunk.chunk_index}'>{escape(chunk.content)}</p>")
 
-    is_pdf = (
-        doc.doc_type == "application/pdf"
-        or doc.title.lower().endswith(".pdf")
-    )
+    is_pdf = doc.doc_type == "application/pdf" or doc.title.lower().endswith(".pdf")
     file_url = reverse("document-file", args=[connector.pk, doc.pk])
 
-    return JsonResponse({
-        "title": doc.title,
-        "doc_type": doc.doc_type,
-        "author": doc.author,
-        "source_url": doc.source_url,
-        "word_count": doc.word_count,
-        "chunk_count": doc.chunk_count,
-        "status": doc.get_status_display(),
-        "modified": doc.source_modified_at.isoformat() if doc.source_modified_at else None,
-        "content_html": "\n".join(parts) if parts else "<p class='text-muted'>" + _("Aucun contenu disponible.") + "</p>",
-        "file_url": file_url,
-        "is_pdf": is_pdf,
-    })
+    return JsonResponse(
+        {
+            "title": doc.title,
+            "doc_type": doc.doc_type,
+            "author": doc.author,
+            "source_url": doc.source_url,
+            "word_count": doc.word_count,
+            "chunk_count": doc.chunk_count,
+            "status": doc.get_status_display(),
+            "modified": doc.source_modified_at.isoformat() if doc.source_modified_at else None,
+            "content_html": "\n".join(parts)
+            if parts
+            else "<p class='text-muted'>" + _("Aucun contenu disponible.") + "</p>",
+            "file_url": file_url,
+            "is_pdf": is_pdf,
+        }
+    )
 
 
 @login_required
@@ -281,17 +296,12 @@ def document_file(request, pk, doc_pk):
             if not file_path.is_relative_to(base_path):
                 return JsonResponse({"error": "Access denied"}, status=403)
             if file_path.is_file():
-                content_type = (
-                    mimetypes.guess_type(str(file_path))[0]
-                    or "application/octet-stream"
-                )
+                content_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
                 response = FileResponse(
                     open(file_path, "rb"),
                     content_type=content_type,
                 )
-                response["Content-Disposition"] = (
-                    f'inline; filename="{file_path.name}"'
-                )
+                response["Content-Disposition"] = f'inline; filename="{file_path.name}"'
                 return response
 
     # For remote sources, redirect to source_url

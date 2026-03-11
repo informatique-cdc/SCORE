@@ -10,6 +10,7 @@ Supports 8 composable RAG techniques via the ``tools`` parameter:
   Phase 3 (post-retrieval):   crag → reranking → self-rag  (stacks in order)
   Phase 4 (generation):       standard, or agentic-rag overrides everything
 """
+
 import logging
 
 from ingestion.models import Document, DocumentChunk
@@ -40,6 +41,7 @@ SEARCH_K = 5
 # Helpers extracted from the former monolithic function
 # ---------------------------------------------------------------------------
 
+
 def _load_chunks_and_docs(results):
     """Load DocumentChunk and Document objects for search results.
 
@@ -69,16 +71,18 @@ def _build_context_and_sources(results, chunks_by_id, docs_by_id):
         heading = f" > {chunk.heading_path}" if chunk.heading_path else ""
         context_parts.append(f"[{doc.title}{heading}]\n{chunk.content}")
 
-        sources.append({
-            "title": doc.title,
-            "chunk": chunk.content[:200],
-            "chunk_index": chunk.chunk_index,
-            "similarity": round(r.get("similarity", 0), 3),
-            "document_id": str(doc.id),
-            "source_url": doc.source_url or "",
-            "doc_type": doc.doc_type or "",
-            "connector_id": str(doc.connector_id) if doc.connector_id else "",
-        })
+        sources.append(
+            {
+                "title": doc.title,
+                "chunk": chunk.content[:200],
+                "chunk_index": chunk.chunk_index,
+                "similarity": round(r.get("similarity", 0), 3),
+                "document_id": str(doc.id),
+                "source_url": doc.source_url or "",
+                "doc_type": doc.doc_type or "",
+                "connector_id": str(doc.connector_id) if doc.connector_id else "",
+            }
+        )
 
     # Deduplicate sources by document (keep best similarity)
     seen_docs = {}
@@ -93,7 +97,12 @@ def _build_context_and_sources(results, chunks_by_id, docs_by_id):
 
 
 def _generate_answer(
-    question, context_str, sources, concept_context, history, llm,
+    question,
+    context_str,
+    sources,
+    concept_context,
+    history,
+    llm,
     system_prompt_template=None,
 ):
     """Build messages and call LLM to generate the final answer.
@@ -140,6 +149,7 @@ def _generate_answer(
 # Sub-pipeline: runs Phases 1-3 for a single question
 # ---------------------------------------------------------------------------
 
+
 def _retrieval_pipeline(question, tid, pid, tools, llm, vec_store):
     """Run query expansion, retrieval, and post-retrieval for a single question.
 
@@ -162,7 +172,9 @@ def _retrieval_pipeline(question, tid, pid, tools, llm, vec_store):
 
     # Phase 3: Post-retrieval (fixed order: crag → reranking → self-rag)
     if "crag" in tools:
-        results = crag_evaluate(question, results, chunks_by_id, llm, vec_store, tid, pid, k=SEARCH_K)
+        results = crag_evaluate(
+            question, results, chunks_by_id, llm, vec_store, tid, pid, k=SEARCH_K
+        )
         # Reload if CRAG re-retrieved new results
         chunks_by_id, docs_by_id = _load_chunks_and_docs(results)
 
@@ -179,6 +191,7 @@ def _retrieval_pipeline(question, tid, pid, tools, llm, vec_store):
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
+
 
 def ask_documents(
     question: str,
@@ -217,8 +230,7 @@ def ask_documents(
         if sub_qs:
             sub_tools = [t for t in tools if t != "decomposition"]
             sub_results = [
-                _retrieval_pipeline(sq, tid, pid, sub_tools, llm, vec_store)
-                for sq in sub_qs
+                _retrieval_pipeline(sq, tid, pid, sub_tools, llm, vec_store) for sq in sub_qs
             ]
             return synthesize_sub_results(question, sub_qs, sub_results, history, llm)
         # If decomposition returned nothing, fall through to standard pipeline

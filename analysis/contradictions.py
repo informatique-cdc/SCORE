@@ -10,6 +10,7 @@ Algorithm:
 
 The system avoids comparing claims within the same document (they're typically consistent).
 """
+
 import json
 import logging
 from datetime import timedelta
@@ -36,7 +37,9 @@ class ContradictionDetector:
         self.on_progress = on_progress
         self.llm = get_llm_client()
         self.vec_store = get_vector_store()
-        self.config = config if config is not None else settings.ANALYSIS_CONFIG.get("contradiction", {})
+        self.config = (
+            config if config is not None else settings.ANALYSIS_CONFIG.get("contradiction", {})
+        )
         self.confidence_threshold = self.config.get("confidence_threshold", 0.75)
         self.similarity_threshold = self.config.get("similarity_threshold", 0.70)
         self.max_neighbors = self.config.get("max_neighbors", 10)
@@ -48,8 +51,9 @@ class ContradictionDetector:
         logger.info("Starting contradiction detection for tenant=%s", self.tenant.slug)
 
         claims = list(
-            Claim.objects.filter(project=self.project, has_embedding=True)
-            .select_related("document", "chunk")
+            Claim.objects.filter(project=self.project, has_embedding=True).select_related(
+                "document", "chunk"
+            )
         )
 
         if len(claims) < 2:
@@ -63,13 +67,19 @@ class ContradictionDetector:
         # Phase 1: In-memory cosine similarity to find candidate pairs
         # Build matrix of all claim embeddings for a single matmul
         embedded_claims = [c for c in claims if str(c.id) in claim_embeddings]
-        logger.info("Contradiction detection: %d claims (%d with embeddings)",
-                     len(claims), len(embedded_claims))
+        logger.info(
+            "Contradiction detection: %d claims (%d with embeddings)",
+            len(claims),
+            len(embedded_claims),
+        )
 
         if len(embedded_claims) < 2:
             return []
 
-        logger.info("[contradictions] Step 1/2: Building similarity matrix for %d claims...", len(embedded_claims))
+        logger.info(
+            "[contradictions] Step 1/2: Building similarity matrix for %d claims...",
+            len(embedded_claims),
+        )
         claim_ids_ordered = [str(c.id) for c in embedded_claims]
         matrix = np.stack([claim_embeddings[cid] for cid in claim_ids_ordered])
 
@@ -87,17 +97,25 @@ class ContradictionDetector:
         pairs_to_verify: list[tuple[Claim, Claim]] = []
         checked_pairs: set[tuple[str, str]] = set()
 
-        logger.info("[contradictions] Scanning %d claims for candidate pairs (max_neighbors=%d, threshold=%.2f)...",
-                     len(embedded_claims), self.max_neighbors, self.similarity_threshold)
+        logger.info(
+            "[contradictions] Scanning %d claims for candidate pairs (max_neighbors=%d, threshold=%.2f)...",
+            len(embedded_claims),
+            self.max_neighbors,
+            self.similarity_threshold,
+        )
         for i in range(len(embedded_claims)):
             if i % 200 == 0 and i > 0:
-                logger.info("[contradictions] Scanned %d/%d claims, %d candidate pairs so far",
-                             i, len(embedded_claims), len(pairs_to_verify))
+                logger.info(
+                    "[contradictions] Scanned %d/%d claims, %d candidate pairs so far",
+                    i,
+                    len(embedded_claims),
+                    len(pairs_to_verify),
+                )
             # Get top-k neighbors for claim i (excluding self)
             sims = sim_matrix[i]
             # Mask self
             sims[i] = -1.0
-            top_indices = np.argpartition(sims, -self.max_neighbors)[-self.max_neighbors:]
+            top_indices = np.argpartition(sims, -self.max_neighbors)[-self.max_neighbors :]
             top_indices = top_indices[np.argsort(sims[top_indices])[::-1]]
 
             for j in top_indices:
@@ -115,17 +133,26 @@ class ContradictionDetector:
 
                 pairs_to_verify.append((embedded_claims[i], embedded_claims[j]))
 
-        logger.info("[contradictions] Step 1/2 done: %d candidate pairs found", len(pairs_to_verify))
+        logger.info(
+            "[contradictions] Step 1/2 done: %d candidate pairs found", len(pairs_to_verify)
+        )
 
         if not pairs_to_verify:
             return []
 
         # Phase 2: Concurrent LLM classification for all candidate pairs
-        logger.info("[contradictions] Step 2/2: Classifying %d pairs via LLM...", len(pairs_to_verify))
+        logger.info(
+            "[contradictions] Step 2/2: Classifying %d pairs via LLM...", len(pairs_to_verify)
+        )
         prompts = [self._build_classify_prompt(a, b) for a, b in pairs_to_verify]
-        responses = self.llm.chat_batch_or_concurrent(prompts, json_mode=True, on_progress=self.on_progress)
+        responses = self.llm.chat_batch_or_concurrent(
+            prompts, json_mode=True, on_progress=self.on_progress
+        )
 
-        logger.info("[contradictions] Step 2/2: LLM responses received, parsing %d results...", len(responses))
+        logger.info(
+            "[contradictions] Step 2/2: LLM responses received, parsing %d results...",
+            len(responses),
+        )
         results = []
         for (claim_a, claim_b), resp in zip(pairs_to_verify, responses):
             if not resp:
@@ -138,7 +165,10 @@ class ContradictionDetector:
             classification = result.get("classification", "unrelated")
             confidence = result.get("confidence", 0.0)
 
-            if classification in ("contradiction", "outdated") and confidence >= self.confidence_threshold:
+            if (
+                classification in ("contradiction", "outdated")
+                and confidence >= self.confidence_threshold
+            ):
                 contradiction = self._create_contradiction(claim_a, claim_b, result)
                 results.append(contradiction)
 
@@ -207,8 +237,12 @@ class ContradictionDetector:
         doc_b = claim_b.document
 
         # Source authority
-        weight_a = source_weights.get(doc_a.connector.connector_type, 0.5) if doc_a.connector else 0.5
-        weight_b = source_weights.get(doc_b.connector.connector_type, 0.5) if doc_b.connector else 0.5
+        weight_a = (
+            source_weights.get(doc_a.connector.connector_type, 0.5) if doc_a.connector else 0.5
+        )
+        weight_b = (
+            source_weights.get(doc_b.connector.connector_type, 0.5) if doc_b.connector else 0.5
+        )
 
         # Recency
         date_a = doc_a.source_modified_at or doc_a.created_at

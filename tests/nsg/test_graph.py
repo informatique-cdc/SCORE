@@ -68,19 +68,17 @@ FRENCH_TEXT = (
 class TestNoStopwordNodes:
     def test_graph_excludes_french_stopwords(self, nsg: NeuralSemanticGraph) -> None:
         from nsg.stopwords import STOPWORDS_FR
+
         nsg.add_document("doc_fr", FRENCH_TEXT)
         for node in nsg.graph.nodes:
-            assert node not in STOPWORDS_FR, (
-                f"Stopword {node!r} found as graph node"
-            )
+            assert node not in STOPWORDS_FR, f"Stopword {node!r} found as graph node"
 
     def test_graph_excludes_english_stopwords(self, nsg: NeuralSemanticGraph) -> None:
         from nsg.stopwords import STOPWORDS_EN
+
         nsg.add_document("doc1", SAMPLE_TEXT)
         for node in nsg.graph.nodes:
-            assert node not in STOPWORDS_EN, (
-                f"Stopword {node!r} found as graph node"
-            )
+            assert node not in STOPWORDS_EN, f"Stopword {node!r} found as graph node"
 
 
 class TestQuery:

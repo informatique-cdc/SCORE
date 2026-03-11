@@ -1,4 +1,5 @@
 """Celery tasks for document ingestion."""
+
 import logging
 
 from celery import shared_task

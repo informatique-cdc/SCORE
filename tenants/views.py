@@ -43,11 +43,15 @@ def tenant_create(request):
             return redirect("tenant-select")
         tenant = Tenant.objects.create(name=name, slug=slug)
         TenantMembership.objects.create(
-            tenant=tenant, user=request.user, role=TenantMembership.Role.ADMIN,
+            tenant=tenant,
+            user=request.user,
+            role=TenantMembership.Role.ADMIN,
         )
         log_audit(
-            tenant=tenant, user=request.user,
-            action=AuditLog.Action.TENANT_CREATED, target=tenant,
+            tenant=tenant,
+            user=request.user,
+            action=AuditLog.Action.TENANT_CREATED,
+            target=tenant,
         )
         request.session["tenant_id"] = str(tenant.id)
         request.session.pop("project_id", None)
@@ -117,10 +121,9 @@ def settings_page(request):
         ctx["roles"] = TenantMembership.Role.choices
         if project:
             ctx["project"] = project
-            ctx["project_members"] = (
-                ProjectMembership.objects.filter(project=project)
-                .select_related("user")
-            )
+            ctx["project_members"] = ProjectMembership.objects.filter(
+                project=project
+            ).select_related("user")
     return render(request, "tenants/settings.html", ctx)
 
 
@@ -140,13 +143,18 @@ def project_list(request):
         return redirect("dashboard-home")
     projects = Project.objects.for_tenant(request.tenant)
     user_project_ids = set(
-        ProjectMembership.objects.filter(user=request.user, project__tenant=request.tenant)
-        .values_list("project_id", flat=True)
+        ProjectMembership.objects.filter(
+            user=request.user, project__tenant=request.tenant
+        ).values_list("project_id", flat=True)
     )
-    return render(request, "tenants/projects.html", {
-        "projects": projects,
-        "user_project_ids": user_project_ids,
-    })
+    return render(
+        request,
+        "tenants/projects.html",
+        {
+            "projects": projects,
+            "user_project_ids": user_project_ids,
+        },
+    )
 
 
 @login_required
@@ -177,8 +185,10 @@ def project_create(request):
                 role=TenantMembership.Role.ADMIN,
             )
             log_audit(
-                tenant=request.tenant, user=request.user,
-                action=AuditLog.Action.PROJECT_CREATED, target=project,
+                tenant=request.tenant,
+                user=request.user,
+                action=AuditLog.Action.PROJECT_CREATED,
+                target=project,
             )
             request.session["project_id"] = str(project.id)
             return redirect("dashboard-home")
@@ -227,7 +237,8 @@ def user_invite(request):
     # Create tenant membership
     TenantMembership.objects.create(tenant=request.tenant, user=user, role=role)
     log_audit(
-        tenant=request.tenant, user=request.user,
+        tenant=request.tenant,
+        user=request.user,
         action=AuditLog.Action.USER_INVITED,
         target_label=email,
         detail={"role": role, "target_user_id": str(user.pk)},
@@ -236,12 +247,13 @@ def user_invite(request):
     # Create project memberships for all projects in this tenant
     projects = Project.objects.for_tenant(request.tenant)
     for project in projects:
-        ProjectMembership.objects.get_or_create(
-            project=project, user=user, defaults={"role": role}
-        )
+        ProjectMembership.objects.get_or_create(project=project, user=user, defaults={"role": role})
 
     role_label = dict(TenantMembership.Role.choices).get(role)
-    messages.success(request, _("%(email)s a été invité avec le rôle %(role)s.") % {"email": email, "role": role_label})
+    messages.success(
+        request,
+        _("%(email)s a été invité avec le rôle %(role)s.") % {"email": email, "role": role_label},
+    )
     return redirect(_settings_url("membres"))
 
 
@@ -272,18 +284,24 @@ def user_role_update(request, pk):
     target.role = new_role
     target.save()
     log_audit(
-        tenant=request.tenant, user=request.user,
-        action=AuditLog.Action.ROLE_CHANGED, target=target,
+        tenant=request.tenant,
+        user=request.user,
+        action=AuditLog.Action.ROLE_CHANGED,
+        target=target,
         target_label=target.user.get_full_name() or target.user.username,
         detail={"old_role": old_role, "new_role": new_role},
     )
 
     # Sync project memberships
-    ProjectMembership.objects.filter(
-        user=target.user, project__tenant=request.tenant
-    ).update(role=new_role)
+    ProjectMembership.objects.filter(user=target.user, project__tenant=request.tenant).update(
+        role=new_role
+    )
 
-    messages.success(request, _("Rôle de %(name)s mis à jour.") % {"name": target.user.get_full_name() or target.user.username})
+    messages.success(
+        request,
+        _("Rôle de %(name)s mis à jour.")
+        % {"name": target.user.get_full_name() or target.user.username},
+    )
     return redirect(_settings_url("membres"))
 
 
@@ -302,12 +320,11 @@ def user_remove(request, pk):
         return redirect(_settings_url("membres"))
 
     # Delete project memberships first, then tenant membership
-    ProjectMembership.objects.filter(
-        user=target.user, project__tenant=request.tenant
-    ).delete()
+    ProjectMembership.objects.filter(user=target.user, project__tenant=request.tenant).delete()
     username = target.user.get_full_name() or target.user.username
     log_audit(
-        tenant=request.tenant, user=request.user,
+        tenant=request.tenant,
+        user=request.user,
         action=AuditLog.Action.USER_REMOVED,
         target_label=username,
         detail={"target_user_id": str(target.user_id), "role": target.role},
@@ -335,16 +352,16 @@ def project_delete(request, pk):
     from ingestion.models import Document
     from vectorstore.store import get_vector_store
 
-    doc_ids = list(
-        Document.objects.filter(connector__project=project).values_list("id", flat=True)
-    )
+    doc_ids = list(Document.objects.filter(connector__project=project).values_list("id", flat=True))
     if doc_ids:
         store = get_vector_store()
         store.delete_by_documents([str(d) for d in doc_ids])
 
     log_audit(
-        tenant=request.tenant, user=request.user,
-        action=AuditLog.Action.PROJECT_DELETED, target=project,
+        tenant=request.tenant,
+        user=request.user,
+        action=AuditLog.Action.PROJECT_DELETED,
+        target=project,
     )
     project.delete()
 

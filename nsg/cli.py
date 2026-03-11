@@ -42,7 +42,9 @@ def cmd_index(args: argparse.Namespace) -> None:
 
     output_path = Path(args.output)
     persistence.save(nsg, output_path)
-    print(f"Graph saved to {output_path}/ ({nsg.graph.number_of_nodes()} nodes, {nsg.graph.number_of_edges()} edges)")
+    print(
+        f"Graph saved to {output_path}/ ({nsg.graph.number_of_nodes()} nodes, {nsg.graph.number_of_edges()} edges)"
+    )
 
 
 def cmd_query(args: argparse.Namespace) -> None:
@@ -64,7 +66,9 @@ def main(argv: list[str] | None = None) -> None:
     # --- index ---
     p_index = sub.add_parser("index", help="Index documents into a graph")
     p_index.add_argument("--input", required=True, help="Path to a docs.jsonl file")
-    p_index.add_argument("--output", default="nsg_output", help="Output directory (default: nsg_output)")
+    p_index.add_argument(
+        "--output", default="nsg_output", help="Output directory (default: nsg_output)"
+    )
 
     # --- query ---
     p_query = sub.add_parser("query", help="Query the graph")

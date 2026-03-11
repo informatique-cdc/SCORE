@@ -1,4 +1,5 @@
 """Tests for the /healthz/ endpoint."""
+
 from unittest.mock import patch, MagicMock
 
 import pytest

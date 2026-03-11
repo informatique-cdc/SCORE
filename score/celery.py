@@ -7,6 +7,7 @@ Supports two modes:
 
 Set CELERY_BROKER_BACKEND=database in .env for dev mode.
 """
+
 import logging
 import os
 
@@ -34,14 +35,18 @@ def recover_stale_analysis_jobs(sender, **kwargs):
         from analysis.models import AnalysisJob
         from analysis.tasks import run_unified_pipeline
 
-        stale_jobs = list(AnalysisJob.objects.filter(
-            status__in=[AnalysisJob.Status.RUNNING, AnalysisJob.Status.QUEUED],
-        ))
+        stale_jobs = list(
+            AnalysisJob.objects.filter(
+                status__in=[AnalysisJob.Status.RUNNING, AnalysisJob.Status.QUEUED],
+            )
+        )
 
         for job in stale_jobs:
             logger.info(
                 "Recovering stale analysis job=%s (status=%s, phase=%s)",
-                job.pk, job.status, job.current_phase,
+                job.pk,
+                job.status,
+                job.current_phase,
             )
             # Revoke the old Celery task to avoid duplicates if the
             # original message is still sitting in the broker queue.

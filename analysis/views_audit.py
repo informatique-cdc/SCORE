@@ -3,6 +3,7 @@
 audit_list and audit_run now redirect to the unified analysis page.
 Axis detail views remain accessible from the unified analysis detail page.
 """
+
 import logging
 
 from django.contrib.auth.decorators import login_required
@@ -39,24 +40,30 @@ def audit_detail(request, pk):
     axes = []
     for key in AXIS_ORDER:
         r = results_map.get(key)
-        axes.append({
-            "key": key,
-            "label": AXIS_LABELS[key],
-            "icon": AXIS_ICONS[key],
-            "result": r,
-            "score": r.score if r else None,
-            "url": reverse(f"audit-{key}", kwargs={"pk": job.id}) if r else None,
-        })
+        axes.append(
+            {
+                "key": key,
+                "label": AXIS_LABELS[key],
+                "icon": AXIS_ICONS[key],
+                "result": r,
+                "score": r.score if r else None,
+                "url": reverse(f"audit-{key}", kwargs={"pk": job.id}) if r else None,
+            }
+        )
     should_poll = job.status in (AuditJob.Status.QUEUED, AuditJob.Status.RUNNING)
     # Link back to parent analysis if available
     parent_analysis = job.analysis_job
-    return render(request, "analysis/audit/detail.html", {
-        "job": job,
-        "axes": axes,
-        "should_poll": should_poll,
-        "parent_analysis": parent_analysis,
-        "analysis_number": analysis_number(parent_analysis),
-    })
+    return render(
+        request,
+        "analysis/audit/detail.html",
+        {
+            "job": job,
+            "axes": axes,
+            "should_poll": should_poll,
+            "parent_analysis": parent_analysis,
+            "analysis_number": analysis_number(parent_analysis),
+        },
+    )
 
 
 @login_required
@@ -78,6 +85,7 @@ def audit_retry(request, pk):
     job.save()
     AuditAxisResult.objects.filter(audit_job=job).delete()
     from analysis.audit.runner import run_audit
+
     task = run_audit.delay(str(job.id))
     job.celery_task_id = task.id
     job.save()
@@ -97,15 +105,19 @@ def audit_delete(request, pk):
 def _axis_detail_view(request, pk, axis_key):
     job = get_object_or_404(AuditJob, pk=pk, project=request.project)
     result = get_object_or_404(AuditAxisResult, audit_job=job, axis=axis_key)
-    return render(request, f"analysis/audit/{axis_key}.html", {
-        "job": job,
-        "result": result,
-        "axis_label": AXIS_LABELS[axis_key],
-        "metrics": result.metrics,
-        "chart_data": result.chart_data,
-        "details": result.details,
-        "analysis_number": analysis_number(job.analysis_job),
-    })
+    return render(
+        request,
+        f"analysis/audit/{axis_key}.html",
+        {
+            "job": job,
+            "result": result,
+            "axis_label": AXIS_LABELS[axis_key],
+            "metrics": result.metrics,
+            "chart_data": result.chart_data,
+            "details": result.details,
+            "analysis_number": analysis_number(job.analysis_job),
+        },
+    )
 
 
 @login_required
@@ -142,10 +154,14 @@ def audit_governance(request, pk):
 def audit_progress_partial(request, pk):
     job = get_object_or_404(AuditJob, pk=pk, project=request.project)
     should_poll = job.status in (AuditJob.Status.QUEUED, AuditJob.Status.RUNNING)
-    return render(request, "analysis/audit/_progress.html", {
-        "job": job,
-        "should_poll": should_poll,
-    })
+    return render(
+        request,
+        "analysis/audit/_progress.html",
+        {
+            "job": job,
+            "should_poll": should_poll,
+        },
+    )
 
 
 @login_required
@@ -156,9 +172,11 @@ def api_audit_axis(request, pk, axis):
         result = AuditAxisResult.objects.get(audit_job=job, axis=axis)
     except AuditAxisResult.DoesNotExist:
         return JsonResponse({"error": "Axe non disponible"}, status=404)
-    return JsonResponse({
-        "axis": axis,
-        "score": result.score,
-        "metrics": result.metrics,
-        "chart_data": result.chart_data,
-    })
+    return JsonResponse(
+        {
+            "axis": axis,
+            "score": result.score,
+            "metrics": result.metrics,
+            "chart_data": result.chart_data,
+        }
+    )

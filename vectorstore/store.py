@@ -16,6 +16,7 @@ Usage:
     store.upsert("chunk-uuid", tenant_id, vector, {"doc_id": "...", "doc_type": "report"})
     results = store.search(query_vector, tenant_id, k=10)
 """
+
 import json
 import logging
 import sqlite3
@@ -156,7 +157,9 @@ class VectorStore:
 
         # Add project_id column to claim_metadata if it doesn't exist
         try:
-            conn.execute("ALTER TABLE claim_metadata ADD COLUMN project_id TEXT NOT NULL DEFAULT ''")
+            conn.execute(
+                "ALTER TABLE claim_metadata ADD COLUMN project_id TEXT NOT NULL DEFAULT ''"
+            )
         except sqlite3.OperationalError:
             pass  # Column already exists
         conn.execute("""
@@ -196,8 +199,13 @@ class VectorStore:
                 meta.get("document_id", ""),
                 meta.get("doc_type", ""),
                 meta.get("source_type", ""),
-                json.dumps({k: v for k, v in meta.items()
-                           if k not in ("document_id", "doc_type", "source_type")}),
+                json.dumps(
+                    {
+                        k: v
+                        for k, v in meta.items()
+                        if k not in ("document_id", "doc_type", "source_type")
+                    }
+                ),
                 project_id,
             ),
         )
@@ -221,16 +229,23 @@ class VectorStore:
         vec_rows = []
         for chunk_id, tenant_id, vector, meta in items:
             meta = meta or {}
-            meta_rows.append((
-                chunk_id,
-                tenant_id,
-                meta.get("document_id", ""),
-                meta.get("doc_type", ""),
-                meta.get("source_type", ""),
-                json.dumps({k: v for k, v in meta.items()
-                           if k not in ("document_id", "doc_type", "source_type")}),
-                project_id,
-            ))
+            meta_rows.append(
+                (
+                    chunk_id,
+                    tenant_id,
+                    meta.get("document_id", ""),
+                    meta.get("doc_type", ""),
+                    meta.get("source_type", ""),
+                    json.dumps(
+                        {
+                            k: v
+                            for k, v in meta.items()
+                            if k not in ("document_id", "doc_type", "source_type")
+                        }
+                    ),
+                    project_id,
+                )
+            )
             vec_rows.append((chunk_id, _serialize_f32(vector)))
 
         conn.executemany(
@@ -334,7 +349,16 @@ class VectorStore:
         ).fetchall()
 
         results = []
-        for chunk_id, distance, row_tenant, doc_id, row_doc_type, source_type, extra_json, row_project in rows:
+        for (
+            chunk_id,
+            distance,
+            row_tenant,
+            doc_id,
+            row_doc_type,
+            source_type,
+            extra_json,
+            row_project,
+        ) in rows:
             if not row_tenant:
                 continue
             if row_tenant != tenant_id:
@@ -346,18 +370,20 @@ class VectorStore:
             if exclude_document_id and doc_id == exclude_document_id:
                 continue
 
-            similarity = 1.0 - (distance ** 2) / 2.0
+            similarity = 1.0 - (distance**2) / 2.0
 
             extra = json.loads(extra_json) if extra_json else {}
-            results.append({
-                "chunk_id": chunk_id,
-                "document_id": doc_id,
-                "doc_type": row_doc_type,
-                "source_type": source_type,
-                "distance": distance,
-                "similarity": max(0.0, min(1.0, similarity)),
-                **extra,
-            })
+            results.append(
+                {
+                    "chunk_id": chunk_id,
+                    "document_id": doc_id,
+                    "doc_type": row_doc_type,
+                    "source_type": source_type,
+                    "distance": distance,
+                    "similarity": max(0.0, min(1.0, similarity)),
+                    **extra,
+                }
+            )
 
             if len(results) >= k:
                 break
@@ -404,14 +430,16 @@ class VectorStore:
             if project_id and row_project != project_id:
                 continue
 
-            similarity = 1.0 - (distance ** 2) / 2.0
-            results.append({
-                "claim_id": claim_id,
-                "document_id": doc_id,
-                "chunk_id": chunk_id,
-                "distance": distance,
-                "similarity": max(0.0, min(1.0, similarity)),
-            })
+            similarity = 1.0 - (distance**2) / 2.0
+            results.append(
+                {
+                    "claim_id": claim_id,
+                    "document_id": doc_id,
+                    "chunk_id": chunk_id,
+                    "distance": distance,
+                    "similarity": max(0.0, min(1.0, similarity)),
+                }
+            )
 
             if len(results) >= k:
                 break
@@ -426,8 +454,15 @@ class VectorStore:
 
         return results
 
-    def upsert_claim(self, claim_id: str, tenant_id: str, document_id: str,
-                     chunk_id: str, vector: list[float], project_id: str = ""):
+    def upsert_claim(
+        self,
+        claim_id: str,
+        tenant_id: str,
+        document_id: str,
+        chunk_id: str,
+        vector: list[float],
+        project_id: str = "",
+    ):
         """Insert or replace a claim vector."""
         conn = self._get_conn()
         conn.execute(
@@ -440,7 +475,9 @@ class VectorStore:
         )
         conn.commit()
 
-    def get_all_vectors_for_tenant(self, tenant_id: str, project_id: str | None = None) -> list[tuple[str, np.ndarray]]:
+    def get_all_vectors_for_tenant(
+        self, tenant_id: str, project_id: str | None = None
+    ) -> list[tuple[str, np.ndarray]]:
         """Retrieve all chunk vectors for a tenant (for clustering). Optionally filter by project."""
         conn = self._get_conn()
 
@@ -462,8 +499,7 @@ class VectorStore:
             ).fetchall()
 
         return [
-            (chunk_id, np.array(_deserialize_f32(emb), dtype=np.float32))
-            for chunk_id, emb in rows
+            (chunk_id, np.array(_deserialize_f32(emb), dtype=np.float32)) for chunk_id, emb in rows
         ]
 
     def get_chunk_embeddings_batch(self, chunk_ids: list[str]) -> dict[str, np.ndarray]:
@@ -484,7 +520,9 @@ class VectorStore:
                 results[chunk_id] = np.array(_deserialize_f32(emb), dtype=np.float32)
         return results
 
-    def get_all_claim_embeddings_for_tenant(self, tenant_id: str, project_id: str | None = None) -> dict[str, np.ndarray]:
+    def get_all_claim_embeddings_for_tenant(
+        self, tenant_id: str, project_id: str | None = None
+    ) -> dict[str, np.ndarray]:
         """Batch-load all claim embeddings for a tenant. Returns {claim_id: vector}."""
         conn = self._get_conn()
         if project_id:
@@ -504,8 +542,7 @@ class VectorStore:
                 (tenant_id,),
             ).fetchall()
         return {
-            claim_id: np.array(_deserialize_f32(emb), dtype=np.float32)
-            for claim_id, emb in rows
+            claim_id: np.array(_deserialize_f32(emb), dtype=np.float32) for claim_id, emb in rows
         }
 
     def search_batch(
@@ -535,7 +572,8 @@ class VectorStore:
             logger.warning(
                 "search_batch: corpus size (%d vectors) exceeds recommended limit (%d). "
                 "Consider using individual KNN queries or migrating to a dedicated vector database.",
-                len(all_vectors), MAX_CORPUS_SIZE,
+                len(all_vectors),
+                MAX_CORPUS_SIZE,
             )
 
         corpus_ids = [v[0] for v in all_vectors]
@@ -586,15 +624,17 @@ class VectorStore:
                     continue
                 _, doc_id, doc_type, source_type, extra_json = meta
                 extra = json.loads(extra_json) if extra_json else {}
-                results.append({
-                    "chunk_id": chunk_id,
-                    "document_id": doc_id,
-                    "doc_type": doc_type,
-                    "source_type": source_type,
-                    "distance": 0.0,
-                    "similarity": max(0.0, min(1.0, similarity)),
-                    **extra,
-                })
+                results.append(
+                    {
+                        "chunk_id": chunk_id,
+                        "document_id": doc_id,
+                        "doc_type": doc_type,
+                        "source_type": source_type,
+                        "distance": 0.0,
+                        "similarity": max(0.0, min(1.0, similarity)),
+                        **extra,
+                    }
+                )
             all_results.append(results)
 
         _trace = self._active_trace
@@ -609,7 +649,9 @@ class VectorStore:
 
         return all_results
 
-    def upsert_claims_batch(self, items: list[tuple[str, str, str, str, list[float]]], project_id: str = ""):
+    def upsert_claims_batch(
+        self, items: list[tuple[str, str, str, str, list[float]]], project_id: str = ""
+    ):
         """Batch upsert claims: list of (claim_id, tenant_id, document_id, chunk_id, vector)."""
         if not items:
             return

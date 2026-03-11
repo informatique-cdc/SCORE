@@ -1,4 +1,5 @@
 """Tests for analysis.trace — TraceCollector & PhaseEventBuffer."""
+
 import threading
 
 import pytest
@@ -10,6 +11,7 @@ from analysis.trace import PhaseEventBuffer, TraceCollector
 # ---------------------------------------------------------------------------
 # PhaseEventBuffer (pure in-memory, no DB)
 # ---------------------------------------------------------------------------
+
 
 class TestPhaseEventBuffer:
     def test_record_event_appends(self):
@@ -70,6 +72,7 @@ class TestPhaseEventBuffer:
 # ---------------------------------------------------------------------------
 # TraceCollector (DB-backed)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestTraceCollector:

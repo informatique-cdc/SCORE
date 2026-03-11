@@ -1,4 +1,5 @@
 """Template context processor for tenant information."""
+
 from .models import ProjectMembership, TenantMembership
 
 
@@ -22,7 +23,8 @@ def tenant_context(request):
         if tenant:
             ctx["user_projects"] = list(
                 ProjectMembership.objects.filter(
-                    user=request.user, project__tenant=tenant,
+                    user=request.user,
+                    project__tenant=tenant,
                 )
                 .select_related("project")
                 .order_by("project__name")
@@ -44,13 +46,18 @@ def _get_onboarding_steps(tenant, project):
 
     if has_project:
         has_connector = ConnectorConfig.objects.filter(
-            tenant=tenant, project=project,
+            tenant=tenant,
+            project=project,
         ).exists()
         has_documents = Document.objects.filter(
-            tenant=tenant, project=project, status=Document.Status.READY,
+            tenant=tenant,
+            project=project,
+            status=Document.Status.READY,
         ).exists()
         has_analysis = AnalysisJob.objects.filter(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         ).exists()
 
     steps = [

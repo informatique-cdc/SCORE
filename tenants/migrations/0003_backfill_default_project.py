@@ -3,6 +3,7 @@ Data migration: create a default "Projet principal" project for each tenant
 and backfill all existing records with this project.
 Also create ProjectMembership for each existing TenantMembership.
 """
+
 import uuid
 
 from django.db import migrations
@@ -54,16 +55,19 @@ def backfill_default_project(apps, schema_editor):
         DuplicateGroup.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
         DuplicatePair.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
         Claim.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
-        ContradictionPair.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
+        ContradictionPair.objects.filter(tenant=tenant, project__isnull=True).update(
+            project=project
+        )
         TopicCluster.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
-        ClusterMembership.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
+        ClusterMembership.objects.filter(tenant=tenant, project__isnull=True).update(
+            project=project
+        )
         GapReport.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
         TreeNode.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
         Report.objects.filter(tenant=tenant, project__isnull=True).update(project=project)
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tenants", "0002_project_projectmembership"),
         ("connectors", "0002_add_project"),

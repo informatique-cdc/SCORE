@@ -1,4 +1,5 @@
 """Tests for tenants/adapters.py — custom allauth adapter."""
+
 from django.test import RequestFactory
 
 from tenants.adapters import ScoreAccountAdapter

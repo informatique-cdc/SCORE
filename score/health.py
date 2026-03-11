@@ -1,4 +1,5 @@
 """Health check endpoint for production readiness."""
+
 import logging
 
 from django.db import connection
@@ -25,6 +26,7 @@ def healthz(request):
     # Vector store check
     try:
         from vectorstore.store import get_vector_store
+
         store = get_vector_store()
         store.ensure_tables()
         checks["vector_store"] = "ok"
@@ -34,4 +36,6 @@ def healthz(request):
         logger.error("Health check: vector_store failed — %s", exc)
 
     status_code = 200 if healthy else 503
-    return JsonResponse({"status": "healthy" if healthy else "unhealthy", "checks": checks}, status=status_code)
+    return JsonResponse(
+        {"status": "healthy" if healthy else "unhealthy", "checks": checks}, status=status_code
+    )

@@ -24,28 +24,29 @@ def clusters_json(request, pk):
 
     nodes = []
     for c in clusters:
-        nodes.append({
-            "id": str(c.id),
-            "label": c.label,
-            "summary": c.summary[:200] if c.summary else "",
-            "key_concepts": c.key_concepts or [],
-            "content_purpose": c.content_purpose or "",
-            "x": c.centroid_x,
-            "y": c.centroid_y,
-            "doc_count": c.doc_count,
-            "chunk_count": c.chunk_count,
-            "level": c.level,
-            "parent_id": str(c.parent_id) if c.parent_id else None,
-        })
+        nodes.append(
+            {
+                "id": str(c.id),
+                "label": c.label,
+                "summary": c.summary[:200] if c.summary else "",
+                "key_concepts": c.key_concepts or [],
+                "content_purpose": c.content_purpose or "",
+                "x": c.centroid_x,
+                "y": c.centroid_y,
+                "doc_count": c.doc_count,
+                "chunk_count": c.chunk_count,
+                "level": c.level,
+                "parent_id": str(c.parent_id) if c.parent_id else None,
+            }
+        )
 
     edges = []
     cluster_docs = {}
     top_level = [c for c in clusters if c.level == 0]
     top_ids = [c.id for c in top_level]
     if top_ids:
-        memberships = (
-            ClusterMembership.objects.filter(cluster_id__in=top_ids)
-            .values_list("cluster_id", "document_id")
+        memberships = ClusterMembership.objects.filter(cluster_id__in=top_ids).values_list(
+            "cluster_id", "document_id"
         )
         for cluster_id, doc_id in memberships:
             cluster_docs.setdefault(str(cluster_id), set()).add(doc_id)
@@ -55,38 +56,46 @@ def clusters_json(request, pk):
         for j in range(i + 1, len(cluster_ids)):
             shared = cluster_docs[cluster_ids[i]] & cluster_docs[cluster_ids[j]]
             if shared:
-                edges.append({
-                    "source": cluster_ids[i],
-                    "target": cluster_ids[j],
-                    "weight": len(shared),
-                })
+                edges.append(
+                    {
+                        "source": cluster_ids[i],
+                        "target": cluster_ids[j],
+                        "weight": len(shared),
+                    }
+                )
 
     for c in clusters:
         if c.parent_id:
-            edges.append({
-                "source": str(c.parent_id),
-                "target": str(c.id),
-                "weight": 1,
-                "type": "hierarchy",
-            })
+            edges.append(
+                {
+                    "source": str(c.parent_id),
+                    "target": str(c.id),
+                    "weight": 1,
+                    "type": "hierarchy",
+                }
+            )
 
     gaps = GapReport.objects.filter(analysis_job=job)
     gap_nodes = []
     for g in gaps:
-        gap_nodes.append({
-            "id": f"gap-{g.id}",
-            "label": g.title[:100],
-            "type": g.gap_type,
-            "severity": g.severity,
-            "coverage_score": g.coverage_score,
-            "related_cluster": str(g.related_cluster_id) if g.related_cluster_id else None,
-        })
+        gap_nodes.append(
+            {
+                "id": f"gap-{g.id}",
+                "label": g.title[:100],
+                "type": g.gap_type,
+                "severity": g.severity,
+                "coverage_score": g.coverage_score,
+                "related_cluster": str(g.related_cluster_id) if g.related_cluster_id else None,
+            }
+        )
 
-    return JsonResponse({
-        "nodes": nodes,
-        "edges": edges,
-        "gaps": gap_nodes,
-    })
+    return JsonResponse(
+        {
+            "nodes": nodes,
+            "edges": edges,
+            "gaps": gap_nodes,
+        }
+    )
 
 
 @login_required
@@ -95,9 +104,11 @@ def tree_json(request, pk):
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
 
     def build_tree(parent=None):
-        nodes = TreeNode.objects.filter(
-            analysis_job=job, parent=parent
-        ).select_related("cluster", "document").order_by("sort_order")
+        nodes = (
+            TreeNode.objects.filter(analysis_job=job, parent=parent)
+            .select_related("cluster", "document")
+            .order_by("sort_order")
+        )
 
         children = []
         for node in nodes:
@@ -144,11 +155,13 @@ def concept_graph_json(request, pk):
 
     nodes = []
     for n, d in sub.nodes(data=True):
-        nodes.append({
-            "id": n,
-            "frequency": d.get("frequency", 1),
-            "degree": sub.degree(n),
-        })
+        nodes.append(
+            {
+                "id": n,
+                "frequency": d.get("frequency", 1),
+                "degree": sub.degree(n),
+            }
+        )
 
     edge_agg = {}
     for s, t, d in sub.edges(data=True):
@@ -162,19 +175,23 @@ def concept_graph_json(request, pk):
 
     edges = []
     for (s, t), agg in edge_agg.items():
-        edges.append({
-            "source": s,
-            "target": t,
-            "weight": round(agg["weight"], 2),
-            "evidence": agg["evidence"][:3],
-        })
+        edges.append(
+            {
+                "source": s,
+                "target": t,
+                "weight": round(agg["weight"], 2),
+                "evidence": agg["evidence"][:3],
+            }
+        )
 
-    return JsonResponse({
-        "nodes": nodes,
-        "edges": edges,
-        "total_nodes": total_nodes,
-        "total_edges": total_edges,
-    })
+    return JsonResponse(
+        {
+            "nodes": nodes,
+            "edges": edges,
+            "total_nodes": total_nodes,
+            "total_edges": total_edges,
+        }
+    )
 
 
 @login_required

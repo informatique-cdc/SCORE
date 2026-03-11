@@ -56,12 +56,14 @@ class TestVectorStoreBasic:
     def test_batch_upsert(self, vec_store):
         items = []
         for i in range(10):
-            items.append((
-                f"chunk-{i}",
-                "tenant-1",
-                _random_vector(8, seed=i),
-                {"document_id": f"doc-{i // 3}"},
-            ))
+            items.append(
+                (
+                    f"chunk-{i}",
+                    "tenant-1",
+                    _random_vector(8, seed=i),
+                    {"document_id": f"doc-{i // 3}"},
+                )
+            )
         vec_store.upsert_batch(items)
 
         results = vec_store.search(_random_vector(8, seed=0), "tenant-1", k=10)

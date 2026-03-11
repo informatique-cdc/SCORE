@@ -1,4 +1,5 @@
 """Tests for chat views: home, ask, conversations, system prompt."""
+
 import json
 from unittest.mock import patch
 

@@ -8,6 +8,7 @@ Generates LLM summaries for each cluster.
 For visualization, 2D coordinates are computed via UMAP-style dimensionality reduction
 (using sklearn TSNE/PCA as a lighter alternative).
 """
+
 import json
 import logging
 
@@ -36,7 +37,9 @@ class TopicClusterEngine:
         self.on_progress = on_progress
         self.vec_store = get_vector_store()
         self.llm = get_llm_client()
-        self.config = config if config is not None else settings.ANALYSIS_CONFIG.get("clustering", {})
+        self.config = (
+            config if config is not None else settings.ANALYSIS_CONFIG.get("clustering", {})
+        )
         self.algorithm = self.config.get("algorithm", "hdbscan")
         self.min_cluster_size = self.config.get("min_cluster_size", 3)
         self.min_samples = self.config.get("min_samples", 2)
@@ -74,7 +77,9 @@ class TopicClusterEngine:
         logger.info("[clustering] Step 3/7 done: %d cluster records created", len(clusters))
 
         # Step 5: Generate summaries (topic labels + descriptions)
-        logger.info("[clustering] Step 4/7: Generating LLM summaries for %d clusters...", len(clusters))
+        logger.info(
+            "[clustering] Step 4/7: Generating LLM summaries for %d clusters...", len(clusters)
+        )
         self._generate_summaries(clusters)
         logger.info("[clustering] Step 4/7 done")
 
@@ -82,7 +87,10 @@ class TopicClusterEngine:
         logger.info("[clustering] Step 5/7: Subclustering large clusters...")
         subclusters = self._subcluster(clusters, coords_2d, chunk_ids, labels)
         if subclusters:
-            logger.info("[clustering] Step 5/7: Generating summaries for %d subclusters...", len(subclusters))
+            logger.info(
+                "[clustering] Step 5/7: Generating summaries for %d subclusters...",
+                len(subclusters),
+            )
             self._generate_summaries(subclusters)
             logger.info("[clustering] Step 5/7 done: %d subclusters", len(subclusters))
         else:
@@ -184,18 +192,21 @@ class TopicClusterEngine:
                     continue
 
                 # Compute similarity to centroid
-                sim = float(np.dot(cluster_vectors[idx], centroid) / (
-                    np.linalg.norm(cluster_vectors[idx]) * np.linalg.norm(centroid) + 1e-10
-                ))
+                sim = float(
+                    np.dot(cluster_vectors[idx], centroid)
+                    / (np.linalg.norm(cluster_vectors[idx]) * np.linalg.norm(centroid) + 1e-10)
+                )
 
-                memberships.append(ClusterMembership(
-                    tenant=self.tenant,
-                    project=self.project,
-                    cluster=cluster,
-                    chunk_id=cid,
-                    document_id=doc_id,
-                    similarity_to_centroid=sim,
-                ))
+                memberships.append(
+                    ClusterMembership(
+                        tenant=self.tenant,
+                        project=self.project,
+                        cluster=cluster,
+                        chunk_id=cid,
+                        document_id=doc_id,
+                        similarity_to_centroid=sim,
+                    )
+                )
 
             ClusterMembership.objects.bulk_create(memberships)
             clusters.append(cluster)
@@ -224,8 +235,9 @@ class TopicClusterEngine:
 
         # Load memberships for all clusters
         all_memberships = list(
-            ClusterMembership.objects.filter(cluster__in=clusters)
-            .values_list("cluster_id", "chunk_id")
+            ClusterMembership.objects.filter(cluster__in=clusters).values_list(
+                "cluster_id", "chunk_id"
+            )
         )
         memberships_by_cluster: dict[str, list[str]] = {}
         for cluster_id, chunk_id in all_memberships:
@@ -242,7 +254,12 @@ class TopicClusterEngine:
             member_chunk_ids = memberships_by_cluster.get(str(cluster.id), [])
             if len(member_chunk_ids) < min_members:
                 continue
-            logger.info("[clustering] Subclustering cluster %d/%d (%d members)", sc_loop_idx + 1, len(clusters), len(member_chunk_ids))
+            logger.info(
+                "[clustering] Subclustering cluster %d/%d (%d members)",
+                sc_loop_idx + 1,
+                len(clusters),
+                len(member_chunk_ids),
+            )
 
             # Gather vectors for this cluster's chunks
             sub_chunk_ids = []
@@ -312,17 +329,20 @@ class TopicClusterEngine:
                     doc_id = chunk_to_doc.get(cid)
                     if not doc_id:
                         continue
-                    sim = float(np.dot(sc_vectors[idx_m], centroid) / (
-                        np.linalg.norm(sc_vectors[idx_m]) * np.linalg.norm(centroid) + 1e-10
-                    ))
-                    memberships.append(ClusterMembership(
-                        tenant=self.tenant,
-                        project=self.project,
-                        cluster=subcluster,
-                        chunk_id=cid,
-                        document_id=doc_id,
-                        similarity_to_centroid=sim,
-                    ))
+                    sim = float(
+                        np.dot(sc_vectors[idx_m], centroid)
+                        / (np.linalg.norm(sc_vectors[idx_m]) * np.linalg.norm(centroid) + 1e-10)
+                    )
+                    memberships.append(
+                        ClusterMembership(
+                            tenant=self.tenant,
+                            project=self.project,
+                            cluster=subcluster,
+                            chunk_id=cid,
+                            document_id=doc_id,
+                            similarity_to_centroid=sim,
+                        )
+                    )
 
                 ClusterMembership.objects.bulk_create(memberships)
                 subclusters.append(subcluster)
@@ -341,8 +361,9 @@ class TopicClusterEngine:
 
         # Preload all memberships, chunks, and docs to avoid N+1 queries
         all_memberships = list(
-            ClusterMembership.objects.filter(cluster__in=clusters)
-            .order_by("-similarity_to_centroid")
+            ClusterMembership.objects.filter(cluster__in=clusters).order_by(
+                "-similarity_to_centroid"
+            )
         )
         all_chunk_ids = {m.chunk_id for m in all_memberships}
         all_doc_ids = {m.document_id for m in all_memberships}
@@ -375,7 +396,9 @@ class TopicClusterEngine:
 
         # Concurrent LLM calls
         if prompts:
-            responses = self.llm.chat_batch_or_concurrent(prompts, json_mode=True, on_progress=self.on_progress)
+            responses = self.llm.chat_batch_or_concurrent(
+                prompts, json_mode=True, on_progress=self.on_progress
+            )
             for resp, idx in zip(responses, cluster_indices):
                 if not resp:
                     continue
@@ -387,11 +410,16 @@ class TopicClusterEngine:
                     clusters[idx].content_purpose = data.get("content_purpose", "")[:500]
                     clusters[idx].save()
                 except (json.JSONDecodeError, Exception) as e:
-                    logger.warning("Cluster summary generation failed for %s: %s",
-                                   clusters[idx].id, e)
+                    logger.warning(
+                        "Cluster summary generation failed for %s: %s", clusters[idx].id, e
+                    )
                     # Fallback label from top document titles
                     members = memberships_by_cluster.get(str(clusters[idx].id), [])
-                    top_docs = [docs_map.get(m.document_id) for m in members[:3] if m.document_id in docs_map]
+                    top_docs = [
+                        docs_map.get(m.document_id)
+                        for m in members[:3]
+                        if m.document_id in docs_map
+                    ]
                     top_docs = [d for d in top_docs if d]
                     if top_docs:
                         clusters[idx].label = " / ".join(d.title[:30] for d in top_docs)
@@ -407,8 +435,7 @@ class TopicClusterEngine:
             return [{"category": clusters[0].label if clusters else "Topics", "clusters": [0]}]
 
         cluster_list = "\n".join(
-            f"{i}. {c.label} — {(c.summary or 'No summary')[:150]}"
-            for i, c in enumerate(clusters)
+            f"{i}. {c.label} — {(c.summary or 'No summary')[:150]}" for i, c in enumerate(clusters)
         )
 
         try:
@@ -434,8 +461,11 @@ class TopicClusterEngine:
                     break
 
             if valid and assigned == set(range(len(clusters))):
-                logger.info("Taxonomy generated: %d categories for %d clusters",
-                            len(taxonomy), len(clusters))
+                logger.info(
+                    "Taxonomy generated: %d categories for %d clusters",
+                    len(taxonomy),
+                    len(clusters),
+                )
                 return taxonomy
 
             logger.warning("Taxonomy validation failed, falling back to flat structure")
@@ -452,10 +482,9 @@ class TopicClusterEngine:
         all_clusters = list(TopicCluster.objects.filter(analysis_job=self.job))
         all_cluster_ids = [c.id for c in all_clusters]
 
-        all_memberships = (
-            ClusterMembership.objects.filter(cluster_id__in=all_cluster_ids)
-            .values_list("cluster_id", "document_id")
-        )
+        all_memberships = ClusterMembership.objects.filter(
+            cluster_id__in=all_cluster_ids
+        ).values_list("cluster_id", "document_id")
         cluster_doc_map: dict[str, set[str]] = {}
         for cluster_id, doc_id in all_memberships:
             cluster_doc_map.setdefault(str(cluster_id), set()).add(str(doc_id))

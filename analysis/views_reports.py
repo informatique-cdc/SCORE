@@ -1,4 +1,5 @@
 """Analysis sub-report views: duplicates, contradictions, clusters, gaps, tree, trace, knowledge map."""
+
 import json
 from urllib.parse import urlencode
 
@@ -69,11 +70,11 @@ def _build_next_page_url(url_name, pk, page_obj, **filters):
 @login_required
 def contradictions_report(request, pk):
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
-    qs = ContradictionPair.objects.filter(
-        analysis_job=job
-    ).select_related(
-        "claim_a__document__connector", "claim_b__document__connector"
-    ).order_by("-confidence")
+    qs = (
+        ContradictionPair.objects.filter(analysis_job=job)
+        .select_related("claim_a__document__connector", "claim_b__document__connector")
+        .order_by("-confidence")
+    )
 
     type_filter = request.GET.get("type", "")
     if type_filter in ("contradiction", "outdated"):
@@ -85,9 +86,7 @@ def contradictions_report(request, pk):
     elif resolution_filter == "unresolved":
         qs = qs.filter(resolution="")
 
-    can_edit = bool(
-        request.project_membership and request.project_membership.can_edit
-    )
+    can_edit = bool(request.project_membership and request.project_membership.can_edit)
 
     # Pre-build query strings so the template can combine both filters in links
     filter_qs = _contra_filter_querystring(type_filter, resolution_filter)
@@ -104,8 +103,11 @@ def contradictions_report(request, pk):
         "filter_qs": filter_qs,
         "can_edit": can_edit,
         "next_page_url": _build_next_page_url(
-            "analysis-contradictions", pk, page_obj,
-            type=type_filter, resolution=resolution_filter,
+            "analysis-contradictions",
+            pk,
+            page_obj,
+            type=type_filter,
+            resolution=resolution_filter,
         ),
     }
 
@@ -135,6 +137,7 @@ def contradiction_resolve(request, pk, contra_pk):
     resolution_filter = request.POST.get("resolution_filter", "")
     qs = _contra_filter_querystring(type_filter, resolution_filter)
     from django.urls import reverse
+
     return redirect(reverse("analysis-contradictions", kwargs={"pk": pk}) + qs)
 
 
@@ -151,7 +154,8 @@ def contradiction_batch_resolve(request, pk):
     resolution = request.POST.get("resolution", "")
     if resolution in ("resolved", "kept", "") and ids:
         ContradictionPair.objects.filter(
-            pk__in=ids, analysis_job=job,
+            pk__in=ids,
+            analysis_job=job,
         ).update(resolution=resolution)
 
     # Preserve active filters in redirect
@@ -159,6 +163,7 @@ def contradiction_batch_resolve(request, pk):
     resolution_filter = request.POST.get("resolution_filter", "")
     qs = _contra_filter_querystring(type_filter, resolution_filter)
     from django.urls import reverse
+
     return redirect(reverse("analysis-contradictions", kwargs={"pk": pk}) + qs)
 
 
@@ -182,7 +187,11 @@ def clusters_view(request, pk):
 @login_required
 def gaps_report(request, pk):
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
-    qs = GapReport.objects.filter(analysis_job=job).select_related("related_cluster").order_by("coverage_score")
+    qs = (
+        GapReport.objects.filter(analysis_job=job)
+        .select_related("related_cluster")
+        .order_by("coverage_score")
+    )
 
     type_filter = request.GET.get("type", "")
     valid_gap_types = {c[0] for c in GapReport.GapType.choices}
@@ -195,9 +204,7 @@ def gaps_report(request, pk):
     elif resolution_filter == "unresolved":
         qs = qs.filter(resolution="")
 
-    can_edit = bool(
-        request.project_membership and request.project_membership.can_edit
-    )
+    can_edit = bool(request.project_membership and request.project_membership.can_edit)
 
     paginator = Paginator(qs, ITEMS_PER_PAGE)
     page_obj = paginator.get_page(request.GET.get("page", 1))
@@ -210,8 +217,11 @@ def gaps_report(request, pk):
         "resolution_filter": resolution_filter,
         "can_edit": can_edit,
         "next_page_url": _build_next_page_url(
-            "analysis-gaps", pk, page_obj,
-            type=type_filter, resolution=resolution_filter,
+            "analysis-gaps",
+            pk,
+            page_obj,
+            type=type_filter,
+            resolution=resolution_filter,
         ),
     }
 
@@ -240,6 +250,7 @@ def gap_resolve(request, pk, gap_pk):
     resolution_filter = request.POST.get("resolution_filter", "")
     qs = _filter_querystring(type_filter, resolution_filter)
     from django.urls import reverse
+
     return redirect(reverse("analysis-gaps", kwargs={"pk": pk}) + qs)
 
 
@@ -256,13 +267,15 @@ def gap_batch_resolve(request, pk):
     resolution = request.POST.get("resolution", "")
     if resolution in ("resolved", "kept", "") and ids:
         GapReport.objects.filter(
-            pk__in=ids, analysis_job=job,
+            pk__in=ids,
+            analysis_job=job,
         ).update(resolution=resolution)
 
     type_filter = request.POST.get("type_filter", "")
     resolution_filter = request.POST.get("resolution_filter", "")
     qs = _filter_querystring(type_filter, resolution_filter)
     from django.urls import reverse
+
     return redirect(reverse("analysis-gaps", kwargs={"pk": pk}) + qs)
 
 
@@ -282,9 +295,7 @@ def hallucination_report(request, pk):
     elif resolution_filter == "unresolved":
         qs = qs.filter(resolution="")
 
-    can_edit = bool(
-        request.project_membership and request.project_membership.can_edit
-    )
+    can_edit = bool(request.project_membership and request.project_membership.can_edit)
 
     paginator = Paginator(qs, ITEMS_PER_PAGE)
     page_obj = paginator.get_page(request.GET.get("page", 1))
@@ -297,8 +308,11 @@ def hallucination_report(request, pk):
         "resolution_filter": resolution_filter,
         "can_edit": can_edit,
         "next_page_url": _build_next_page_url(
-            "analysis-hallucinations", pk, page_obj,
-            type=type_filter, resolution=resolution_filter,
+            "analysis-hallucinations",
+            pk,
+            page_obj,
+            type=type_filter,
+            resolution=resolution_filter,
         ),
     }
 
@@ -342,7 +356,8 @@ def hallucination_batch_resolve(request, pk):
     resolution = request.POST.get("resolution", "")
     if resolution in ("resolved", "kept", "") and ids:
         HallucinationReport.objects.filter(
-            pk__in=ids, analysis_job=job,
+            pk__in=ids,
+            analysis_job=job,
         ).update(resolution=resolution)
 
     type_filter = request.POST.get("type_filter", "")
@@ -374,25 +389,29 @@ def trace_view(request, pk):
         phases = list(PhaseTrace.objects.filter(pipeline_trace=trace).order_by("sort_order"))
         context["phases"] = phases
 
-        context["phase_timeline_json"] = json.dumps([
-            {
-                "label": p.phase_label,
-                "duration": round(p.duration_seconds, 2),
-                "status": p.status,
-            }
-            for p in phases
-            if p.status != "running"
-        ])
+        context["phase_timeline_json"] = json.dumps(
+            [
+                {
+                    "label": p.phase_label,
+                    "duration": round(p.duration_seconds, 2),
+                    "status": p.status,
+                }
+                for p in phases
+                if p.status != "running"
+            ]
+        )
 
-        context["token_dist_json"] = json.dumps([
-            {
-                "label": p.phase_label,
-                "prompt": p.prompt_tokens,
-                "completion": p.completion_tokens,
-            }
-            for p in phases
-            if p.prompt_tokens or p.completion_tokens
-        ])
+        context["token_dist_json"] = json.dumps(
+            [
+                {
+                    "label": p.phase_label,
+                    "prompt": p.prompt_tokens,
+                    "completion": p.completion_tokens,
+                }
+                for p in phases
+                if p.prompt_tokens or p.completion_tokens
+            ]
+        )
 
         events = list(
             TraceEvent.objects.filter(phase_trace__pipeline_trace=trace)
@@ -412,7 +431,11 @@ def knowledge_map_view(request, pk):
     """HTML page for the concept graph (knowledge map)."""
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
     graph_path = graph_dir(str(job.project_id)) / "graph.json"
-    return render(request, "analysis/knowledge_map.html", {
-        "job": job,
-        "has_graph": graph_path.exists(),
-    })
+    return render(
+        request,
+        "analysis/knowledge_map.html",
+        {
+            "job": job,
+            "has_graph": graph_path.exists(),
+        },
+    )

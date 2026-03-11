@@ -1,4 +1,5 @@
 """Tests for model constraints, properties, managers, and helpers across all apps."""
+
 import uuid
 
 import pytest
@@ -214,7 +215,8 @@ class TestAuditLog:
 
     def test_str(self, tenant, user):
         log_audit(
-            tenant=tenant, user=user,
+            tenant=tenant,
+            user=user,
             action=AuditLog.Action.PROJECT_CREATED,
             target_label="My Project",
         )
@@ -223,7 +225,8 @@ class TestAuditLog:
 
     def test_log_audit_no_target(self, tenant, user):
         log_audit(
-            tenant=tenant, user=user,
+            tenant=tenant,
+            user=user,
             action=AuditLog.Action.TENANT_CREATED,
         )
         entry = AuditLog.objects.first()
@@ -299,29 +302,36 @@ class TestDocumentChunkModel:
 @pytest.mark.django_db
 class TestIngestionJob:
     def test_str(self, tenant, project, connector):
-        job = IngestionJob.objects.create(
-            tenant=tenant, project=project, connector=connector
-        )
+        job = IngestionJob.objects.create(tenant=tenant, project=project, connector=connector)
         assert "Test Connector" in str(job)
 
     def test_progress_pct_zero_total(self, tenant, project, connector):
         job = IngestionJob.objects.create(
-            tenant=tenant, project=project, connector=connector,
-            total_documents=0, processed_documents=0,
+            tenant=tenant,
+            project=project,
+            connector=connector,
+            total_documents=0,
+            processed_documents=0,
         )
         assert job.progress_pct == 0
 
     def test_progress_pct_partial(self, tenant, project, connector):
         job = IngestionJob.objects.create(
-            tenant=tenant, project=project, connector=connector,
-            total_documents=10, processed_documents=3,
+            tenant=tenant,
+            project=project,
+            connector=connector,
+            total_documents=10,
+            processed_documents=3,
         )
         assert job.progress_pct == 30
 
     def test_progress_pct_complete(self, tenant, project, connector):
         job = IngestionJob.objects.create(
-            tenant=tenant, project=project, connector=connector,
-            total_documents=5, processed_documents=5,
+            tenant=tenant,
+            project=project,
+            connector=connector,
+            total_documents=5,
+            processed_documents=5,
         )
         assert job.progress_pct == 100
 
@@ -351,8 +361,13 @@ class TestClaimModel:
         doc = make_document(tenant, project, connector, title="ClaimDoc")
         chunk = make_chunk(tenant, doc, 0, "text")
         claim = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="Python", predicate="is", object_value="a language",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="Python",
+            predicate="is",
+            object_value="a language",
             raw_text="Python is a language.",
         )
         assert "Python" in str(claim)
@@ -363,8 +378,13 @@ class TestClaimModel:
         doc = make_document(tenant, project, connector, title="AsText")
         chunk = make_chunk(tenant, doc, 0, "text")
         claim = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="Django", predicate="supports", object_value="ORM",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="Django",
+            predicate="supports",
+            object_value="ORM",
             raw_text="Django supports ORM.",
         )
         assert claim.as_text == "Django supports ORM"
@@ -374,9 +394,13 @@ class TestClaimModel:
 class TestGapReport:
     def test_str(self, analysis_job, tenant, project):
         gap = GapReport.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
-            gap_type="missing_topic", title="Missing API docs",
-            description="No API documentation found.", severity="high",
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            gap_type="missing_topic",
+            title="Missing API docs",
+            description="No API documentation found.",
+            severity="high",
         )
         assert "Missing API docs" in str(gap)
 
@@ -385,7 +409,9 @@ class TestGapReport:
 class TestTopicCluster:
     def test_str(self, analysis_job, tenant, project):
         cluster = TopicCluster.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
             label="Security Practices",
         )
         assert str(cluster) == "Security Practices"
@@ -396,7 +422,9 @@ class TestAuditJob:
     def test_str(self, tenant, project):
         analysis = AnalysisJob.objects.create(tenant=tenant, project=project)
         audit = AuditJob.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis,
             status="completed",
         )
         assert "completed" in str(audit)
@@ -404,7 +432,9 @@ class TestAuditJob:
     def test_default_status(self, tenant, project):
         analysis = AnalysisJob.objects.create(tenant=tenant, project=project)
         audit = AuditJob.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis,
         )
         assert audit.status == AuditJob.Status.QUEUED
 
@@ -414,27 +444,49 @@ class TestAuditAxisResult:
     def test_str(self, tenant, project):
         analysis = AnalysisJob.objects.create(tenant=tenant, project=project)
         audit = AuditJob.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis,
         )
         result = AuditAxisResult.objects.create(
-            tenant=tenant, project=project, audit_job=audit,
-            axis="hygiene", score=85.0, metrics={}, chart_data={}, details={},
+            tenant=tenant,
+            project=project,
+            audit_job=audit,
+            axis="hygiene",
+            score=85.0,
+            metrics={},
+            chart_data={},
+            details={},
         )
         assert "85" in str(result)
 
     def test_unique_together(self, tenant, project):
         analysis = AnalysisJob.objects.create(tenant=tenant, project=project)
         audit = AuditJob.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis,
         )
         AuditAxisResult.objects.create(
-            tenant=tenant, project=project, audit_job=audit,
-            axis="hygiene", score=80, metrics={}, chart_data={}, details={},
+            tenant=tenant,
+            project=project,
+            audit_job=audit,
+            axis="hygiene",
+            score=80,
+            metrics={},
+            chart_data={},
+            details={},
         )
         with pytest.raises(IntegrityError):
             AuditAxisResult.objects.create(
-                tenant=tenant, project=project, audit_job=audit,
-                axis="hygiene", score=90, metrics={}, chart_data={}, details={},
+                tenant=tenant,
+                project=project,
+                audit_job=audit,
+                axis="hygiene",
+                score=90,
+                metrics={},
+                chart_data={},
+                details={},
             )
 
 
@@ -452,21 +504,15 @@ class TestConversation:
         assert str(conv) == "My Chat"
 
     def test_str_without_title(self, tenant, project, user):
-        conv = Conversation.objects.create(
-            tenant=tenant, project=project, user=user, title=""
-        )
+        conv = Conversation.objects.create(tenant=tenant, project=project, user=user, title="")
         assert "Conversation" in str(conv)
 
 
 @pytest.mark.django_db
 class TestMessage:
     def test_str(self, tenant, project, user):
-        conv = Conversation.objects.create(
-            tenant=tenant, project=project, user=user, title="Chat"
-        )
-        msg = Message.objects.create(
-            conversation=conv, role="user", content="Hello world!"
-        )
+        conv = Conversation.objects.create(tenant=tenant, project=project, user=user, title="Chat")
+        msg = Message.objects.create(conversation=conv, role="user", content="Hello world!")
         assert "user" in str(msg)
         assert "Hello" in str(msg)
 
@@ -475,18 +521,24 @@ class TestMessage:
 class TestChatConfig:
     def test_str(self, tenant, project, user):
         config = ChatConfig.objects.create(
-            tenant=tenant, project=project, user=user,
+            tenant=tenant,
+            project=project,
+            user=user,
             system_prompt="You are helpful.",
         )
         assert "testuser" in str(config)
 
     def test_unique_together(self, tenant, project, user):
         ChatConfig.objects.create(
-            tenant=tenant, project=project, user=user,
+            tenant=tenant,
+            project=project,
+            user=user,
         )
         with pytest.raises(IntegrityError):
             ChatConfig.objects.create(
-                tenant=tenant, project=project, user=user,
+                tenant=tenant,
+                project=project,
+                user=user,
             )
 
 
@@ -499,9 +551,12 @@ class TestChatConfig:
 class TestFeedback:
     def test_str(self, tenant, user):
         fb = Feedback.objects.create(
-            tenant=tenant, user=user,
-            feedback_type="feedback", area="analysis",
-            subject="Great feature", description="I like the analysis.",
+            tenant=tenant,
+            user=user,
+            feedback_type="feedback",
+            area="analysis",
+            subject="Great feature",
+            description="I like the analysis.",
         )
         assert "Great feature" in str(fb)
         assert "Feedback" in str(fb)
@@ -517,16 +572,22 @@ class TestReportModel:
     def test_str(self, tenant, project):
         job = AnalysisJob.objects.create(tenant=tenant, project=project)
         report = Report.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            report_type="full", title="Full Report Q1",
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            report_type="full",
+            title="Full Report Q1",
         )
         assert str(report) == "Full Report Q1"
 
     def test_default_format(self, tenant, project):
         job = AnalysisJob.objects.create(tenant=tenant, project=project)
         report = Report.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            report_type="duplicates", title="Dup Report",
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            report_type="duplicates",
+            title="Dup Report",
         )
         assert report.format == Report.Format.HTML
 
@@ -541,7 +602,9 @@ class TestPipelineTrace:
     def test_str(self, tenant, project):
         job = AnalysisJob.objects.create(tenant=tenant, project=project)
         trace = PipelineTrace.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
             started_at=timezone.now(),
         )
         assert str(job.id)[:8] in str(trace)
@@ -552,12 +615,17 @@ class TestPhaseTrace:
     def test_str(self, tenant, project):
         job = AnalysisJob.objects.create(tenant=tenant, project=project)
         pipeline_trace = PipelineTrace.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
             started_at=timezone.now(),
         )
         phase = PhaseTrace.objects.create(
-            tenant=tenant, project=project, pipeline_trace=pipeline_trace,
-            phase_key="duplicates", phase_label="Duplicate Detection",
+            tenant=tenant,
+            project=project,
+            pipeline_trace=pipeline_trace,
+            phase_key="duplicates",
+            phase_label="Duplicate Detection",
             status="completed",
         )
         assert "Duplicate Detection" in str(phase)
@@ -566,15 +634,23 @@ class TestPhaseTrace:
     def test_unique_together(self, tenant, project):
         job = AnalysisJob.objects.create(tenant=tenant, project=project)
         pt = PipelineTrace.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
             started_at=timezone.now(),
         )
         PhaseTrace.objects.create(
-            tenant=tenant, project=project, pipeline_trace=pt,
-            phase_key="duplicates", phase_label="Dup",
+            tenant=tenant,
+            project=project,
+            pipeline_trace=pt,
+            phase_key="duplicates",
+            phase_label="Dup",
         )
         with pytest.raises(IntegrityError):
             PhaseTrace.objects.create(
-                tenant=tenant, project=project, pipeline_trace=pt,
-                phase_key="duplicates", phase_label="Dup Again",
+                tenant=tenant,
+                project=project,
+                pipeline_trace=pt,
+                phase_key="duplicates",
+                phase_label="Dup Again",
             )

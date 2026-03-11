@@ -1,4 +1,5 @@
 """Tests for analysis views: list, detail, run, delete, retry, cancel, reports, resolve."""
+
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -44,7 +45,9 @@ def _client(user, tenant, project):
 
 def _make_job(tenant, project, status="completed"):
     return AnalysisJob.objects.create(
-        tenant=tenant, project=project, status=status,
+        tenant=tenant,
+        project=project,
+        status=status,
     )
 
 
@@ -181,14 +184,21 @@ class TestDuplicatesReport:
         doc_b = make_document(tenant, project, connector, title="DB", status="ready")
         job = _make_job(tenant, project)
         group = DuplicateGroup.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
             recommended_action="merge",
         )
         DuplicatePair.objects.create(
-            tenant=tenant, project=project, group=group,
-            doc_a=doc_a, doc_b=doc_b,
-            semantic_score=0.95, lexical_score=0.80,
-            metadata_score=0.70, combined_score=0.87,
+            tenant=tenant,
+            project=project,
+            group=group,
+            doc_a=doc_a,
+            doc_b=doc_b,
+            semantic_score=0.95,
+            lexical_score=0.80,
+            metadata_score=0.70,
+            combined_score=0.87,
         )
         client = _client(user, tenant, project)
         resp = client.get(f"/analysis/{job.id}/duplicates/")
@@ -206,18 +216,35 @@ class TestContradictionsReport:
         doc = make_document(tenant, project, connector, title="ConDoc", status="ready")
         chunk = make_chunk(tenant, doc, 0, "text")
         claim_a = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="X", predicate="is", object_value="A", raw_text="X is A",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="X",
+            predicate="is",
+            object_value="A",
+            raw_text="X is A",
         )
         claim_b = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="X", predicate="is", object_value="B", raw_text="X is B",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="X",
+            predicate="is",
+            object_value="B",
+            raw_text="X is B",
         )
         return ContradictionPair.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            claim_a=claim_a, claim_b=claim_b,
-            classification="contradiction", severity="high",
-            confidence=0.9, evidence="Direct conflict.",
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            claim_a=claim_a,
+            claim_b=claim_b,
+            classification="contradiction",
+            severity="high",
+            confidence=0.9,
+            evidence="Direct conflict.",
         )
 
     def test_loads(self, setup):
@@ -253,9 +280,13 @@ class TestGapsReport:
         user, tenant, project, _ = setup
         job = _make_job(tenant, project)
         GapReport.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            gap_type="missing_topic", title="Missing API",
-            description="API docs missing.", severity="high",
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            gap_type="missing_topic",
+            title="Missing API",
+            description="API docs missing.",
+            severity="high",
         )
         client = _client(user, tenant, project)
         resp = client.get(f"/analysis/{job.id}/gaps/")
@@ -265,9 +296,13 @@ class TestGapsReport:
         user, tenant, project, _ = setup
         job = _make_job(tenant, project)
         gap = GapReport.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            gap_type="missing_topic", title="Gap",
-            description="A gap.", severity="low",
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            gap_type="missing_topic",
+            title="Gap",
+            description="A gap.",
+            severity="low",
         )
         client = _client(user, tenant, project)
         resp = client.post(
@@ -350,8 +385,11 @@ class TestClustersJSON:
         user, tenant, project, _ = setup
         job = _make_job(tenant, project)
         TopicCluster.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            label="Security", level=0,
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            label="Security",
+            level=0,
         )
         client = _client(user, tenant, project)
         resp = client.get(f"/analysis/{job.id}/api/clusters/")
@@ -380,6 +418,7 @@ class TestCanRunAnalysis:
     def test_no_docs_blocks(self, setup):
         _, tenant, project, _ = setup
         from analysis.views import can_run_analysis
+
         can_run, reason = can_run_analysis(project)
         assert can_run is False
         assert reason == "no_docs"
@@ -388,6 +427,7 @@ class TestCanRunAnalysis:
         _, tenant, project, connector = setup
         make_document(tenant, project, connector, title="D", status="ready")
         from analysis.views import can_run_analysis
+
         can_run, reason = can_run_analysis(project)
         assert can_run is True
 
@@ -395,9 +435,12 @@ class TestCanRunAnalysis:
         _, tenant, project, connector = setup
         make_document(tenant, project, connector, title="D", status="ready")
         AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.RUNNING,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.RUNNING,
         )
         from analysis.views import can_run_analysis
+
         can_run, reason = can_run_analysis(project)
         assert can_run is False
         assert reason == "running"
@@ -406,9 +449,12 @@ class TestCanRunAnalysis:
         _, tenant, project, connector = setup
         make_document(tenant, project, connector, title="D", status="ready")
         AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         from analysis.views import can_run_analysis
+
         can_run, reason = can_run_analysis(project)
         assert can_run is False
         assert reason == "no_changes"
@@ -427,18 +473,35 @@ class TestBatchResolve:
         doc = make_document(tenant, project, connector, title="BD", status="ready")
         chunk = make_chunk(tenant, doc, 0, "text")
         claim_a = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="S", predicate="P", object_value="O", raw_text="s p o",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="S",
+            predicate="P",
+            object_value="O",
+            raw_text="s p o",
         )
         claim_b = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="S", predicate="P", object_value="O2", raw_text="s p o2",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="S",
+            predicate="P",
+            object_value="O2",
+            raw_text="s p o2",
         )
         c1 = ContradictionPair.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            claim_a=claim_a, claim_b=claim_b,
-            classification="contradiction", severity="low",
-            confidence=0.5, evidence="Minor conflict.",
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            claim_a=claim_a,
+            claim_b=claim_b,
+            classification="contradiction",
+            severity="low",
+            confidence=0.5,
+            evidence="Minor conflict.",
         )
         client = _client(user, tenant, project)
         resp = client.post(
@@ -453,9 +516,13 @@ class TestBatchResolve:
         user, tenant, project, _ = setup
         job = _make_job(tenant, project)
         g1 = GapReport.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            gap_type="orphan_topic", title="Orphan",
-            description="Orphaned.", severity="low",
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            gap_type="orphan_topic",
+            title="Orphan",
+            description="Orphaned.",
+            severity="low",
         )
         client = _client(user, tenant, project)
         resp = client.post(

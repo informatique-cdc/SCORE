@@ -1,4 +1,5 @@
 """Tests for dashboard views: home, stats partials, feedback."""
+
 import json
 
 import pytest
@@ -93,12 +94,14 @@ class TestSubmitFeedback:
         client = _client(user, tenant, project)
         resp = client.post(
             "/dashboard/feedback/",
-            json.dumps({
-                "type": "feedback",
-                "area": "analysis",
-                "subject": "Great tool",
-                "description": "Very useful.",
-            }),
+            json.dumps(
+                {
+                    "type": "feedback",
+                    "area": "analysis",
+                    "subject": "Great tool",
+                    "description": "Very useful.",
+                }
+            ),
             content_type="application/json",
         )
         assert resp.status_code == 200

@@ -1,4 +1,5 @@
 """Tests for dashboard/scoring.py — SCORE computation logic."""
+
 import pytest
 
 from analysis.models import (
@@ -132,7 +133,9 @@ class TestComputeSCORE:
             make_document(tenant, project, connector, title=f"Doc{i}", status="ready")
 
         AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
 
         result = compute_score(project)
@@ -152,12 +155,16 @@ class TestComputeSCORE:
             make_document(tenant, project, connector, title=f"Doc{i}", status="ready")
 
         job = AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         # Create several duplicate groups (not KEEP)
         for i in range(5):
             DuplicateGroup.objects.create(
-                tenant=tenant, project=project, analysis_job=job,
+                tenant=tenant,
+                project=project,
+                analysis_job=job,
                 recommended_action=DuplicateGroup.Action.MERGE,
             )
 
@@ -171,25 +178,44 @@ class TestComputeSCORE:
             make_chunk(tenant, doc, 0, f"Content {i}")
 
         job = AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         docs = list(Document.objects.filter(project=project))
         chunks = [doc.chunks.first() for doc in docs]
 
         # Create claims and contradiction
         claim_a = Claim.objects.create(
-            tenant=tenant, project=project, document=docs[0], chunk=chunks[0],
-            subject="X", predicate="is", object_value="A", raw_text="X is A",
+            tenant=tenant,
+            project=project,
+            document=docs[0],
+            chunk=chunks[0],
+            subject="X",
+            predicate="is",
+            object_value="A",
+            raw_text="X is A",
         )
         claim_b = Claim.objects.create(
-            tenant=tenant, project=project, document=docs[1], chunk=chunks[1],
-            subject="X", predicate="is", object_value="B", raw_text="X is B",
+            tenant=tenant,
+            project=project,
+            document=docs[1],
+            chunk=chunks[1],
+            subject="X",
+            predicate="is",
+            object_value="B",
+            raw_text="X is B",
         )
         ContradictionPair.objects.create(
-            tenant=tenant, project=project, analysis_job=job,
-            claim_a=claim_a, claim_b=claim_b,
-            classification="contradiction", severity="high",
-            confidence=0.95, evidence="Direct conflict.",
+            tenant=tenant,
+            project=project,
+            analysis_job=job,
+            claim_a=claim_a,
+            claim_b=claim_b,
+            classification="contradiction",
+            severity="high",
+            confidence=0.95,
+            evidence="Direct conflict.",
         )
 
         result = compute_score(project)
@@ -201,11 +227,15 @@ class TestComputeSCORE:
 
         # Old completed job
         AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         # Running job (should be ignored)
         AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.RUNNING,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.RUNNING,
         )
 
         result = compute_score(project)
@@ -221,13 +251,17 @@ class TestComputeSCORE:
 class TestComputeSCOREForJob:
     def test_non_completed_returns_none(self, tenant, project):
         job = AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.RUNNING,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.RUNNING,
         )
         assert compute_score_for_job(job) is None
 
     def test_no_documents_returns_e(self, tenant, project):
         job = AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         result = compute_score_for_job(job)
         assert result["grade"] == "E"
@@ -238,7 +272,9 @@ class TestComputeSCOREForJob:
             make_document(tenant, project, connector, title=f"Doc{i}", status="ready")
 
         job = AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         result = compute_score_for_job(job)
         assert "grade" in result
@@ -274,7 +310,9 @@ class TestComputeSCOREDetail:
             make_document(tenant, project, connector, title=f"Doc{i}", status="ready")
 
         AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         result = compute_score_detail(project)
         assert len(result["dimensions"]) == 7
@@ -291,7 +329,9 @@ class TestComputeSCOREDetail:
         for i in range(3):
             make_document(tenant, project, connector, title=f"Doc{i}", status="ready")
         AnalysisJob.objects.create(
-            tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
+            tenant=tenant,
+            project=project,
+            status=AnalysisJob.Status.COMPLETED,
         )
         result = compute_score_detail(project)
         for dim in result["dimensions"]:

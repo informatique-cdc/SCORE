@@ -1,4 +1,5 @@
 """Axe 1 — Hygiène du corpus: dedup, near-dup, boilerplate, language, PII."""
+
 import collections
 import logging
 import re
@@ -14,9 +15,7 @@ PII_PATTERNS = {
     "phone_intl": re.compile(r"\b\+\d{1,3}[\s.-]?\d{4,14}\b"),
     "api_key": re.compile(r"\b(?:sk|pk|api[_-]?key)[_-]?[A-Za-z0-9]{20,}\b", re.I),
     "ip_address": re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"),
-    "secret_generic": re.compile(
-        r"(?:password|secret|token|credentials?)\s*[:=]\s*\S+", re.I
-    ),
+    "secret_generic": re.compile(r"(?:password|secret|token|credentials?)\s*[:=]\s*\S+", re.I),
 }
 
 
@@ -37,8 +36,9 @@ class HygieneAxis(BaseAuditAxis):
         )
 
         docs = list(
-            Document.objects.filter(project=self.project, status="ready")
-            .values_list("id", "title", "content_hash")
+            Document.objects.filter(project=self.project, status="ready").values_list(
+                "id", "title", "content_hash"
+            )
         )
 
         if not chunks:
@@ -113,17 +113,12 @@ class HygieneAxis(BaseAuditAxis):
                     if c[2] == h:
                         doc_dup_counts[str(c[3])] += 1
 
-        dup_bar = [
-            {"doc_id": did, "count": cnt}
-            for did, cnt in doc_dup_counts.most_common(20)
-        ]
+        dup_bar = [{"doc_id": did, "count": cnt} for did, cnt in doc_dup_counts.most_common(20)]
 
         chart_data = {
             "length_histogram": length_bins,
             "dup_distribution": dup_bar,
-            "language_pie": [
-                {"language": lang, "count": cnt} for lang, cnt in lang_dist.items()
-            ],
+            "language_pie": [{"language": lang, "count": cnt} for lang, cnt in lang_dist.items()],
             "pii_by_type": self._pii_by_type(pii_findings),
         }
 
@@ -179,12 +174,14 @@ class HygieneAxis(BaseAuditAxis):
                     pair_key = tuple(sorted([cid, r]))
                     if pair_key not in seen:
                         seen.add(pair_key)
-                        pairs.append({
-                            "chunk_a": cid,
-                            "chunk_b": r,
-                            "doc_a": doc_id,
-                            "doc_b": minhashes[r][1],
-                        })
+                        pairs.append(
+                            {
+                                "chunk_a": cid,
+                                "chunk_b": r,
+                                "doc_a": doc_id,
+                                "doc_b": minhashes[r][1],
+                            }
+                        )
 
         neardup_ratio = len(pairs) / max(len(sample), 1)
         return pairs, neardup_ratio
@@ -256,19 +253,25 @@ class HygieneAxis(BaseAuditAxis):
             for pii_type, pattern in PII_PATTERNS.items():
                 matches = pattern.findall(content)
                 if matches:
-                    chunk_pii.append({
-                        "type": pii_type,
-                        "count": len(matches),
-                        "sample": matches[0][:50] + "..." if len(matches[0]) > 50 else matches[0],
-                    })
+                    chunk_pii.append(
+                        {
+                            "type": pii_type,
+                            "count": len(matches),
+                            "sample": matches[0][:50] + "..."
+                            if len(matches[0]) > 50
+                            else matches[0],
+                        }
+                    )
             if chunk_pii:
                 total_with_pii += 1
-                findings.append({
-                    "chunk_id": str(chunk_id),
-                    "doc_id": str(doc_id),
-                    "doc_title": doc_title[:100],
-                    "pii_types": chunk_pii,
-                })
+                findings.append(
+                    {
+                        "chunk_id": str(chunk_id),
+                        "doc_id": str(doc_id),
+                        "doc_title": doc_title[:100],
+                        "pii_types": chunk_pii,
+                    }
+                )
 
         pii_ratio = total_with_pii / max(len(chunks[:1000]), 1)
         return findings, pii_ratio
@@ -293,6 +296,10 @@ class HygieneAxis(BaseAuditAxis):
         for i in range(bins):
             lo = mn + i * step
             hi = mn + (i + 1) * step
-            cnt = sum(1 for v in values if lo <= v < hi) if i < bins - 1 else sum(1 for v in values if lo <= v <= hi)
+            cnt = (
+                sum(1 for v in values if lo <= v < hi)
+                if i < bins - 1
+                else sum(1 for v in values if lo <= v <= hi)
+            )
             result.append({"bin_start": round(lo, 1), "bin_end": round(hi, 1), "count": cnt})
         return result

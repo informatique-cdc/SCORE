@@ -101,9 +101,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "claim_date",
-                    models.DateField(
-                        blank=True, help_text="Date the claim pertains to", null=True
-                    ),
+                    models.DateField(blank=True, help_text="Date the claim pertains to", null=True),
                 ),
                 ("raw_text", models.TextField(help_text="Original passage text")),
                 ("has_embedding", models.BooleanField(default=False)),
@@ -172,9 +170,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "confidence",
-                    models.FloatField(
-                        help_text="LLM confidence in this classification"
-                    ),
+                    models.FloatField(help_text="LLM confidence in this classification"),
                 ),
                 (
                     "evidence",
@@ -290,9 +286,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "semantic_score",
-                    models.FloatField(
-                        help_text="Cosine similarity of document embeddings"
-                    ),
+                    models.FloatField(help_text="Cosine similarity of document embeddings"),
                 ),
                 (
                     "lexical_score",
@@ -324,15 +318,11 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "evidence_chunks_a",
-                    models.JSONField(
-                        default=list, help_text="Chunk IDs and snippets from doc A"
-                    ),
+                    models.JSONField(default=list, help_text="Chunk IDs and snippets from doc A"),
                 ),
                 (
                     "evidence_chunks_b",
-                    models.JSONField(
-                        default=list, help_text="Chunk IDs and snippets from doc B"
-                    ),
+                    models.JSONField(default=list, help_text="Chunk IDs and snippets from doc B"),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
@@ -386,21 +376,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "label",
-                    models.CharField(
-                        help_text="LLM-generated cluster label", max_length=500
-                    ),
+                    models.CharField(help_text="LLM-generated cluster label", max_length=500),
                 ),
                 (
                     "summary",
-                    models.TextField(
-                        blank=True, default="", help_text="LLM-generated summary"
-                    ),
+                    models.TextField(blank=True, default="", help_text="LLM-generated summary"),
                 ),
                 (
                     "key_concepts",
-                    models.JSONField(
-                        default=list, help_text="LLM-extracted concept list"
-                    ),
+                    models.JSONField(default=list, help_text="LLM-extracted concept list"),
                 ),
                 (
                     "content_purpose",
@@ -413,9 +397,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "level",
-                    models.PositiveIntegerField(
-                        default=0, help_text="Hierarchy level (0 = top)"
-                    ),
+                    models.PositiveIntegerField(default=0, help_text="Hierarchy level (0 = top)"),
                 ),
                 ("doc_count", models.PositiveIntegerField(default=0)),
                 ("chunk_count", models.PositiveIntegerField(default=0)),
@@ -479,9 +461,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "title",
-                    models.CharField(
-                        help_text="Suggested topic/document title", max_length=500
-                    ),
+                    models.CharField(help_text="Suggested topic/document title", max_length=500),
                 ),
                 (
                     "description",
@@ -672,9 +652,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="claim",
-            index=models.Index(
-                fields=["tenant", "subject"], name="analysis_cl_tenant__05b49b_idx"
-            ),
+            index=models.Index(fields=["tenant", "subject"], name="analysis_cl_tenant__05b49b_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="duplicatepair",

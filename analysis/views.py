@@ -1,4 +1,5 @@
 """Analysis views: run jobs, view results, serve JSON for visualizations."""
+
 import json
 import logging
 
@@ -59,10 +60,13 @@ def can_run_analysis(project):
         return has_docs, ("" if has_docs else "no_docs")
 
     # Check if any connector was added or synced since last analysis
-    changed = ConnectorConfig.objects.filter(project=project).filter(
-        models.Q(created_at__gt=last_created_at)
-        | models.Q(last_sync_at__gt=last_created_at)
-    ).exists()
+    changed = (
+        ConnectorConfig.objects.filter(project=project)
+        .filter(
+            models.Q(created_at__gt=last_created_at) | models.Q(last_sync_at__gt=last_created_at)
+        )
+        .exists()
+    )
     return changed, ("" if changed else "no_changes")
 
 
@@ -77,12 +81,24 @@ def analysis_number(analysis_job):
 # Display constants imported from analysis.constants
 
 AXIS_TOOLTIPS = {
-    "hygiene": _lazy("Mesure la propreté du corpus : doublons exacts, quasi-doublons, boilerplate, homogénéité linguistique et données sensibles."),
-    "structure": _lazy("Évalue la qualité du découpage en chunks : uniformité de taille, outliers, densité informationnelle et lisibilité."),
-    "coverage": _lazy("Analyse la couverture sémantique : équilibre des topics, taux de couverture, outliers et cohérence intra-topic."),
-    "coherence": _lazy("Détecte les incohérences internes : conflits clé-valeur, variations terminologiques et contradictions entre entités."),
-    "retrievability": _lazy("Teste la capacité de recherche : MRR, recall@10, taux de résultats non-vides et diversité des résultats."),
-    "governance": _lazy("Vérifie la gouvernance des métadonnées : complétude des champs, fraîcheur des documents, orphelins et connectivité."),
+    "hygiene": _lazy(
+        "Mesure la propreté du corpus : doublons exacts, quasi-doublons, boilerplate, homogénéité linguistique et données sensibles."
+    ),
+    "structure": _lazy(
+        "Évalue la qualité du découpage en chunks : uniformité de taille, outliers, densité informationnelle et lisibilité."
+    ),
+    "coverage": _lazy(
+        "Analyse la couverture sémantique : équilibre des topics, taux de couverture, outliers et cohérence intra-topic."
+    ),
+    "coherence": _lazy(
+        "Détecte les incohérences internes : conflits clé-valeur, variations terminologiques et contradictions entre entités."
+    ),
+    "retrievability": _lazy(
+        "Teste la capacité de recherche : MRR, recall@10, taux de résultats non-vides et diversité des résultats."
+    ),
+    "governance": _lazy(
+        "Vérifie la gouvernance des métadonnées : complétude des champs, fraîcheur des documents, orphelins et connectivité."
+    ),
 }
 
 AXIS_ORDER = ["hygiene", "structure", "coverage", "coherence", "retrievability", "governance"]
@@ -93,7 +109,9 @@ def _build_job_issues(job):
     if job.status != AnalysisJob.Status.COMPLETED:
         return []
     return build_analysis_issues(
-        job, exclude_resolved=True, include_hallucinations=True,
+        job,
+        exclude_resolved=True,
+        include_hallucinations=True,
     )[:5]
 
 
@@ -118,8 +136,7 @@ def _analysis_jobs_context(project):
         job.score_result = scores.get(job.id)
 
     should_poll = any(
-        j.status in (AnalysisJob.Status.QUEUED, AnalysisJob.Status.RUNNING)
-        for j in jobs
+        j.status in (AnalysisJob.Status.QUEUED, AnalysisJob.Status.RUNNING) for j in jobs
     )
     return {"jobs": jobs, "should_poll": should_poll}
 
@@ -136,9 +153,7 @@ def _batch_scores(project, completed_jobs, audit_map):
     job_ids = [j.id for j in completed_jobs]
 
     # Document counts — shared across all jobs (same project)
-    docs_qs = Document.objects.filter(project=project).exclude(
-        status=Document.Status.DELETED
-    )
+    docs_qs = Document.objects.filter(project=project).exclude(status=Document.Status.DELETED)
     total_docs = docs_qs.count()
     if total_docs == 0:
         return {jid: {"grade": "E", "score": 0} for jid in job_ids}
@@ -172,9 +187,7 @@ def _batch_scores(project, completed_jobs, audit_map):
             low=Count("id", filter=Q(severity="low")),
         )
     ):
-        contra_data[row["analysis_job_id"]] = (
-            row["high"] * 3 + row["med"] * 2 + row["low"]
-        )
+        contra_data[row["analysis_job_id"]] = row["high"] * 3 + row["med"] * 2 + row["low"]
 
     # Batch: gap weighted counts + avg coverage per job
     gap_data = {}
@@ -222,9 +235,8 @@ def _batch_scores(project, completed_jobs, audit_map):
             completed_audit_ids.append(aj.id)
             audit_to_analysis[aj.id] = jid
     if completed_audit_ids:
-        for row in (
-            AuditAxisResult.objects.filter(audit_job_id__in=completed_audit_ids)
-            .values("audit_job_id", "axis", "score")
+        for row in AuditAxisResult.objects.filter(audit_job_id__in=completed_audit_ids).values(
+            "audit_job_id", "axis", "score"
         ):
             analysis_jid = audit_to_analysis[row["audit_job_id"]]
             audit_scores.setdefault(analysis_jid, {})[row["axis"]] = row["score"]
@@ -301,22 +313,66 @@ def _analysis_progress_context(job):
 
 # Ordered pipeline phases for the progress stepper
 _PIPELINE_PHASES = [
-    ("duplicates", _lazy("Détection des doublons"), "M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2M9 2h6v4H9z"),
-    ("claims", _lazy("Extraction des affirmations"), "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8"),
-    ("semantic_graph", _lazy("Graphe sémantique"), "M5.5 4.5l3 3M18 13l-3-3M12 2v4M2 12h4M18 12h4M12 18v4M7.5 7.5a5 5 0 107 7 5 5 0 00-7-7z"),
-    ("clustering", _lazy("Clustering thématique"), "M12 2a4 4 0 014 4 4 4 0 01-4 4 4 4 0 01-4-4 4 4 0 014-4zM4.93 15.5A8 8 0 0112 12a8 8 0 017.07 3.5"),
+    (
+        "duplicates",
+        _lazy("Détection des doublons"),
+        "M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2M9 2h6v4H9z",
+    ),
+    (
+        "claims",
+        _lazy("Extraction des affirmations"),
+        "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8",
+    ),
+    (
+        "semantic_graph",
+        _lazy("Graphe sémantique"),
+        "M5.5 4.5l3 3M18 13l-3-3M12 2v4M2 12h4M18 12h4M12 18v4M7.5 7.5a5 5 0 107 7 5 5 0 00-7-7z",
+    ),
+    (
+        "clustering",
+        _lazy("Clustering thématique"),
+        "M12 2a4 4 0 014 4 4 4 0 01-4 4 4 4 0 01-4-4 4 4 0 014-4zM4.93 15.5A8 8 0 0112 12a8 8 0 017.07 3.5",
+    ),
     ("gaps", _lazy("Détection des lacunes"), "M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35"),
-    ("tree", _lazy("Index arborescent"), "M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"),
-    ("contradictions", _lazy("Détection des contradictions"), "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"),
-    ("hallucination", _lazy("Risques d'hallucination"), "M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 9h.01M15 9h.01"),
+    (
+        "tree",
+        _lazy("Index arborescent"),
+        "M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z",
+    ),
+    (
+        "contradictions",
+        _lazy("Détection des contradictions"),
+        "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01",
+    ),
+    (
+        "hallucination",
+        _lazy("Risques d'hallucination"),
+        "M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 9h.01M15 9h.01",
+    ),
 ]
 
 _AUDIT_PHASES = [
-    ("audit_hygiene", _lazy("Hygiène du corpus"), "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"),
+    (
+        "audit_hygiene",
+        _lazy("Hygiène du corpus"),
+        "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
+    ),
     ("audit_structure", _lazy("Structure RAG"), "M4 6h16M4 10h16M4 14h16M4 18h16"),
-    ("audit_coverage", _lazy("Couverture sémantique"), "M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20"),
-    ("audit_coherence", _lazy("Cohérence interne"), "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"),
-    ("audit_retrievability", _lazy("Retrievability"), "M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35M11 8v6M8 11h6"),
+    (
+        "audit_coverage",
+        _lazy("Couverture sémantique"),
+        "M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20",
+    ),
+    (
+        "audit_coherence",
+        _lazy("Cohérence interne"),
+        "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
+    ),
+    (
+        "audit_retrievability",
+        _lazy("Retrievability"),
+        "M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35M11 8v6M8 11h6",
+    ),
     ("audit_governance", _lazy("Gouvernance"), "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"),
 ]
 
@@ -335,13 +391,15 @@ def _analysis_progress_page_context(job):
                 status = "active"
             else:
                 status = "pending"
-            result.append({
-                "key": key,
-                "label": label,
-                "icon_svg": icon_svg,
-                "status": status,
-                "progress_pct": phase_progress,
-            })
+            result.append(
+                {
+                    "key": key,
+                    "label": label,
+                    "icon_svg": icon_svg,
+                    "status": status,
+                    "progress_pct": phase_progress,
+                }
+            )
         return result
 
     analysis_phases = build_phases(_PIPELINE_PHASES)
@@ -359,10 +417,16 @@ def _analysis_results_context(job):
     return {
         "job": job,
         "dup_count": DuplicateGroup.objects.filter(analysis_job=job).count(),
-        "contra_count": ContradictionPair.objects.filter(analysis_job=job).exclude(resolution="resolved").count(),
+        "contra_count": ContradictionPair.objects.filter(analysis_job=job)
+        .exclude(resolution="resolved")
+        .count(),
         "cluster_count": TopicCluster.objects.filter(analysis_job=job).count(),
-        "gap_count": GapReport.objects.filter(analysis_job=job).exclude(resolution="resolved").count(),
-        "hallu_count": HallucinationReport.objects.filter(analysis_job=job).exclude(resolution="resolved").count(),
+        "gap_count": GapReport.objects.filter(analysis_job=job)
+        .exclude(resolution="resolved")
+        .count(),
+        "hallu_count": HallucinationReport.objects.filter(analysis_job=job)
+        .exclude(resolution="resolved")
+        .count(),
         "doc_count": Document.objects.filter(project=job.project).count(),
         "ds": compute_score(job.project),
         "should_poll": should_poll,
@@ -382,7 +446,11 @@ def analysis_list(request):
 
 
 _ALLOWED_CONFIG_SECTIONS = {
-    "duplicate", "contradiction", "clustering", "gap_detection", "hallucination",
+    "duplicate",
+    "contradiction",
+    "clustering",
+    "gap_detection",
+    "hallucination",
     "use_batch_api",
 }
 
@@ -452,7 +520,11 @@ def analysis_retry(request, pk):
         return redirect("analysis-list")
 
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
-    if job.status not in (AnalysisJob.Status.QUEUED, AnalysisJob.Status.FAILED, AnalysisJob.Status.CANCELLED):
+    if job.status not in (
+        AnalysisJob.Status.QUEUED,
+        AnalysisJob.Status.FAILED,
+        AnalysisJob.Status.CANCELLED,
+    ):
         return redirect("analysis-detail", pk=pk)
 
     # Only delete audit jobs if resuming from an analysis phase (audit hasn't
@@ -491,8 +563,10 @@ def analysis_delete(request, pk):
 
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
     log_audit(
-        tenant=request.tenant, user=request.user,
-        action=AuditLog.Action.ANALYSIS_DELETED, target=job,
+        tenant=request.tenant,
+        user=request.user,
+        action=AuditLog.Action.ANALYSIS_DELETED,
+        target=job,
     )
     logger.info("Deleting analysis job=%s", pk)
     job.delete()
@@ -514,6 +588,7 @@ def analysis_cancel(request, pk):
     # Revoke the Celery task
     if job.celery_task_id:
         from score.celery import app as celery_app
+
         celery_app.control.revoke(job.celery_task_id, terminate=True)
 
     job.status = AnalysisJob.Status.CANCELLED
@@ -596,25 +671,29 @@ def analysis_audit_overview(request, pk):
                     }
                     for i, (k, v) in enumerate(subs.items())
                 ]
-            axes.append({
-                "key": key,
-                "label": AXIS_LABELS[key],
-                "icon": AXIS_ICONS[key],
-                "color": AXIS_COLORS.get(key, "#6c717e"),
-                "tooltip": AXIS_TOOLTIPS.get(key, ""),
-                "result": r,
-                "score": r.score if r else None,
-                "url": reverse(f"audit-{key}", kwargs={"pk": linked_audit.id}) if r else None,
-                "sub_scores": sub_list,
-            })
+            axes.append(
+                {
+                    "key": key,
+                    "label": AXIS_LABELS[key],
+                    "icon": AXIS_ICONS[key],
+                    "color": AXIS_COLORS.get(key, "#6c717e"),
+                    "tooltip": AXIS_TOOLTIPS.get(key, ""),
+                    "result": r,
+                    "score": r.score if r else None,
+                    "url": reverse(f"audit-{key}", kwargs={"pk": linked_audit.id}) if r else None,
+                    "sub_scores": sub_list,
+                }
+            )
         total_score = sum(a["score"] or 0 for a in axes) or 1
         for a in axes:
             a["score_pct"] = round((a["score"] or 0) / total_score * 100)
         context["audit_axes"] = axes
-        context["axes_json"] = json.dumps([
-            {"label": str(a["label"]), "score": a["score"] or 0, "color": a["color"]}
-            for a in axes
-        ])
+        context["axes_json"] = json.dumps(
+            [
+                {"label": str(a["label"]), "score": a["score"] or 0, "color": a["color"]}
+                for a in axes
+            ]
+        )
         context["radar_data_json"] = json.dumps(
             [{"axis": str(a["label"]), "score": a["score"] or 0} for a in axes]
         )
@@ -623,7 +702,6 @@ def analysis_audit_overview(request, pk):
             context["coverage_chart_data_json"] = json.dumps(coverage_result.chart_data)
 
     return render(request, "analysis/audit_overview.html", context)
-
 
 
 # Report views moved to analysis/views_reports.py:
@@ -645,7 +723,6 @@ from analysis.views_reports import (  # noqa: F401, E402
     trace_view,
     tree_view,
 )
-
 
 
 # JSON API views moved to analysis/views_json.py:
@@ -685,5 +762,3 @@ def analysis_results_partial(request, pk):
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
     context = _analysis_results_context(job)
     return render(request, "analysis/_results.html", context)
-
-

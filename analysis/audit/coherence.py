@@ -1,4 +1,5 @@
 """Axe 4 — Cohérence interne: terminology variants, key-value conflicts, entities."""
+
 import collections
 import logging
 import re
@@ -16,7 +17,9 @@ KV_PATTERNS = {
     "version": re.compile(r"version\s*[:=]\s*([^\n,;]{1,30})", re.I),
     "port": re.compile(r"port\s*[:=]\s*(\d{2,5})", re.I),
     "url": re.compile(r"(?:url|endpoint|uri)\s*[:=]\s*(https?://[^\s,;\"']{5,200})", re.I),
-    "date": re.compile(r"(?:date|échéance|deadline)\s*[:=]\s*(\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4})", re.I),
+    "date": re.compile(
+        r"(?:date|échéance|deadline)\s*[:=]\s*(\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4})", re.I
+    ),
     "timeout": re.compile(r"timeout\s*[:=]\s*(\d+\s*(?:ms|s|sec|min)?)", re.I),
     "limit": re.compile(r"(?:limit|max|maximum)\s*[:=]\s*(\d[\d\s]*\w*)", re.I),
 }
@@ -74,14 +77,12 @@ class CoherenceAxis(BaseAuditAxis):
         variant_groups = len(variants)
         term_consistency = max(0, 100 - variant_groups * 2)
 
-        entity_conflict_count = sum(len(e.get("values", [])) - 1 for e in entity_conflicts if len(e.get("values", [])) > 1)
+        entity_conflict_count = sum(
+            len(e.get("values", [])) - 1 for e in entity_conflicts if len(e.get("values", [])) > 1
+        )
         entity_score = max(0, 100 * (1 - entity_conflict_count / max(total_docs * 3, 1)))
 
-        score = (
-            0.40 * conflict_score
-            + 0.30 * term_consistency
-            + 0.30 * entity_score
-        )
+        score = 0.40 * conflict_score + 0.30 * term_consistency + 0.30 * entity_score
 
         metrics = {
             "total_chunks": len(chunks),
@@ -100,13 +101,21 @@ class CoherenceAxis(BaseAuditAxis):
         # Chart data
         # Top conflicting keys bar chart
         conflict_bar = [
-            {"key": kv["key"], "conflict_count": len(kv["conflicting_values"]), "values": kv["conflicting_values"][:5]}
+            {
+                "key": kv["key"],
+                "conflict_count": len(kv["conflicting_values"]),
+                "values": kv["conflicting_values"][:5],
+            }
             for kv in kv_conflicts[:20]
         ]
 
         # Variant groups (sankey-like: canonical → variants)
         variant_chart = [
-            {"canonical": v["canonical"], "variants": v["variants"][:10], "doc_count": v["doc_count"]}
+            {
+                "canonical": v["canonical"],
+                "variants": v["variants"][:10],
+                "doc_count": v["doc_count"],
+            }
             for v in variants[:30]
         ]
 
@@ -139,7 +148,13 @@ class CoherenceAxis(BaseAuditAxis):
         if len(texts) < 2:
             return {}
 
-        vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 1), min_df=1, max_df=0.95, stop_words=get_stopwords_for_sklearn())
+        vectorizer = TfidfVectorizer(
+            max_features=5000,
+            ngram_range=(1, 1),
+            min_df=1,
+            max_df=0.95,
+            stop_words=get_stopwords_for_sklearn(),
+        )
         tfidf = vectorizer.fit_transform(texts)
         feature_names = vectorizer.get_feature_names_out()
 
@@ -156,6 +171,7 @@ class CoherenceAxis(BaseAuditAxis):
         """Detect terminology variants using stemming and string similarity."""
         try:
             from nltk.stem.snowball import SnowballStemmer
+
             stemmer = SnowballStemmer("french")
         except ImportError:
             # Fallback: simple lowering
@@ -196,14 +212,17 @@ class CoherenceAxis(BaseAuditAxis):
                 canonical = max(terms, key=lambda t: all_terms[t])
                 others = [t for t in terms if t != canonical]
                 doc_count = sum(
-                    1 for doc_terms_list in doc_terms.values()
+                    1
+                    for doc_terms_list in doc_terms.values()
                     if any(t in doc_terms_list for t in terms)
                 )
-                variants.append({
-                    "canonical": canonical,
-                    "variants": others,
-                    "doc_count": doc_count,
-                })
+                variants.append(
+                    {
+                        "canonical": canonical,
+                        "variants": others,
+                        "doc_count": doc_count,
+                    }
+                )
 
         return sorted(variants, key=lambda v: v["doc_count"], reverse=True)
 
@@ -226,11 +245,13 @@ class CoherenceAxis(BaseAuditAxis):
                     {"value": val, "doc_count": len(docs), "doc_ids": list(docs)[:5]}
                     for val, docs in sorted(values.items(), key=lambda x: -len(x[1]))
                 ]
-                conflicts.append({
-                    "key": key,
-                    "conflicting_values": conflicting,
-                    "total_values": len(values),
-                })
+                conflicts.append(
+                    {
+                        "key": key,
+                        "conflicting_values": conflicting,
+                        "total_values": len(values),
+                    }
+                )
 
         return sorted(conflicts, key=lambda c: c["total_values"], reverse=True)
 
@@ -247,14 +268,16 @@ class CoherenceAxis(BaseAuditAxis):
         results = []
         for etype, values in entity_map.items():
             if len(values) > 0:
-                results.append({
-                    "entity_type": etype,
-                    "unique_values": len(values),
-                    "values": [
-                        {"value": val, "doc_count": len(docs)}
-                        for val, docs in sorted(values.items(), key=lambda x: -len(x[1]))[:20]
-                    ],
-                })
+                results.append(
+                    {
+                        "entity_type": etype,
+                        "unique_values": len(values),
+                        "values": [
+                            {"value": val, "doc_count": len(docs)}
+                            for val, docs in sorted(values.items(), key=lambda x: -len(x[1]))[:20]
+                        ],
+                    }
+                )
 
         return results
 

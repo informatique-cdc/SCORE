@@ -4,15 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('analysis', '0009_analysisjob_config_overrides'),
+        ("analysis", "0009_analysisjob_config_overrides"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='analysisjob',
-            name='status',
-            field=models.CharField(choices=[('queued', 'En attente'), ('running', 'En cours'), ('completed', 'Terminé'), ('failed', 'Échoué'), ('cancelled', 'Annulé')], default='queued', max_length=20),
+            model_name="analysisjob",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("queued", "En attente"),
+                    ("running", "En cours"),
+                    ("completed", "Terminé"),
+                    ("failed", "Échoué"),
+                    ("cancelled", "Annulé"),
+                ],
+                default="queued",
+                max_length=20,
+            ),
         ),
     ]

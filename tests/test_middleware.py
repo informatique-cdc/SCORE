@@ -1,4 +1,5 @@
 """Tests for tenants.middleware — TenantMiddleware."""
+
 import pytest
 from django.contrib.auth.models import User
 from django.test import Client, RequestFactory
@@ -24,7 +25,9 @@ def mw_tenant(db):
 @pytest.fixture
 def mw_membership(mw_tenant, mw_user):
     return TenantMembership.objects.create(
-        tenant=mw_tenant, user=mw_user, role=TenantMembership.Role.ADMIN,
+        tenant=mw_tenant,
+        user=mw_user,
+        role=TenantMembership.Role.ADMIN,
     )
 
 
@@ -36,7 +39,9 @@ def mw_project(mw_tenant):
 @pytest.fixture
 def mw_project_membership(mw_project, mw_user):
     return ProjectMembership.objects.create(
-        project=mw_project, user=mw_user, role=TenantMembership.Role.ADMIN,
+        project=mw_project,
+        user=mw_user,
+        role=TenantMembership.Role.ADMIN,
     )
 
 
@@ -55,7 +60,12 @@ class TestTenantMiddleware:
         assert "tenants/select" in resp.url or "tenant" in resp.url.lower()
 
     def test_authenticated_with_membership_resolves_tenant(
-        self, mw_user, mw_tenant, mw_membership, mw_project, mw_project_membership,
+        self,
+        mw_user,
+        mw_tenant,
+        mw_membership,
+        mw_project,
+        mw_project_membership,
     ):
         client = Client()
         client.login(username="mwuser", password="pass1234")
@@ -64,7 +74,12 @@ class TestTenantMiddleware:
         assert resp.status_code == 200
 
     def test_session_tenant_id_persisted(
-        self, mw_user, mw_tenant, mw_membership, mw_project, mw_project_membership,
+        self,
+        mw_user,
+        mw_tenant,
+        mw_membership,
+        mw_project,
+        mw_project_membership,
     ):
         client = Client()
         client.login(username="mwuser", password="pass1234")
@@ -72,7 +87,12 @@ class TestTenantMiddleware:
         assert client.session.get("tenant_id") == str(mw_tenant.id)
 
     def test_session_project_id_persisted(
-        self, mw_user, mw_tenant, mw_membership, mw_project, mw_project_membership,
+        self,
+        mw_user,
+        mw_tenant,
+        mw_membership,
+        mw_project,
+        mw_project_membership,
     ):
         client = Client()
         client.login(username="mwuser", password="pass1234")
@@ -92,16 +112,26 @@ class TestTenantMiddleware:
         mw = TenantMiddleware(lambda req: req)
         result = mw(request)
         # Middleware should pass through (return the request, not a redirect)
-        assert result is request or not hasattr(result, "url") or "tenant" not in getattr(result, "url", "")
+        assert (
+            result is request
+            or not hasattr(result, "url")
+            or "tenant" not in getattr(result, "url", "")
+        )
 
-    def test_switching_tenant_updates_session(self, mw_user, mw_membership, mw_project, mw_project_membership):
+    def test_switching_tenant_updates_session(
+        self, mw_user, mw_membership, mw_project, mw_project_membership
+    ):
         tenant2 = Tenant.objects.create(name="Tenant 2", slug="tenant-2")
         TenantMembership.objects.create(
-            tenant=tenant2, user=mw_user, role=TenantMembership.Role.ADMIN,
+            tenant=tenant2,
+            user=mw_user,
+            role=TenantMembership.Role.ADMIN,
         )
         project2 = Project.objects.create(tenant=tenant2, name="P2", slug="p2")
         ProjectMembership.objects.create(
-            project=project2, user=mw_user, role=TenantMembership.Role.ADMIN,
+            project=project2,
+            user=mw_user,
+            role=TenantMembership.Role.ADMIN,
         )
 
         client = Client()

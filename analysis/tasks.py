@@ -9,6 +9,7 @@ Supports checkpoint/resume: if a pipeline fails mid-run, the saved
 ``current_phase`` acts as a checkpoint.  On retry the pipeline skips
 phases that completed successfully and re-runs from the failed phase.
 """
+
 import logging
 import shutil
 
@@ -94,6 +95,7 @@ def _cleanup_phase(job, phase_value):
 
     elif phase_value == "semantic_graph":
         from analysis.semantic_graph import graph_dir as _get_graph_dir
+
         gdir = _get_graph_dir(str(job.project_id))
         if gdir.exists():
             shutil.rmtree(gdir)
@@ -119,6 +121,7 @@ def _cleanup_phase(job, phase_value):
 
     elif phase_value == "hallucination":
         from analysis.models import HallucinationReport
+
         deleted, _ = HallucinationReport.objects.filter(analysis_job=job).delete()
         logger.info("Cleanup hallucination: deleted %d hallucination reports", deleted)
 
@@ -197,11 +200,10 @@ def _make_progress_cb(job_pk, step_label):
     return _on_progress
 
 
-
-
 def _audit_grade(score):
     """Backward-compatible alias — delegates to shared grade()."""
     from score.scoring import grade
+
     return grade(score)
 
 
@@ -237,7 +239,9 @@ def run_unified_pipeline(self, job_id: str):
     ):
         logger.warning(
             "Skipping duplicate task %s for job %s (active task: %s)",
-            self.request.id, job_id, job.celery_task_id,
+            self.request.id,
+            job_id,
+            job.celery_task_id,
         )
         return
 
@@ -277,6 +281,7 @@ def run_unified_pipeline(self, job_id: str):
 
     try:
         import time as _pipeline_time
+
         _pipeline_t0 = _pipeline_time.monotonic()
 
         from analysis.pipeline import run_analysis_phases, run_audit_phases
@@ -294,14 +299,20 @@ def run_unified_pipeline(self, job_id: str):
             logger.info("=== Starting analysis phases ===")
             _analysis_t0 = _pipeline_time.monotonic()
             stats = run_analysis_phases(job, collector, resume_from=resume_from)
-            logger.info("=== Analysis phases completed in %.1fs ===", _pipeline_time.monotonic() - _analysis_t0)
+            logger.info(
+                "=== Analysis phases completed in %.1fs ===",
+                _pipeline_time.monotonic() - _analysis_t0,
+            )
 
             # Audit phases (60-93%)
             if job.includes_audit:
                 logger.info("=== Starting audit phases ===")
                 _audit_t0 = _pipeline_time.monotonic()
                 run_audit_phases(job, collector)
-                logger.info("=== Audit phases completed in %.1fs ===", _pipeline_time.monotonic() - _audit_t0)
+                logger.info(
+                    "=== Audit phases completed in %.1fs ===",
+                    _pipeline_time.monotonic() - _audit_t0,
+                )
 
         # Done (100%)
         _update_phase(job, AnalysisJob.Phase.DONE, UNIFIED_PROGRESS["done"])
@@ -313,9 +324,13 @@ def run_unified_pipeline(self, job_id: str):
         logger.info(
             "=== Pipeline complete in %.1fs for tenant=%s: %d dup groups, %d claims, "
             "%d contradictions, %d clusters, %d gaps, %d hallucination risks ===",
-            _total_duration, job.tenant.slug,
-            stats["dup_groups"], stats["claims"],
-            stats["contradictions"], stats["clusters"], stats["gaps"],
+            _total_duration,
+            job.tenant.slug,
+            stats["dup_groups"],
+            stats["claims"],
+            stats["contradictions"],
+            stats["clusters"],
+            stats["gaps"],
             stats.get("hallucinations", 0),
         )
 
@@ -360,7 +375,9 @@ def run_analysis(self, job_id: str):
     ):
         logger.warning(
             "Skipping duplicate task %s for job %s (active task: %s)",
-            self.request.id, job_id, job.celery_task_id,
+            self.request.id,
+            job_id,
+            job.celery_task_id,
         )
         return
 
@@ -398,6 +415,7 @@ def run_analysis(self, job_id: str):
 
     try:
         from analysis.pipeline import run_analysis_phases
+
         run_analysis_phases(job, collector, resume_from=resume_from)
 
         _update_phase(job, AnalysisJob.Phase.DONE, 100)

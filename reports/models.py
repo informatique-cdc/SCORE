@@ -1,4 +1,5 @@
 """Report generation and export models."""
+
 import uuid
 
 from django.db import models

@@ -5,6 +5,7 @@ Requires: pip install msal office365-rest-python-client
 Config keys: site_url, drive_id (optional), folder_path (optional)
 Credential ref: env var name containing client_secret (SHAREPOINT_CLIENT_SECRET)
 """
+
 import logging
 import os
 from datetime import datetime
@@ -45,7 +46,9 @@ class SharePointConnector(BaseConnector):
         if "access_token" in result:
             self._access_token = result["access_token"]
         else:
-            raise ConnectionError(f"SharePoint auth failed: {result.get('error_description', 'unknown')}")
+            raise ConnectionError(
+                f"SharePoint auth failed: {result.get('error_description', 'unknown')}"
+            )
 
     def _graph_request(self, endpoint: str) -> dict:
         """Make a Microsoft Graph API request."""
@@ -78,16 +81,18 @@ class SharePointConnector(BaseConnector):
         for item in data.get("value", []):
             if "file" not in item:
                 continue  # skip folders
-            docs.append({
-                "source_id": item["id"],
-                "title": item["name"],
-                "source_version": item.get("eTag", ""),
-                "source_url": item.get("webUrl", ""),
-                "source_modified_at": item.get("lastModifiedDateTime", ""),
-                "author": item.get("lastModifiedBy", {}).get("user", {}).get("displayName", ""),
-                "content_type": item.get("file", {}).get("mimeType", ""),
-                "size": item.get("size", 0),
-            })
+            docs.append(
+                {
+                    "source_id": item["id"],
+                    "title": item["name"],
+                    "source_version": item.get("eTag", ""),
+                    "source_url": item.get("webUrl", ""),
+                    "source_modified_at": item.get("lastModifiedDateTime", ""),
+                    "author": item.get("lastModifiedBy", {}).get("user", {}).get("displayName", ""),
+                    "content_type": item.get("file", {}).get("mimeType", ""),
+                    "size": item.get("size", 0),
+                }
+            )
         return docs
 
     def fetch_document(self, source_id: str) -> RawDocument:
@@ -115,7 +120,9 @@ class SharePointConnector(BaseConnector):
 
         modified_at = None
         if meta.get("lastModifiedDateTime"):
-            modified_at = datetime.fromisoformat(meta["lastModifiedDateTime"].replace("Z", "+00:00"))
+            modified_at = datetime.fromisoformat(
+                meta["lastModifiedDateTime"].replace("Z", "+00:00")
+            )
 
         return RawDocument(
             source_id=source_id,

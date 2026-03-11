@@ -2,6 +2,7 @@
 
 Extracted from analysis/tasks.py to reduce file size.
 """
+
 import logging
 
 from django.utils import timezone
@@ -64,10 +65,14 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         logger.info("Phases 1-2 skipped (resume): duplicates + claims")
         if collector:
             existing_dup = DuplicateGroup.objects.filter(analysis_job=job).count()
-            collector.start_phase("duplicates", "Détection des doublons", sort_order=0, items_in=doc_count)
+            collector.start_phase(
+                "duplicates", "Détection des doublons", sort_order=0, items_in=doc_count
+            )
             collector.end_phase(items_out=existing_dup, status="skipped")
             existing_claims = Claim.objects.filter(project=project).count()
-            collector.start_phase("claims", "Extraction des affirmations", sort_order=1, items_in=doc_count)
+            collector.start_phase(
+                "claims", "Extraction des affirmations", sort_order=1, items_in=doc_count
+            )
             collector.end_phase(items_out=existing_claims, status="skipped")
     elif run_dup and run_claims:
         import time as _time
@@ -102,7 +107,13 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             vec_store._trace_local.trace = dup_buffer
             t0 = _time.monotonic()
             try:
-                detector = DuplicateDetector(tenant, job, project, on_progress=dup_progress_cb, config=effective.get("duplicate"))
+                detector = DuplicateDetector(
+                    tenant,
+                    job,
+                    project,
+                    on_progress=dup_progress_cb,
+                    config=effective.get("duplicate"),
+                )
                 dup_result["groups"] = detector.run()
             except Exception as exc:
                 dup_result["error"] = exc
@@ -119,7 +130,12 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             vec_store._trace_local.trace = claims_buffer
             t0 = _time.monotonic()
             try:
-                extractor = ClaimsExtractor(tenant, project, on_progress=claims_progress_cb, config=effective.get("contradiction"))
+                extractor = ClaimsExtractor(
+                    tenant,
+                    project,
+                    on_progress=claims_progress_cb,
+                    config=effective.get("contradiction"),
+                )
                 claims_result["count"] = extractor.extract_all()
             except Exception as exc:
                 claims_result["error"] = exc
@@ -133,7 +149,9 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             pool.submit(_run_claims)
 
         if collector:
-            collector.start_phase("duplicates", "Détection des doublons", sort_order=0, items_in=doc_count)
+            collector.start_phase(
+                "duplicates", "Détection des doublons", sort_order=0, items_in=doc_count
+            )
             dup_buffer.replay_into(collector)
         if dup_result["error"]:
             logger.exception("Phase 1 failed: %s", dup_result["error"])
@@ -146,12 +164,16 @@ def run_analysis_phases(job, collector=None, resume_from=None):
                 collector.end_phase(items_out=len(dup_result["groups"]))
 
         if collector:
-            collector.start_phase("claims", "Extraction des affirmations", sort_order=1, items_in=doc_count)
+            collector.start_phase(
+                "claims", "Extraction des affirmations", sort_order=1, items_in=doc_count
+            )
             claims_buffer.replay_into(collector)
         if claims_result["error"]:
             logger.exception("Phase 2 failed: %s", claims_result["error"])
             if collector:
-                collector.end_phase(status="failed", error_message=str(claims_result["error"])[:500])
+                collector.end_phase(
+                    status="failed", error_message=str(claims_result["error"])[:500]
+                )
             raise claims_result["error"]
         else:
             logger.info("Phase 2 complete: %d claims extracted", claims_result["count"])
@@ -162,17 +184,23 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             logger.info("Phase 1 skipped (resume): duplicates")
             if collector:
                 existing = DuplicateGroup.objects.filter(analysis_job=job).count()
-                collector.start_phase("duplicates", "Détection des doublons", sort_order=0, items_in=doc_count)
+                collector.start_phase(
+                    "duplicates", "Détection des doublons", sort_order=0, items_in=doc_count
+                )
                 collector.end_phase(items_out=existing, status="skipped")
         else:
             if _is_resume_target("duplicates"):
                 _cleanup_phase(job, "duplicates")
             _update_phase(job, AnalysisJob.Phase.DUPLICATES, UNIFIED_PROGRESS["duplicates"])
             if collector:
-                collector.start_phase("duplicates", "Détection des doublons", sort_order=0, items_in=doc_count)
+                collector.start_phase(
+                    "duplicates", "Détection des doublons", sort_order=0, items_in=doc_count
+                )
             try:
                 dup_cb = _make_progress_cb(job.pk, "Vérification LLM des doublons")
-                detector = DuplicateDetector(tenant, job, project, on_progress=dup_cb, config=effective.get("duplicate"))
+                detector = DuplicateDetector(
+                    tenant, job, project, on_progress=dup_cb, config=effective.get("duplicate")
+                )
                 dup_groups = detector.run()
                 logger.info("Phase 1 complete: %d duplicate groups", len(dup_groups))
                 if collector:
@@ -186,17 +214,23 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             logger.info("Phase 2 skipped (resume): claims")
             if collector:
                 existing = Claim.objects.filter(project=project).count()
-                collector.start_phase("claims", "Extraction des affirmations", sort_order=1, items_in=doc_count)
+                collector.start_phase(
+                    "claims", "Extraction des affirmations", sort_order=1, items_in=doc_count
+                )
                 collector.end_phase(items_out=existing, status="skipped")
         else:
             if _is_resume_target("claims"):
                 _cleanup_phase(job, "claims")
             _update_phase(job, AnalysisJob.Phase.CLAIMS, UNIFIED_PROGRESS["claims"])
             if collector:
-                collector.start_phase("claims", "Extraction des affirmations", sort_order=1, items_in=doc_count)
+                collector.start_phase(
+                    "claims", "Extraction des affirmations", sort_order=1, items_in=doc_count
+                )
             try:
                 claims_cb = _make_progress_cb(job.pk, "Extraction des affirmations")
-                extractor = ClaimsExtractor(tenant, project, on_progress=claims_cb, config=effective.get("contradiction"))
+                extractor = ClaimsExtractor(
+                    tenant, project, on_progress=claims_cb, config=effective.get("contradiction")
+                )
                 claims_count = extractor.extract_all()
                 logger.info("Phase 2 complete: %d claims extracted", claims_count)
                 if collector:
@@ -222,13 +256,17 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         claim_count = Claim.objects.filter(project=project).count()
         _update_phase(job, AnalysisJob.Phase.SEMANTIC_GRAPH, UNIFIED_PROGRESS["semantic_graph"])
         if collector:
-            collector.start_phase("semantic_graph", "Graphe sémantique", sort_order=2, items_in=claim_count)
+            collector.start_phase(
+                "semantic_graph", "Graphe sémantique", sort_order=2, items_in=claim_count
+            )
         try:
             from analysis.semantic_graph import ProjectGraphBuilder
 
             graph_builder = ProjectGraphBuilder(tenant, job, project)
             nsg = graph_builder.run()
-            logger.info("Phase 3 complete: semantic graph built (%d nodes)", nsg.graph.number_of_nodes())
+            logger.info(
+                "Phase 3 complete: semantic graph built (%d nodes)", nsg.graph.number_of_nodes()
+            )
             if collector:
                 collector.end_phase(items_out=0)
         except ImportError as exc:
@@ -247,6 +285,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
 
     if nsg is None and sg_config.get("enabled", False) and not _should_skip("gaps"):
         from analysis.semantic_graph import load_graph
+
         nsg = load_graph(str(project.id))
         if nsg:
             logger.info("Loaded semantic graph from disk for resumed pipeline")
@@ -268,7 +307,9 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             collector.start_phase("clustering", "Clustering thématique", sort_order=3, items_in=0)
         try:
             clustering_cb = _make_progress_cb(job.pk, "Résumés des clusters")
-            cluster_engine = TopicClusterEngine(tenant, job, project, on_progress=clustering_cb, config=effective.get("clustering"))
+            cluster_engine = TopicClusterEngine(
+                tenant, job, project, on_progress=clustering_cb, config=effective.get("clustering")
+            )
             clusters = cluster_engine.run()
             logger.info("Phase 4 complete: %d clusters created", len(clusters))
             if collector:
@@ -285,6 +326,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         logger.info("Phase 5 skipped (resume): gaps")
         if collector:
             from analysis.models import GapReport
+
             existing = GapReport.objects.filter(analysis_job=job).count()
             collector.start_phase("gaps", "Détection des lacunes", sort_order=4, items_in=0)
             collector.end_phase(items_out=existing, status="skipped")
@@ -294,10 +336,19 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         _update_phase(job, AnalysisJob.Phase.GAPS, UNIFIED_PROGRESS["gaps"])
         cluster_count = TopicCluster.objects.filter(analysis_job=job).count()
         if collector:
-            collector.start_phase("gaps", "Détection des lacunes", sort_order=4, items_in=cluster_count)
+            collector.start_phase(
+                "gaps", "Détection des lacunes", sort_order=4, items_in=cluster_count
+            )
         try:
             gaps_cb = _make_progress_cb(job.pk, "Détection des lacunes")
-            gap_detector = GapDetector(tenant, job, project, nsg=nsg, on_progress=gaps_cb, config=effective.get("gap_detection"))
+            gap_detector = GapDetector(
+                tenant,
+                job,
+                project,
+                nsg=nsg,
+                on_progress=gaps_cb,
+                config=effective.get("gap_detection"),
+            )
             gaps = gap_detector.run()
             logger.info("Phase 5 complete: %d gaps detected", len(gaps))
             if collector:
@@ -331,8 +382,11 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         logger.info("Phase 7 skipped (resume): contradictions")
         if collector:
             from analysis.models import ContradictionPair
+
             existing = ContradictionPair.objects.filter(analysis_job=job).count()
-            collector.start_phase("contradictions", "Détection des contradictions", sort_order=6, items_in=0)
+            collector.start_phase(
+                "contradictions", "Détection des contradictions", sort_order=6, items_in=0
+            )
             collector.end_phase(items_out=existing, status="skipped")
     else:
         if _is_resume_target("contradictions"):
@@ -340,10 +394,14 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         _update_phase(job, AnalysisJob.Phase.CONTRADICTIONS, UNIFIED_PROGRESS["contradictions"])
         claim_count = Claim.objects.filter(project=project).count()
         if collector:
-            collector.start_phase("contradictions", "Détection des contradictions", sort_order=6, items_in=claim_count)
+            collector.start_phase(
+                "contradictions", "Détection des contradictions", sort_order=6, items_in=claim_count
+            )
         try:
             contra_cb = _make_progress_cb(job.pk, "Classification des paires")
-            contra_detector = ContradictionDetector(tenant, job, project, on_progress=contra_cb, config=effective.get("contradiction"))
+            contra_detector = ContradictionDetector(
+                tenant, job, project, on_progress=contra_cb, config=effective.get("contradiction")
+            )
             contradictions = contra_detector.run()
             logger.info("Phase 7 complete: %d contradictions found", len(contradictions))
             if collector:
@@ -360,20 +418,31 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         logger.info("Phase 8 skipped (resume): hallucination")
         if collector:
             from analysis.models import HallucinationReport
+
             existing = HallucinationReport.objects.filter(analysis_job=job).count()
-            collector.start_phase("hallucination", "Détection des risques d'hallucination", sort_order=7, items_in=0)
+            collector.start_phase(
+                "hallucination", "Détection des risques d'hallucination", sort_order=7, items_in=0
+            )
             collector.end_phase(items_out=existing, status="skipped")
     else:
         if _is_resume_target("hallucination"):
             _cleanup_phase(job, "hallucination")
         _update_phase(job, AnalysisJob.Phase.HALLUCINATION, UNIFIED_PROGRESS["hallucination"])
         if collector:
-            collector.start_phase("hallucination", "Détection des risques d'hallucination", sort_order=7, items_in=doc_count)
+            collector.start_phase(
+                "hallucination",
+                "Détection des risques d'hallucination",
+                sort_order=7,
+                items_in=doc_count,
+            )
         try:
             from analysis.hallucination import HallucinationDetector
+
             hallu_cb = _make_progress_cb(job.pk, "Détection des risques d'hallucination")
             hallu_detector = HallucinationDetector(
-                tenant, job, project,
+                tenant,
+                job,
+                project,
                 on_progress=hallu_cb,
                 config=effective.get("hallucination"),
             )
@@ -424,8 +493,7 @@ def run_audit_phases(job, collector=None, resume_from=None):
     completed_axes = set()
     if resume_from:
         completed_axes = set(
-            AuditAxisResult.objects.filter(audit_job=audit_job)
-            .values_list("axis", flat=True)
+            AuditAxisResult.objects.filter(audit_job=audit_job).values_list("axis", flat=True)
         )
 
     resume_axis_key = None
@@ -443,7 +511,8 @@ def run_audit_phases(job, collector=None, resume_from=None):
     for idx, (axis_key, module_path, class_name) in enumerate(AXIS_ORDER):
         if axis_key in completed_axes and axis_key != resume_axis_key:
             existing_result = AuditAxisResult.objects.filter(
-                audit_job=audit_job, axis=axis_key,
+                audit_job=audit_job,
+                axis=axis_key,
             ).first()
             score = existing_result.score if existing_result else 0
             w = weights.get(axis_key, 1.0 / 6)
@@ -478,6 +547,7 @@ def run_audit_phases(job, collector=None, resume_from=None):
 
     def _run_single_axis(idx, axis_key, module_path, class_name):
         import django
+
         django.db.connections.close_all()
         mod = import_module(module_path)
         axis_cls = getattr(mod, class_name)
@@ -499,8 +569,9 @@ def run_audit_phases(job, collector=None, resume_from=None):
                 result = future.result()
                 axis_results[axis_key] = result
                 score, _metrics, _chart, _details, duration = result
-                logger.info("Audit axis %s complete: score=%.1f duration=%.1fs",
-                            axis_key, score, duration)
+                logger.info(
+                    "Audit axis %s complete: score=%.1f duration=%.1fs", axis_key, score, duration
+                )
             except Exception as exc:
                 logger.exception("Audit axis %s failed: %s", axis_key, exc)
                 axis_results[axis_key] = exc

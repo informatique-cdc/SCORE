@@ -1,4 +1,5 @@
 """Axe 2 — Structure RAG: chunk size stats, info density, readability, overlap."""
+
 import collections
 import logging
 import math
@@ -25,8 +26,12 @@ class StructureAxis(BaseAuditAxis):
             )
             .select_related("document__connector")
             .values_list(
-                "id", "content", "token_count", "document_id",
-                "document__title", "document__connector__name",
+                "id",
+                "content",
+                "token_count",
+                "document_id",
+                "document__title",
+                "document__connector__name",
                 "chunk_index",
             )
             .order_by("document_id", "chunk_index")
@@ -146,25 +151,29 @@ class StructureAxis(BaseAuditAxis):
             min_s = min(tcs)
             max_s = max(tcs)
             q1, median, q3 = self._quartiles(tcs)
-            source_violin.append({
-                "source": source,
-                "count": len(tcs),
-                "mean": round(mean_s, 1),
-                "min": min_s,
-                "max": max_s,
-                "q1": q1,
-                "median": median,
-                "q3": q3,
-            })
+            source_violin.append(
+                {
+                    "source": source,
+                    "count": len(tcs),
+                    "mean": round(mean_s, 1),
+                    "min": min_s,
+                    "max": max_s,
+                    "q1": q1,
+                    "median": median,
+                    "q3": q3,
+                }
+            )
 
         # Scatter: size vs density
         scatter = []
         for i in range(min(500, total)):
-            scatter.append({
-                "tokens": token_counts[i],
-                "density": round(densities[i], 3),
-                "doc_title": chunks[i][4][:50],
-            })
+            scatter.append(
+                {
+                    "tokens": token_counts[i],
+                    "density": round(densities[i], 3),
+                    "doc_title": chunks[i][4][:50],
+                }
+            )
 
         chart_data = {
             "token_histogram": tc_hist,
@@ -180,11 +189,13 @@ class StructureAxis(BaseAuditAxis):
         details = {
             "too_small_chunks": [
                 {"chunk_id": str(c[0]), "doc_title": c[4][:80], "tokens": token_counts[i]}
-                for i, c in enumerate(chunks) if token_counts[i] < min_tokens
+                for i, c in enumerate(chunks)
+                if token_counts[i] < min_tokens
             ][:30],
             "too_large_chunks": [
                 {"chunk_id": str(c[0]), "doc_title": c[4][:80], "tokens": token_counts[i]}
-                for i, c in enumerate(chunks) if token_counts[i] > max_tokens
+                for i, c in enumerate(chunks)
+                if token_counts[i] > max_tokens
             ][:30],
         }
 
@@ -216,7 +227,11 @@ class StructureAxis(BaseAuditAxis):
         for i in range(bins):
             lo = mn + i * step
             hi = mn + (i + 1) * step
-            cnt = sum(1 for v in values if lo <= v < hi) if i < bins - 1 else sum(1 for v in values if lo <= v <= hi)
+            cnt = (
+                sum(1 for v in values if lo <= v < hi)
+                if i < bins - 1
+                else sum(1 for v in values if lo <= v <= hi)
+            )
             result.append({"bin_start": round(lo, 1), "bin_end": round(hi, 1), "count": cnt})
         return result
 

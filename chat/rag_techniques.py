@@ -4,6 +4,7 @@ RAG technique implementations for the chat pipeline.
 Each function corresponds to one of the 8 RAG techniques available
 in the Outils dropdown. They are composed by the orchestrator in rag.py.
 """
+
 import json
 import logging
 
@@ -24,6 +25,7 @@ def _parse_json(raw: str) -> dict:
         global _FENCE_RE
         if _FENCE_RE is None:
             import re
+
             _FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)```\s*$", re.DOTALL)
         m = _FENCE_RE.match(raw)
         if m:
@@ -34,6 +36,7 @@ def _parse_json(raw: str) -> dict:
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
+
 
 def _reciprocal_rank_fusion(result_lists: list[list[dict]], k_rrf: int = 60) -> list[dict]:
     """Merge multiple ranked result lists using Reciprocal Rank Fusion.
@@ -70,6 +73,7 @@ def _format_chunks_block(results: list[dict], chunks_by_id: dict) -> str:
 # ---------------------------------------------------------------------------
 # Phase 1: Pre-retrieval — Query Expansion
 # ---------------------------------------------------------------------------
+
 
 def rag_fusion(question, llm, vec_store, tenant_id, project_id, k=5, n_variants=3):
     """RAG Fusion: generate query variants, search each, merge via RRF.
@@ -209,6 +213,7 @@ def synthesize_sub_results(question, sub_questions, sub_results, history, llm):
 # Phase 2: Retrieval Enhancement
 # ---------------------------------------------------------------------------
 
+
 def graph_rag_context(question, project):
     """Extract concept context from the semantic graph.
 
@@ -245,6 +250,7 @@ def graph_rag_context(question, project):
 # ---------------------------------------------------------------------------
 # Phase 3: Post-retrieval
 # ---------------------------------------------------------------------------
+
 
 def rerank_chunks(question, results, chunks_by_id, llm, top_k=5):
     """LLM-based re-ranking: score each chunk's relevance 0-10.
@@ -348,6 +354,7 @@ def self_rag_filter(question, results, chunks_by_id, llm):
 # Phase 4: Generation — Agentic RAG
 # ---------------------------------------------------------------------------
 
+
 def agentic_rag(question, tenant, project, history, llm, vec_store, max_steps=3):
     """Agentic RAG: autonomous search/evaluate/answer loop.
 
@@ -423,7 +430,9 @@ def agentic_rag(question, tenant, project, history, llm, vec_store, max_steps=3)
 
     # If we reach max_steps without an answer, synthesize from scratchpad
     logger.info("Agentic RAG: max steps reached, synthesizing from scratchpad")
-    scratchpad_text = "\n\n".join(scratchpad_entries) if scratchpad_entries else "Aucune information trouvée."
+    scratchpad_text = (
+        "\n\n".join(scratchpad_entries) if scratchpad_entries else "Aucune information trouvée."
+    )
     fallback_prompt = (
         f"À partir des informations suivantes, réponds à la question : {question}\n\n"
         f"{scratchpad_text}\n\n"
@@ -452,15 +461,17 @@ def _finalize_agentic(answer_text, all_chunk_ids, all_doc_ids):
     if all_doc_ids:
         docs = Document.objects.filter(id__in=list(all_doc_ids))
         for doc in docs:
-            sources.append({
-                "title": doc.title,
-                "chunk": "",
-                "similarity": 0.0,
-                "document_id": str(doc.id),
-                "source_url": doc.source_url or "",
-                "doc_type": doc.doc_type or "",
-                "connector_id": str(doc.connector_id) if doc.connector_id else "",
-            })
+            sources.append(
+                {
+                    "title": doc.title,
+                    "chunk": "",
+                    "similarity": 0.0,
+                    "document_id": str(doc.id),
+                    "source_url": doc.source_url or "",
+                    "doc_type": doc.doc_type or "",
+                    "connector_id": str(doc.connector_id) if doc.connector_id else "",
+                }
+            )
 
     return {
         "answer": "\n".join(answer_lines).rstrip(),

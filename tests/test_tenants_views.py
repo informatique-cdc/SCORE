@@ -1,4 +1,5 @@
 """Tests for tenants.views — tenant/project CRUD, user management."""
+
 import pytest
 from django.contrib.auth.models import User
 from django.test import Client
@@ -15,17 +16,22 @@ from tenants.models import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def admin_setup(db):
     """Full setup: user + tenant + membership + project + project_membership."""
     user = User.objects.create_user("admin", "admin@example.com", "pass1234")
     tenant = Tenant.objects.create(name="Acme Corp", slug="acme-corp")
     membership = TenantMembership.objects.create(
-        tenant=tenant, user=user, role=TenantMembership.Role.ADMIN,
+        tenant=tenant,
+        user=user,
+        role=TenantMembership.Role.ADMIN,
     )
     project = Project.objects.create(tenant=tenant, name="Main", slug="main")
     ProjectMembership.objects.create(
-        project=project, user=user, role=TenantMembership.Role.ADMIN,
+        project=project,
+        user=user,
+        role=TenantMembership.Role.ADMIN,
     )
     return user, tenant, membership, project
 
@@ -46,6 +52,7 @@ def _logged_in_client(user, tenant=None, project=None):
 # ---------------------------------------------------------------------------
 # Tenant select
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestTenantSelect:
@@ -73,6 +80,7 @@ class TestTenantSelect:
 # Tenant create
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestTenantCreate:
     def test_creates_tenant_and_admin_membership(self, admin_setup):
@@ -84,7 +92,9 @@ class TestTenantCreate:
         new_tenant = Tenant.objects.get(name="New Space")
         assert new_tenant.slug == "new-space"
         assert TenantMembership.objects.filter(
-            tenant=new_tenant, user=user, role=TenantMembership.Role.ADMIN,
+            tenant=new_tenant,
+            user=user,
+            role=TenantMembership.Role.ADMIN,
         ).exists()
         assert client.session["tenant_id"] == str(new_tenant.id)
 
@@ -118,6 +128,7 @@ class TestTenantCreate:
 # Project list and create
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestProjectList:
     def test_shows_projects(self, admin_setup):
@@ -139,26 +150,35 @@ class TestProjectCreate:
     def test_creates_project(self, admin_setup):
         user, tenant, _, _ = admin_setup
         client = _logged_in_client(user, tenant)
-        resp = client.post("/tenants/projects/create/", {
-            "name": "New Project",
-            "description": "A new project.",
-        })
+        resp = client.post(
+            "/tenants/projects/create/",
+            {
+                "name": "New Project",
+                "description": "A new project.",
+            },
+        )
         assert resp.status_code == 302
         assert Project.objects.filter(tenant=tenant, name="New Project").exists()
         new_project = Project.objects.get(tenant=tenant, name="New Project")
         # Creator should have admin membership
         assert ProjectMembership.objects.filter(
-            project=new_project, user=user, role=TenantMembership.Role.ADMIN,
+            project=new_project,
+            user=user,
+            role=TenantMembership.Role.ADMIN,
         ).exists()
 
     def test_non_admin_cannot_create(self, admin_setup):
         _, tenant, _, project = admin_setup
         viewer = User.objects.create_user("viewer", "v@example.com", "pass1234")
         TenantMembership.objects.create(
-            tenant=tenant, user=viewer, role=TenantMembership.Role.VIEWER,
+            tenant=tenant,
+            user=viewer,
+            role=TenantMembership.Role.VIEWER,
         )
         ProjectMembership.objects.create(
-            project=project, user=viewer, role=TenantMembership.Role.VIEWER,
+            project=project,
+            user=viewer,
+            role=TenantMembership.Role.VIEWER,
         )
         client = _logged_in_client(viewer, tenant, project)
         resp = client.post("/tenants/projects/create/", {"name": "Nope"})
@@ -171,34 +191,44 @@ class TestProjectCreate:
 # User invite
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestUserInvite:
     def test_invite_new_email_creates_user_and_membership(self, admin_setup):
         user, tenant, _, project = admin_setup
         client = _logged_in_client(user, tenant, project)
-        resp = client.post("/tenants/users/invite/", {
-            "email": "newguy@example.com",
-            "role": "editor",
-        })
+        resp = client.post(
+            "/tenants/users/invite/",
+            {
+                "email": "newguy@example.com",
+                "role": "editor",
+            },
+        )
         assert resp.status_code == 302
 
         invited_user = User.objects.get(email="newguy@example.com")
         assert TenantMembership.objects.filter(
-            tenant=tenant, user=invited_user, role=TenantMembership.Role.EDITOR,
+            tenant=tenant,
+            user=invited_user,
+            role=TenantMembership.Role.EDITOR,
         ).exists()
         # Should also get project memberships
         assert ProjectMembership.objects.filter(
-            project=project, user=invited_user,
+            project=project,
+            user=invited_user,
         ).exists()
 
     def test_invite_existing_user(self, admin_setup):
         user, tenant, _, project = admin_setup
         existing = User.objects.create_user("existing", "existing@example.com", "pass1234")
         client = _logged_in_client(user, tenant, project)
-        resp = client.post("/tenants/users/invite/", {
-            "email": "existing@example.com",
-            "role": "viewer",
-        })
+        resp = client.post(
+            "/tenants/users/invite/",
+            {
+                "email": "existing@example.com",
+                "role": "viewer",
+            },
+        )
         assert resp.status_code == 302
         assert TenantMembership.objects.filter(tenant=tenant, user=existing).exists()
 
@@ -206,10 +236,13 @@ class TestUserInvite:
         user, tenant, _, project = admin_setup
         client = _logged_in_client(user, tenant, project)
         # admin is already a member
-        resp = client.post("/tenants/users/invite/", {
-            "email": "admin@example.com",
-            "role": "viewer",
-        })
+        resp = client.post(
+            "/tenants/users/invite/",
+            {
+                "email": "admin@example.com",
+                "role": "viewer",
+            },
+        )
         assert resp.status_code == 302
         # Should still only have 1 membership
         assert TenantMembership.objects.filter(tenant=tenant, user=user).count() == 1
@@ -227,16 +260,21 @@ class TestUserInvite:
 # User role update
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestUserRoleUpdate:
     def test_update_role(self, admin_setup):
         user, tenant, _, project = admin_setup
         target = User.objects.create_user("target", "target@example.com", "pass1234")
         tm = TenantMembership.objects.create(
-            tenant=tenant, user=target, role=TenantMembership.Role.VIEWER,
+            tenant=tenant,
+            user=target,
+            role=TenantMembership.Role.VIEWER,
         )
         ProjectMembership.objects.create(
-            project=project, user=target, role=TenantMembership.Role.VIEWER,
+            project=project,
+            user=target,
+            role=TenantMembership.Role.VIEWER,
         )
 
         client = _logged_in_client(user, tenant, project)
@@ -258,16 +296,21 @@ class TestUserRoleUpdate:
 # User remove
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestUserRemove:
     def test_remove_member(self, admin_setup):
         user, tenant, _, project = admin_setup
         target = User.objects.create_user("removeme", "rm@example.com", "pass1234")
         tm = TenantMembership.objects.create(
-            tenant=tenant, user=target, role=TenantMembership.Role.VIEWER,
+            tenant=tenant,
+            user=target,
+            role=TenantMembership.Role.VIEWER,
         )
         ProjectMembership.objects.create(
-            project=project, user=target, role=TenantMembership.Role.VIEWER,
+            project=project,
+            user=target,
+            role=TenantMembership.Role.VIEWER,
         )
 
         client = _logged_in_client(user, tenant, project)
@@ -288,6 +331,7 @@ class TestUserRemove:
 # Settings page
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestSettingsPage:
     def test_get_settings(self, admin_setup):
@@ -299,11 +343,14 @@ class TestSettingsPage:
     def test_update_profile(self, admin_setup):
         user, tenant, _, project = admin_setup
         client = _logged_in_client(user, tenant, project)
-        resp = client.post("/tenants/settings/", {
-            "form_type": "profil",
-            "first_name": "John",
-            "last_name": "Doe",
-        })
+        resp = client.post(
+            "/tenants/settings/",
+            {
+                "form_type": "profil",
+                "first_name": "John",
+                "last_name": "Doe",
+            },
+        )
         assert resp.status_code == 302
         user.refresh_from_db()
         assert user.first_name == "John"
@@ -312,10 +359,13 @@ class TestSettingsPage:
     def test_update_tenant_name(self, admin_setup):
         user, tenant, _, project = admin_setup
         client = _logged_in_client(user, tenant, project)
-        resp = client.post("/tenants/settings/", {
-            "form_type": "espace",
-            "name": "Renamed Corp",
-        })
+        resp = client.post(
+            "/tenants/settings/",
+            {
+                "form_type": "espace",
+                "name": "Renamed Corp",
+            },
+        )
         assert resp.status_code == 302
         tenant.refresh_from_db()
         assert tenant.name == "Renamed Corp"
@@ -323,11 +373,14 @@ class TestSettingsPage:
     def test_update_project(self, admin_setup):
         user, tenant, _, project = admin_setup
         client = _logged_in_client(user, tenant, project)
-        resp = client.post("/tenants/settings/?tab=projet", {
-            "form_type": "projet",
-            "name": "Renamed Project",
-            "description": "New desc",
-        })
+        resp = client.post(
+            "/tenants/settings/?tab=projet",
+            {
+                "form_type": "projet",
+                "name": "Renamed Project",
+                "description": "New desc",
+            },
+        )
         assert resp.status_code == 302
         project.refresh_from_db()
         assert project.name == "Renamed Project"
@@ -336,16 +389,23 @@ class TestSettingsPage:
         _, tenant, _, project = admin_setup
         viewer = User.objects.create_user("settviewer", "sv@example.com", "pass1234")
         TenantMembership.objects.create(
-            tenant=tenant, user=viewer, role=TenantMembership.Role.VIEWER,
+            tenant=tenant,
+            user=viewer,
+            role=TenantMembership.Role.VIEWER,
         )
         ProjectMembership.objects.create(
-            project=project, user=viewer, role=TenantMembership.Role.VIEWER,
+            project=project,
+            user=viewer,
+            role=TenantMembership.Role.VIEWER,
         )
         client = _logged_in_client(viewer, tenant, project)
-        resp = client.post("/tenants/settings/", {
-            "form_type": "espace",
-            "name": "Hacked",
-        })
+        resp = client.post(
+            "/tenants/settings/",
+            {
+                "form_type": "espace",
+                "name": "Hacked",
+            },
+        )
         # Should not update — viewer lacks is_admin
         assert resp.status_code == 200
         tenant.refresh_from_db()

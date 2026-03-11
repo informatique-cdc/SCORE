@@ -27,27 +27,33 @@ from .scoring import build_breakdown_json, compute_score, compute_score_detail
 
 def _has_active_jobs(project):
     """Return True if there are any running/queued ingestion, analysis, or audit jobs."""
-    if IngestionJob.objects.filter(project=project).filter(
-        status__in=[IngestionJob.Status.QUEUED, IngestionJob.Status.RUNNING]
-    ).exists():
+    if (
+        IngestionJob.objects.filter(project=project)
+        .filter(status__in=[IngestionJob.Status.QUEUED, IngestionJob.Status.RUNNING])
+        .exists()
+    ):
         return True
-    if AnalysisJob.objects.filter(project=project).filter(
-        status__in=[AnalysisJob.Status.QUEUED, AnalysisJob.Status.RUNNING]
-    ).exists():
+    if (
+        AnalysisJob.objects.filter(project=project)
+        .filter(status__in=[AnalysisJob.Status.QUEUED, AnalysisJob.Status.RUNNING])
+        .exists()
+    ):
         return True
-    if AuditJob.objects.filter(project=project).filter(
-        status__in=[AuditJob.Status.QUEUED, AuditJob.Status.RUNNING]
-    ).exists():
+    if (
+        AuditJob.objects.filter(project=project)
+        .filter(status__in=[AuditJob.Status.QUEUED, AuditJob.Status.RUNNING])
+        .exists()
+    ):
         return True
     return False
 
 
 def _dashboard_stats_context(project):
     """Build context dict for dashboard stats partial."""
-    latest_analysis = (
-        AnalysisJob.objects.filter(project=project).order_by("-created_at").first()
+    latest_analysis = AnalysisJob.objects.filter(project=project).order_by("-created_at").first()
+    doc_count = (
+        Document.objects.filter(project=project).exclude(status=Document.Status.DELETED).count()
     )
-    doc_count = Document.objects.filter(project=project).exclude(status=Document.Status.DELETED).count()
     dup_count = 0
     contra_count = 0
     gap_count = 0
@@ -71,11 +77,10 @@ def _dashboard_latest_analysis_context(project, membership):
     """Build context dict for latest analysis partial."""
     from analysis.views import can_run_analysis
 
-    latest_analysis = (
-        AnalysisJob.objects.filter(project=project).order_by("-created_at").first()
-    )
+    latest_analysis = AnalysisJob.objects.filter(project=project).order_by("-created_at").first()
     should_poll = latest_analysis is not None and latest_analysis.status in (
-        AnalysisJob.Status.QUEUED, AnalysisJob.Status.RUNNING,
+        AnalysisJob.Status.QUEUED,
+        AnalysisJob.Status.RUNNING,
     )
     can_run, block_reason = can_run_analysis(project)
     return {
@@ -102,30 +107,44 @@ def _dashboard_recent_jobs_context(project):
 
 def _build_activity_feed(project, limit=8):
     """Build a unified activity feed from recent ingestion + analysis jobs."""
-    ingestions = IngestionJob.objects.filter(project=project).select_related("connector").order_by("-created_at")[:limit]
+    ingestions = (
+        IngestionJob.objects.filter(project=project)
+        .select_related("connector")
+        .order_by("-created_at")[:limit]
+    )
     analyses = AnalysisJob.objects.filter(project=project).order_by("-created_at")[:limit]
 
     events = []
     for job in ingestions:
-        events.append({
-            "type": "ingestion",
-            "date": job.created_at,
-            "status": job.status,
-            "title": _("Ingestion : %(name)s") % {"name": job.connector.name} if job.connector else _("Ingestion"),
-            "detail": _("%(processed)s/%(total)s documents") % {"processed": job.processed_documents, "total": job.total_documents},
-            "icon": "link",
-        })
+        events.append(
+            {
+                "type": "ingestion",
+                "date": job.created_at,
+                "status": job.status,
+                "title": _("Ingestion : %(name)s") % {"name": job.connector.name}
+                if job.connector
+                else _("Ingestion"),
+                "detail": _("%(processed)s/%(total)s documents")
+                % {"processed": job.processed_documents, "total": job.total_documents},
+                "icon": "link",
+            }
+        )
     for job in analyses:
-        phase_label = job.get_current_phase_display() if job.status == AnalysisJob.Status.RUNNING else ""
-        events.append({
-            "type": "analysis",
-            "date": job.created_at,
-            "status": job.status,
-            "title": _("Analyse %(status)s") % {"status": job.get_status_display()},
-            "detail": phase_label or (f"{job.progress_pct}%" if job.status == AnalysisJob.Status.RUNNING else ""),
-            "icon": "search",
-            "pk": str(job.pk),
-        })
+        phase_label = (
+            job.get_current_phase_display() if job.status == AnalysisJob.Status.RUNNING else ""
+        )
+        events.append(
+            {
+                "type": "analysis",
+                "date": job.created_at,
+                "status": job.status,
+                "title": _("Analyse %(status)s") % {"status": job.get_status_display()},
+                "detail": phase_label
+                or (f"{job.progress_pct}%" if job.status == AnalysisJob.Status.RUNNING else ""),
+                "icon": "search",
+                "pk": str(job.pk),
+            }
+        )
 
     events.sort(key=lambda e: e["date"], reverse=True)
     return events[:limit]
@@ -140,41 +159,52 @@ def _build_top_issues(project):
     )
     issues = []
 
-    doc_count = Document.objects.filter(project=project).exclude(
-        status=Document.Status.DELETED
-    ).count()
+    doc_count = (
+        Document.objects.filter(project=project).exclude(status=Document.Status.DELETED).count()
+    )
     connector_count = ConnectorConfig.objects.filter(project=project).count()
 
     # Setup alerts (before any analysis exists)
     if connector_count == 0:
-        issues.append({
-            "severity": "medium",
-            "title": _("Aucun connecteur configuré"),
-            "detail": _("Configurez un connecteur pour importer vos documents."),
-            "action_label": _("Ajouter un connecteur"),
-            "action_url_name": "connector-create",
-            "action_pk": None,
-        })
+        issues.append(
+            {
+                "severity": "medium",
+                "title": _("Aucun connecteur configuré"),
+                "detail": _("Configurez un connecteur pour importer vos documents."),
+                "action_label": _("Ajouter un connecteur"),
+                "action_url_name": "connector-create",
+                "action_pk": None,
+            }
+        )
 
     if doc_count == 0 and connector_count > 0:
-        issues.append({
-            "severity": "medium",
-            "title": _("Aucun document indexé"),
-            "detail": _("Lancez une ingération depuis vos connecteurs pour indexer vos documents."),
-            "action_label": _("Voir les connecteurs"),
-            "action_url_name": "connector-list",
-            "action_pk": None,
-        })
+        issues.append(
+            {
+                "severity": "medium",
+                "title": _("Aucun document indexé"),
+                "detail": _(
+                    "Lancez une ingération depuis vos connecteurs pour indexer vos documents."
+                ),
+                "action_label": _("Voir les connecteurs"),
+                "action_url_name": "connector-list",
+                "action_pk": None,
+            }
+        )
 
     if doc_count > 0 and not latest:
-        issues.append({
-            "severity": "medium",
-            "title": _("Aucune analyse effectuée"),
-            "detail": _("Vous avez %(count)s document(s) indexé(s). Lancez une analyse pour détecter les problèmes.") % {"count": doc_count},
-            "action_label": _("Lancer l\u2019analyse"),
-            "action_url_name": "analysis-list",
-            "action_pk": None,
-        })
+        issues.append(
+            {
+                "severity": "medium",
+                "title": _("Aucune analyse effectuée"),
+                "detail": _(
+                    "Vous avez %(count)s document(s) indexé(s). Lancez une analyse pour détecter les problèmes."
+                )
+                % {"count": doc_count},
+                "action_label": _("Lancer l\u2019analyse"),
+                "action_url_name": "analysis-list",
+                "action_pk": None,
+            }
+        )
 
     if not latest:
         return issues[:4]

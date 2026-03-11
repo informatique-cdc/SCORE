@@ -4,6 +4,7 @@ Adapter between SCORE and the Neural Semantic Graph (NSG) library.
 Builds, persists, and loads a concept-level knowledge graph from project
 documents and claims, using the project's configured LLM embedding provider.
 """
+
 import json
 import logging
 from pathlib import Path
@@ -53,9 +54,12 @@ class ProjectGraphBuilder:
         nsg = NeuralSemanticGraph(config=nsg_config, embed_fn=embed_fn, lazy_embed=True)
 
         # Feed document chunks
-        docs = list(Document.objects.filter(
-            project=self.project, status=Document.Status.READY,
-        ))
+        docs = list(
+            Document.objects.filter(
+                project=self.project,
+                status=Document.Status.READY,
+            )
+        )
         logger.info("[semantic_graph] Step 1/4: Feeding %d documents...", len(docs))
         for doc_idx, doc in enumerate(docs):
             if doc_idx % 50 == 0 and doc_idx > 0:

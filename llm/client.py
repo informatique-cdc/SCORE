@@ -7,6 +7,7 @@ Usage:
     response = client.chat("Summarize this document", system="You are a helpful assistant.")
     embeddings = client.embed(["text1", "text2"])
 """
+
 import io
 import json
 import logging
@@ -70,7 +71,7 @@ class LLMClient:
             base = f"{parsed.scheme}://{parsed.netloc}"
             path = parsed.path.rstrip("/")
             if "/models" in path:
-                base_url = base + path[:path.index("/models") + len("/models")]
+                base_url = base + path[: path.index("/models") + len("/models")]
             else:
                 base_url = base + "/models"
             self._client = OpenAI(
@@ -109,9 +110,7 @@ class LLMClient:
         )
 
         embed_provider = "azure" if self.provider == "azure_mistral" else self.provider
-        self._embed_dimensions = config.get(embed_provider, {}).get(
-            "embedding_dimensions", 1536
-        )
+        self._embed_dimensions = config.get(embed_provider, {}).get("embedding_dimensions", 1536)
 
         # Fallback config
         self._fallback_models = config.get("fallback_models", [])
@@ -169,10 +168,12 @@ class LLMClient:
                 if retry_after:
                     wait = float(retry_after)
                 else:
-                    wait = min(2 ** attempt + random.random(), 60)
+                    wait = min(2**attempt + random.random(), 60)
                 logger.warning(
                     "Rate limited (attempt %d/%d), retrying in %.1fs",
-                    attempt + 1, self._MAX_RETRIES, wait,
+                    attempt + 1,
+                    self._MAX_RETRIES,
+                    wait,
                 )
                 time.sleep(wait)
 
@@ -201,18 +202,23 @@ class LLMClient:
                     if retry_after:
                         wait = float(retry_after)
                     else:
-                        wait = min(2 ** attempt + random.random(), 60)
+                        wait = min(2**attempt + random.random(), 60)
 
                     if is_last_attempt:
                         logger.warning(
                             "Rate limited on model %s after %d attempts, falling back to %s",
-                            model, self._fallback_retries, models[model_idx + 1],
+                            model,
+                            self._fallback_retries,
+                            models[model_idx + 1],
                         )
                         break  # move to next model
                     else:
                         logger.warning(
                             "Rate limited on model %s (attempt %d/%d), retrying in %.1fs",
-                            model, attempt + 1, self._fallback_retries, wait,
+                            model,
+                            attempt + 1,
+                            self._fallback_retries,
+                            wait,
                         )
                         time.sleep(wait)
 
@@ -241,9 +247,7 @@ class LLMClient:
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
-        response = self._call_with_fallback(
-            self._client.chat.completions.create, **kwargs
-        )
+        response = self._call_with_fallback(self._client.chat.completions.create, **kwargs)
         choice = response.choices[0]
 
         result = LLMResponse(
@@ -287,9 +291,7 @@ class LLMClient:
             kwargs["temperature"] = temperature
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
-        response = self._call_with_fallback(
-            self._client.chat.completions.create, **kwargs
-        )
+        response = self._call_with_fallback(self._client.chat.completions.create, **kwargs)
         choice = response.choices[0]
         result = LLMResponse(
             content=choice.message.content or "",
@@ -333,9 +335,7 @@ class LLMClient:
             if self._embed_dimensions:
                 kwargs["dimensions"] = self._embed_dimensions
 
-            response = self._call_with_retry(
-                self._embed_client.embeddings.create, **kwargs
-            )
+            response = self._call_with_retry(self._embed_client.embeddings.create, **kwargs)
             batch_embeddings = [item.embedding for item in response.data]
             all_embeddings.extend(batch_embeddings)
 
@@ -392,8 +392,13 @@ class LLMClient:
             if caller_trace is not None:
                 self._trace_local.trace = caller_trace
             try:
-                return idx, self.chat(prompt, system=system, temperature=temperature,
-                                      max_tokens=max_tokens, json_mode=json_mode)
+                return idx, self.chat(
+                    prompt,
+                    system=system,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    json_mode=json_mode,
+                )
             except (RateLimitError, APIConnectionError, APITimeoutError, ValueError) as exc:
                 logger.warning("Concurrent chat call %d failed: %s", idx, exc)
                 return idx, None
@@ -431,8 +436,11 @@ class LLMClient:
             on_progress(0, len(prompts))
         try:
             results = self._chat_batch_inner(
-                prompts, system=system, temperature=temperature,
-                max_tokens=max_tokens, json_mode=json_mode,
+                prompts,
+                system=system,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
             )
             if on_progress:
                 on_progress(len(prompts), len(prompts))
@@ -440,8 +448,11 @@ class LLMClient:
         except (RateLimitError, APIConnectionError, APITimeoutError, TimeoutError, OSError) as exc:
             logger.warning("Batch API failed (%s), falling back to chat_concurrent", exc)
             return self.chat_concurrent(
-                prompts, system=system, temperature=temperature,
-                max_tokens=max_tokens, json_mode=json_mode,
+                prompts,
+                system=system,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
                 on_progress=on_progress,
             )
 
@@ -502,12 +513,8 @@ class LLMClient:
 
         _trace = self._active_trace
         if _trace:
-            total_prompt = sum(
-                r.usage.get("prompt_tokens", 0) for r in results if r
-            )
-            total_completion = sum(
-                r.usage.get("completion_tokens", 0) for r in results if r
-            )
+            total_prompt = sum(r.usage.get("prompt_tokens", 0) for r in results if r)
+            total_completion = sum(r.usage.get("completion_tokens", 0) for r in results if r)
             _trace.record_event(
                 "llm_chat_batch",
                 prompt_tokens=total_prompt,
@@ -548,9 +555,7 @@ class LLMClient:
             if batch.status in ("failed", "expired", "cancelled"):
                 raise RuntimeError(f"Batch {batch_id} ended with status: {batch.status}")
 
-            logger.debug(
-                "Batch %s status: %s (%.0fs elapsed)", batch_id, batch.status, elapsed
-            )
+            logger.debug("Batch %s status: %s (%.0fs elapsed)", batch_id, batch.status, elapsed)
 
     def _download_batch_results(
         self, output_file_id: str, num_requests: int
@@ -616,13 +621,19 @@ class LLMClient:
         use_batch = settings.ANALYSIS_CONFIG.get("use_batch_api", False)
         if use_batch and len(prompts) >= 10:
             return self.chat_batch(
-                prompts, system=system, temperature=temperature,
-                max_tokens=max_tokens, json_mode=json_mode,
+                prompts,
+                system=system,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                json_mode=json_mode,
                 on_progress=on_progress,
             )
         return self.chat_concurrent(
-            prompts, system=system, temperature=temperature,
-            max_tokens=max_tokens, json_mode=json_mode,
+            prompts,
+            system=system,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            json_mode=json_mode,
             max_workers=max_workers,
             on_progress=on_progress,
         )

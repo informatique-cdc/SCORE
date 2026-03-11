@@ -1,4 +1,5 @@
 """Tests for analysis.clustering — TopicClusterEngine."""
+
 import json
 from unittest.mock import MagicMock, patch
 
@@ -36,6 +37,7 @@ def _random_vectors(n, dim=1536):
 # Clustering
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestClustering:
     def test_kmeans_creates_clusters(self, tenant, project, connector, analysis_job):
@@ -45,22 +47,35 @@ class TestClustering:
         chunk_ids = [str(c.id) for c in chunks]
         vectors = _random_vectors(n)
 
-        eng = _make_engine(tenant, analysis_job, project, algorithm="kmeans",
-                           config={"kmeans_k": 3}, min_cluster_size=2)
+        eng = _make_engine(
+            tenant,
+            analysis_job,
+            project,
+            algorithm="kmeans",
+            config={"kmeans_k": 3},
+            min_cluster_size=2,
+        )
         eng.vec_store.get_all_vectors_for_tenant.return_value = [
             (cid, vec) for cid, vec in zip(chunk_ids, vectors)
         ]
 
         # Mock summaries / taxonomy / tree dependencies
         eng.llm.chat_batch_or_concurrent.return_value = [
-            make_llm_response(json.dumps({
-                "label": f"Topic {i}", "summary": f"Summary {i}",
-                "key_concepts": [f"concept_{i}"], "content_purpose": f"Purpose {i}",
-            })) for i in range(3)
+            make_llm_response(
+                json.dumps(
+                    {
+                        "label": f"Topic {i}",
+                        "summary": f"Summary {i}",
+                        "key_concepts": [f"concept_{i}"],
+                        "content_purpose": f"Purpose {i}",
+                    }
+                )
+            )
+            for i in range(3)
         ]
-        eng.llm.chat.return_value = make_llm_response(json.dumps({
-            "taxonomy": [{"category": "All", "clusters": [0, 1, 2]}]
-        }))
+        eng.llm.chat.return_value = make_llm_response(
+            json.dumps({"taxonomy": [{"category": "All", "clusters": [0, 1, 2]}]})
+        )
         eng.vec_store.get_chunk_embeddings_batch.return_value = {}
 
         clusters = eng.run()
@@ -93,10 +108,12 @@ class TestClustering:
         np.testing.assert_array_equal(coords, np.zeros((2, 2)))
 
     @patch("analysis.clustering.KMeans")
-    def test_hdbscan_import_error_falls_back_to_kmeans(self, mock_kmeans_cls,
-                                                        tenant, project, analysis_job):
-        eng = _make_engine(tenant, analysis_job, project, algorithm="hdbscan",
-                           config={"kmeans_k": 2})
+    def test_hdbscan_import_error_falls_back_to_kmeans(
+        self, mock_kmeans_cls, tenant, project, analysis_job
+    ):
+        eng = _make_engine(
+            tenant, analysis_job, project, algorithm="hdbscan", config={"kmeans_k": 2}
+        )
         vectors = _random_vectors(6, dim=1536)
 
         mock_kmeans = MagicMock()
@@ -104,9 +121,14 @@ class TestClustering:
         mock_kmeans_cls.return_value = mock_kmeans
 
         with patch.dict("sys.modules", {"hdbscan": None}):
-            with patch("builtins.__import__", side_effect=lambda name, *a, **kw:
-                        (_ for _ in ()).throw(ImportError("no hdbscan"))
-                        if name == "hdbscan" else __builtins__.__import__(name, *a, **kw)):
+            with patch(
+                "builtins.__import__",
+                side_effect=lambda name, *a, **kw: (
+                    (_ for _ in ()).throw(ImportError("no hdbscan"))
+                    if name == "hdbscan"
+                    else __builtins__.__import__(name, *a, **kw)
+                ),
+            ):
                 labels = eng._cluster(vectors)
 
         mock_kmeans_cls.assert_called_once()
@@ -117,28 +139,41 @@ class TestClustering:
 # Generate summaries
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestGenerateSummaries:
     def test_summary_from_llm(self, tenant, project, connector, analysis_job):
         cluster = TopicCluster.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
-            label="Placeholder", doc_count=2, chunk_count=4,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            label="Placeholder",
+            doc_count=2,
+            chunk_count=4,
         )
         doc = make_document(tenant, project, connector, title="Doc for summary")
         chunk = make_chunk(tenant, doc, 0, "Some relevant content.")
         ClusterMembership.objects.create(
-            tenant=tenant, project=project, cluster=cluster,
-            chunk=chunk, document=doc, similarity_to_centroid=0.9,
+            tenant=tenant,
+            project=project,
+            cluster=cluster,
+            chunk=chunk,
+            document=doc,
+            similarity_to_centroid=0.9,
         )
 
         eng = _make_engine(tenant, analysis_job, project)
         eng.llm.chat_batch_or_concurrent.return_value = [
-            make_llm_response(json.dumps({
-                "label": "Security Policies",
-                "summary": "Documents about security.",
-                "key_concepts": ["security", "policy"],
-                "content_purpose": "Define security guidelines",
-            })),
+            make_llm_response(
+                json.dumps(
+                    {
+                        "label": "Security Policies",
+                        "summary": "Documents about security.",
+                        "key_concepts": ["security", "policy"],
+                        "content_purpose": "Define security guidelines",
+                    }
+                )
+            ),
         ]
 
         eng._generate_summaries([cluster])
@@ -150,14 +185,22 @@ class TestGenerateSummaries:
 
     def test_summary_fallback_on_error(self, tenant, project, connector, analysis_job):
         cluster = TopicCluster.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
-            label="Placeholder", doc_count=1, chunk_count=1,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            label="Placeholder",
+            doc_count=1,
+            chunk_count=1,
         )
         doc = make_document(tenant, project, connector, title="Fallback Doc Title")
         chunk = make_chunk(tenant, doc, 0, "Content.")
         ClusterMembership.objects.create(
-            tenant=tenant, project=project, cluster=cluster,
-            chunk=chunk, document=doc, similarity_to_centroid=0.8,
+            tenant=tenant,
+            project=project,
+            cluster=cluster,
+            chunk=chunk,
+            document=doc,
+            similarity_to_centroid=0.8,
         )
 
         eng = _make_engine(tenant, analysis_job, project)
@@ -175,25 +218,34 @@ class TestGenerateSummaries:
 # Generate taxonomy
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestGenerateTaxonomy:
     def test_valid_taxonomy_accepted(self, tenant, project, analysis_job):
         clusters = [
             TopicCluster.objects.create(
-                tenant=tenant, project=project, analysis_job=analysis_job,
-                label=f"Cluster {i}", summary=f"Summary {i}",
-                doc_count=5, chunk_count=15,
+                tenant=tenant,
+                project=project,
+                analysis_job=analysis_job,
+                label=f"Cluster {i}",
+                summary=f"Summary {i}",
+                doc_count=5,
+                chunk_count=15,
             )
             for i in range(3)
         ]
 
         eng = _make_engine(tenant, analysis_job, project)
-        eng.llm.chat.return_value = make_llm_response(json.dumps({
-            "taxonomy": [
-                {"category": "Cat A", "clusters": [0, 1]},
-                {"category": "Cat B", "clusters": [2]},
-            ]
-        }))
+        eng.llm.chat.return_value = make_llm_response(
+            json.dumps(
+                {
+                    "taxonomy": [
+                        {"category": "Cat A", "clusters": [0, 1]},
+                        {"category": "Cat B", "clusters": [2]},
+                    ]
+                }
+            )
+        )
 
         taxonomy = eng._generate_taxonomy(clusters)
 
@@ -206,17 +258,21 @@ class TestGenerateTaxonomy:
     def test_invalid_taxonomy_falls_back(self, tenant, project, analysis_job):
         clusters = [
             TopicCluster.objects.create(
-                tenant=tenant, project=project, analysis_job=analysis_job,
-                label=f"Cluster {i}", doc_count=5, chunk_count=15,
+                tenant=tenant,
+                project=project,
+                analysis_job=analysis_job,
+                label=f"Cluster {i}",
+                doc_count=5,
+                chunk_count=15,
             )
             for i in range(3)
         ]
 
         eng = _make_engine(tenant, analysis_job, project)
         # Missing cluster index 2 → invalid
-        eng.llm.chat.return_value = make_llm_response(json.dumps({
-            "taxonomy": [{"category": "Cat A", "clusters": [0, 1]}]
-        }))
+        eng.llm.chat.return_value = make_llm_response(
+            json.dumps({"taxonomy": [{"category": "Cat A", "clusters": [0, 1]}]})
+        )
 
         taxonomy = eng._generate_taxonomy(clusters)
 
@@ -226,8 +282,12 @@ class TestGenerateTaxonomy:
 
     def test_single_cluster_returns_flat(self, tenant, project, analysis_job):
         cluster = TopicCluster.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
-            label="Only One", doc_count=5, chunk_count=15,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            label="Only One",
+            doc_count=5,
+            chunk_count=15,
         )
 
         eng = _make_engine(tenant, analysis_job, project)
@@ -242,21 +302,29 @@ class TestGenerateTaxonomy:
 # Build tree
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestBuildTree:
     def test_tree_nodes_created(self, tenant, project, connector, analysis_job):
         clusters = []
         for i in range(2):
             c = TopicCluster.objects.create(
-                tenant=tenant, project=project, analysis_job=analysis_job,
-                label=f"Cluster {i}", doc_count=2, chunk_count=4,
+                tenant=tenant,
+                project=project,
+                analysis_job=analysis_job,
+                label=f"Cluster {i}",
+                doc_count=2,
+                chunk_count=4,
             )
             for j in range(2):
                 doc = make_document(tenant, project, connector, title=f"Doc {i}-{j}")
                 chunk = make_chunk(tenant, doc, 0, f"Content {i}-{j}")
                 ClusterMembership.objects.create(
-                    tenant=tenant, project=project, cluster=c,
-                    chunk=chunk, document=doc,
+                    tenant=tenant,
+                    project=project,
+                    cluster=c,
+                    chunk=chunk,
+                    document=doc,
                 )
             clusters.append(c)
 
@@ -280,14 +348,21 @@ class TestBuildTree:
 
     def test_single_category_skips_level(self, tenant, project, connector, analysis_job):
         cluster = TopicCluster.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
-            label="Only Cluster", doc_count=1, chunk_count=1,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            label="Only Cluster",
+            doc_count=1,
+            chunk_count=1,
         )
         doc = make_document(tenant, project, connector, title="Single Doc")
         chunk = make_chunk(tenant, doc, 0, "Single content.")
         ClusterMembership.objects.create(
-            tenant=tenant, project=project, cluster=cluster,
-            chunk=chunk, document=doc,
+            tenant=tenant,
+            project=project,
+            cluster=cluster,
+            chunk=chunk,
+            document=doc,
         )
 
         taxonomy = [{"category": "All", "clusters": [0]}]
@@ -302,25 +377,40 @@ class TestBuildTree:
 
     def test_subclusters_in_tree(self, tenant, project, connector, analysis_job):
         parent_cluster = TopicCluster.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
-            label="Parent Cluster", doc_count=4, chunk_count=8,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            label="Parent Cluster",
+            doc_count=4,
+            chunk_count=8,
         )
         subcluster = TopicCluster.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
             parent=parent_cluster,
-            label="Sub Cluster", level=1, doc_count=2, chunk_count=4,
+            label="Sub Cluster",
+            level=1,
+            doc_count=2,
+            chunk_count=4,
         )
 
         doc = make_document(tenant, project, connector, title="Sub Doc")
         chunk = make_chunk(tenant, doc, 0, "Sub content.")
         ClusterMembership.objects.create(
-            tenant=tenant, project=project, cluster=subcluster,
-            chunk=chunk, document=doc,
+            tenant=tenant,
+            project=project,
+            cluster=subcluster,
+            chunk=chunk,
+            document=doc,
         )
         # Also add membership to parent so it shows up in the mapping
         ClusterMembership.objects.create(
-            tenant=tenant, project=project, cluster=parent_cluster,
-            chunk=chunk, document=doc,
+            tenant=tenant,
+            project=project,
+            cluster=parent_cluster,
+            chunk=chunk,
+            document=doc,
         )
 
         taxonomy = [{"category": "All", "clusters": [0]}]

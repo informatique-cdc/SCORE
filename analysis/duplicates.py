@@ -13,6 +13,7 @@ Algorithm:
 
 Thresholds and weights are configurable in config.yaml / settings.
 """
+
 import json
 import logging
 from difflib import SequenceMatcher
@@ -39,7 +40,9 @@ class DuplicateDetector:
         self.job = analysis_job
         self.project = project
         self.on_progress = on_progress
-        self.config = config if config is not None else settings.ANALYSIS_CONFIG.get("duplicate", {})
+        self.config = (
+            config if config is not None else settings.ANALYSIS_CONFIG.get("duplicate", {})
+        )
         self.semantic_weight = self.config.get("semantic_weight", 0.55)
         self.lexical_weight = self.config.get("lexical_weight", 0.25)
         self.metadata_weight = self.config.get("metadata_weight", 0.20)
@@ -58,8 +61,9 @@ class DuplicateDetector:
         logger.info("Starting duplicate detection for tenant=%s", self.tenant.slug)
 
         docs = list(
-            Document.objects.filter(project=self.project, status=Document.Status.READY)
-            .order_by("title")
+            Document.objects.filter(project=self.project, status=Document.Status.READY).order_by(
+                "title"
+            )
         )
         if len(docs) < 2:
             return []
@@ -69,7 +73,9 @@ class DuplicateDetector:
         # Step 1: Compute document-level embeddings (average of chunk embeddings)
         logger.info("[duplicates] Step 1/6: Computing document embeddings...")
         doc_embeddings = self._compute_document_embeddings(docs)
-        logger.info("[duplicates] Step 1/6 done: %d document embeddings computed", len(doc_embeddings))
+        logger.info(
+            "[duplicates] Step 1/6 done: %d document embeddings computed", len(doc_embeddings)
+        )
 
         # Step 2: Build MinHash index + LSH for lexical candidate generation
         logger.info("[duplicates] Step 2/6: Computing MinHash signatures for %d docs...", len(docs))
@@ -98,7 +104,11 @@ class DuplicateDetector:
 
         # Step 6: Two-tier verification: LLM for high-confidence, auto-classify the rest
         total_pairs = sum(len(g) for g in groups)
-        logger.info("[duplicates] Step 6/6: Verifying %d groups (%d pairs) via LLM...", len(groups), total_pairs)
+        logger.info(
+            "[duplicates] Step 6/6: Verifying %d groups (%d pairs) via LLM...",
+            len(groups),
+            total_pairs,
+        )
         verified_groups = self._verify_groups(groups)
 
         logger.info("Duplicate detection found %d groups", len(verified_groups))
@@ -113,8 +123,9 @@ class DuplicateDetector:
         all_chunk_ids: list[str] = []
         for doc in docs:
             chunk_ids = list(
-                DocumentChunk.objects.filter(document=doc, has_embedding=True)
-                .values_list("id", flat=True)
+                DocumentChunk.objects.filter(document=doc, has_embedding=True).values_list(
+                    "id", flat=True
+                )
             )
             if chunk_ids:
                 str_ids = [str(cid) for cid in chunk_ids]
@@ -307,7 +318,12 @@ class DuplicateDetector:
         result_groups = []
 
         for grp_idx, group_pairs in enumerate(groups):
-            logger.info("[duplicates] Verifying group %d/%d (%d pairs)", grp_idx + 1, len(groups), len(group_pairs))
+            logger.info(
+                "[duplicates] Verifying group %d/%d (%d pairs)",
+                grp_idx + 1,
+                len(groups),
+                len(group_pairs),
+            )
             db_group = DuplicateGroup.objects.create(
                 tenant=self.tenant,
                 project=self.project,
@@ -334,9 +350,14 @@ class DuplicateDetector:
             any_verified_dup = False
 
             for idx, (doc_a, doc_b, scores, evidence_a, evidence_b) in enumerate(llm_pairs):
-                verification = llm_verifications.get(idx, {
-                    "classification": "", "confidence": 0.0, "evidence": "",
-                })
+                verification = llm_verifications.get(
+                    idx,
+                    {
+                        "classification": "",
+                        "confidence": 0.0,
+                        "evidence": "",
+                    },
+                )
                 if verification.get("classification") == "duplicate":
                     any_verified_dup = True
 
@@ -355,12 +376,10 @@ class DuplicateDetector:
                     verification_confidence=verification.get("confidence"),
                     verification_evidence=verification.get("evidence", ""),
                     evidence_chunks_a=[
-                        {"chunk_id": str(c.id), "snippet": c.content[:200]}
-                        for c in evidence_a
+                        {"chunk_id": str(c.id), "snippet": c.content[:200]} for c in evidence_a
                     ],
                     evidence_chunks_b=[
-                        {"chunk_id": str(c.id), "snippet": c.content[:200]}
-                        for c in evidence_b
+                        {"chunk_id": str(c.id), "snippet": c.content[:200]} for c in evidence_b
                     ],
                 )
 
@@ -380,12 +399,10 @@ class DuplicateDetector:
                     verification_confidence=0.0,
                     verification_evidence="Score combiné entre les seuils — classé automatiquement pour revue manuelle.",
                     evidence_chunks_a=[
-                        {"chunk_id": str(c.id), "snippet": c.content[:200]}
-                        for c in evidence_a
+                        {"chunk_id": str(c.id), "snippet": c.content[:200]} for c in evidence_a
                     ],
                     evidence_chunks_b=[
-                        {"chunk_id": str(c.id), "snippet": c.content[:200]}
-                        for c in evidence_b
+                        {"chunk_id": str(c.id), "snippet": c.content[:200]} for c in evidence_b
                     ],
                 )
 
@@ -395,7 +412,9 @@ class DuplicateDetector:
                 db_group.rationale = "LLM verified these documents as duplicates."
             elif all(s["combined"] >= self.semantic_threshold for _, _, s in group_pairs):
                 db_group.recommended_action = DuplicateGroup.Action.REVIEW
-                db_group.rationale = "High similarity scores but LLM did not confirm as exact duplicates."
+                db_group.rationale = (
+                    "High similarity scores but LLM did not confirm as exact duplicates."
+                )
             else:
                 db_group.recommended_action = DuplicateGroup.Action.KEEP
                 db_group.rationale = "Documents are related but not duplicates."
@@ -417,7 +436,7 @@ class DuplicateDetector:
         # Split pairs into batches
         batches = []
         for i in range(0, len(pairs), self.llm_batch_size):
-            batches.append(pairs[i:i + self.llm_batch_size])
+            batches.append(pairs[i : i + self.llm_batch_size])
 
         prompts = []
         batch_ranges = []  # (start_idx, count) for each batch
@@ -431,7 +450,9 @@ class DuplicateDetector:
         if not prompts:
             return verifications
 
-        responses = self.llm.chat_batch_or_concurrent(prompts, json_mode=True, on_progress=self.on_progress)
+        responses = self.llm.chat_batch_or_concurrent(
+            prompts, json_mode=True, on_progress=self.on_progress
+        )
 
         for batch_idx, resp in enumerate(responses):
             start_idx, count = batch_ranges[batch_idx]
@@ -439,7 +460,9 @@ class DuplicateDetector:
                 # Fill with empty verifications
                 for i in range(count):
                     verifications[start_idx + i] = {
-                        "classification": "", "confidence": 0.0, "evidence": "",
+                        "classification": "",
+                        "confidence": 0.0,
+                        "evidence": "",
                     }
                 continue
 
@@ -455,19 +478,21 @@ class DuplicateDetector:
                 for i in range(count):
                     if start_idx + i not in verifications:
                         verifications[start_idx + i] = {
-                            "classification": "", "confidence": 0.0, "evidence": "",
+                            "classification": "",
+                            "confidence": 0.0,
+                            "evidence": "",
                         }
             except (json.JSONDecodeError, AttributeError):
                 for i in range(count):
                     verifications[start_idx + i] = {
-                        "classification": "", "confidence": 0.0, "evidence": "",
+                        "classification": "",
+                        "confidence": 0.0,
+                        "evidence": "",
                     }
 
         return verifications
 
-    def _build_batch_prompt(
-        self, batch: list[tuple[Document, Document, dict, list, list]]
-    ) -> str:
+    def _build_batch_prompt(self, batch: list[tuple[Document, Document, dict, list, list]]) -> str:
         """Build a batched LLM verification prompt for multiple pairs."""
         pair_blocks = []
         for idx, (doc_a, doc_b, scores, evidence_a, evidence_b) in enumerate(batch):
@@ -492,6 +517,4 @@ class DuplicateDetector:
 
     def _get_evidence_chunks(self, doc: Document, limit: int = 2) -> list[DocumentChunk]:
         """Get the first N chunks of a document as evidence."""
-        return list(
-            DocumentChunk.objects.filter(document=doc).order_by("chunk_index")[:limit]
-        )
+        return list(DocumentChunk.objects.filter(document=doc).order_by("chunk_index")[:limit])

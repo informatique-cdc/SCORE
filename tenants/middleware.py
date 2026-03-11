@@ -5,6 +5,7 @@ The tenant is determined by:
 1. Session key 'tenant_id' (user switches tenant in UI)
 2. First tenant the user belongs to (default)
 """
+
 import logging
 
 from django.shortcuts import redirect
@@ -47,9 +48,7 @@ class TenantMiddleware:
 
         if not membership:
             membership = (
-                TenantMembership.objects.filter(user=request.user)
-                .select_related("tenant")
-                .first()
+                TenantMembership.objects.filter(user=request.user).select_related("tenant").first()
             )
             if membership:
                 request.session["tenant_id"] = str(membership.tenant_id)

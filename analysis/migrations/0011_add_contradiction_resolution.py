@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('analysis', '0010_add_cancelled_status'),
+        ("analysis", "0010_add_cancelled_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='contradictionpair',
-            name='resolution',
-            field=models.CharField(blank=True, choices=[('', 'Non traité'), ('resolved', 'Traité'), ('kept', 'Conservé')], default='', max_length=10),
+            model_name="contradictionpair",
+            name="resolution",
+            field=models.CharField(
+                blank=True,
+                choices=[("", "Non traité"), ("resolved", "Traité"), ("kept", "Conservé")],
+                default="",
+                max_length=10,
+            ),
         ),
     ]

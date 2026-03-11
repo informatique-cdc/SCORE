@@ -59,15 +59,11 @@ class Migration(migrations.Migration):
                 ("progress_pct", models.PositiveIntegerField(default=0)),
                 (
                     "overall_score",
-                    models.FloatField(
-                        blank=True, help_text="0-100 weighted score", null=True
-                    ),
+                    models.FloatField(blank=True, help_text="0-100 weighted score", null=True),
                 ),
                 (
                     "overall_grade",
-                    models.CharField(
-                        blank=True, default="", help_text="A-E grade", max_length=1
-                    ),
+                    models.CharField(blank=True, default="", help_text="A-E grade", max_length=1),
                 ),
                 (
                     "celery_task_id",
@@ -129,15 +125,11 @@ class Migration(migrations.Migration):
                 ("score", models.FloatField(help_text="0-100 axis score")),
                 (
                     "metrics",
-                    models.JSONField(
-                        default=dict, help_text="Key metrics for this axis"
-                    ),
+                    models.JSONField(default=dict, help_text="Key metrics for this axis"),
                 ),
                 (
                     "chart_data",
-                    models.JSONField(
-                        default=dict, help_text="Pre-computed data for D3.js charts"
-                    ),
+                    models.JSONField(default=dict, help_text="Pre-computed data for D3.js charts"),
                 ),
                 (
                     "details",

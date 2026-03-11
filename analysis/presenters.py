@@ -3,6 +3,7 @@
 Extract chart data from querysets into JSON-serializable structures,
 keeping presentation logic out of view functions.
 """
+
 import json
 
 

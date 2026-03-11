@@ -1,4 +1,5 @@
 """Axe 3 — Couverture sémantique: TF-IDF, SVD/LSA, NMF topics, KMeans, LOF."""
+
 import logging
 import math
 
@@ -29,11 +30,18 @@ class CoverageAxis(BaseAuditAxis):
                 document__status="ready",
             )
             .select_related("document__connector")
-            .values_list("id", "content", "document_id", "document__title", "document__connector__name")
+            .values_list(
+                "id", "content", "document_id", "document__title", "document__connector__name"
+            )
         )
 
         if len(chunks) < 5:
-            return 100.0, {"total_chunks": len(chunks)}, {}, {"message": "Trop peu de chunks pour l'analyse de couverture"}
+            return (
+                100.0,
+                {"total_chunks": len(chunks)},
+                {},
+                {"message": "Trop peu de chunks pour l'analyse de couverture"},
+            )
 
         cfg = self.config
         max_features = cfg.get("tfidf_max_features", 10000)
@@ -46,9 +54,11 @@ class CoverageAxis(BaseAuditAxis):
 
         # TF-IDF
         vectorizer = TfidfVectorizer(
-            max_features=max_features, ngram_range=(1, 2),
+            max_features=max_features,
+            ngram_range=(1, 2),
             stop_words=get_stopwords_for_sklearn(),
-            min_df=2, max_df=0.95,
+            min_df=2,
+            max_df=0.95,
         )
         tfidf_matrix = vectorizer.fit_transform(texts)
         feature_names = vectorizer.get_feature_names_out()
@@ -95,6 +105,7 @@ class CoverageAxis(BaseAuditAxis):
 
         # PCA 2D projection for scatter chart
         from sklearn.decomposition import PCA
+
         pca = PCA(n_components=2, random_state=42)
         coords_2d = pca.fit_transform(svd_normed)
 
@@ -156,16 +167,22 @@ class CoverageAxis(BaseAuditAxis):
         # Chart data
         # 2D scatter (sampled if too many)
         sample_n = min(500, n_docs)
-        indices = np.random.default_rng(42).choice(n_docs, sample_n, replace=False) if n_docs > sample_n else np.arange(n_docs)
+        indices = (
+            np.random.default_rng(42).choice(n_docs, sample_n, replace=False)
+            if n_docs > sample_n
+            else np.arange(n_docs)
+        )
         scatter = []
         for idx in indices:
-            scatter.append({
-                "x": float(coords_2d[idx, 0]),
-                "y": float(coords_2d[idx, 1]),
-                "topic": int(labels[idx]),
-                "outlier": int(outlier_labels[idx] == -1),
-                "doc_title": chunks[idx][3][:50],
-            })
+            scatter.append(
+                {
+                    "x": float(coords_2d[idx, 0]),
+                    "y": float(coords_2d[idx, 1]),
+                    "topic": int(labels[idx]),
+                    "outlier": int(outlier_labels[idx] == -1),
+                    "doc_title": chunks[idx][3][:50],
+                }
+            )
 
         # Topic volumes bar chart
         topic_volumes = [
@@ -197,7 +214,8 @@ class CoverageAxis(BaseAuditAxis):
             "cluster_sizes": cluster_sizes,
             "outlier_chunks": [
                 {"chunk_id": str(chunks[i][0]), "doc_title": chunks[i][3][:80]}
-                for i in range(n_docs) if outlier_labels[i] == -1
+                for i in range(n_docs)
+                if outlier_labels[i] == -1
             ][:50],
         }
 

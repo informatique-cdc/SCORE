@@ -1,4 +1,5 @@
 """Abstract base class for audit axes."""
+
 import logging
 import time
 from abc import ABC, abstractmethod

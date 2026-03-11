@@ -8,18 +8,20 @@ class ContentSecurityPolicyMiddleware:
     pdf.js, echarts, Hotwire) while blocking everything else.
     """
 
-    CSP = "; ".join([
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com",
-        "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net",
-        "img-src 'self' data: blob:",
-        "font-src 'self' cdn.jsdelivr.net",
-        "connect-src 'self'",
-        "worker-src 'self' blob:",
-        "frame-src 'self'",
-        "object-src 'none'",
-        "base-uri 'self'",
-    ])
+    CSP = "; ".join(
+        [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com",
+            "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net",
+            "img-src 'self' data: blob:",
+            "font-src 'self' cdn.jsdelivr.net",
+            "connect-src 'self'",
+            "worker-src 'self' blob:",
+            "frame-src 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+        ]
+    )
 
     def __init__(self, get_response):
         self.get_response = get_response

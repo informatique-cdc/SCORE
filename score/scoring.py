@@ -12,6 +12,7 @@ a letter grade A through E.  Seven dimensions are evaluated:
   Retrievability  (max penalty 15)  Audit retrievability (9) + audit hygiene (6)
   Gouvernance     (max penalty 10)  Audit governance (6) + audit coherence (4)
 """
+
 from django.db.models import Avg
 from django.utils.translation import gettext as _
 
@@ -86,9 +87,7 @@ def _get_audit_axis_score(audit_job, axis_key):
 
 def compute_score(project):
     """Return a dict with grade, score (0-100), breakdown, and metadata."""
-    docs_qs = Document.objects.filter(project=project).exclude(
-        status=Document.Status.DELETED
-    )
+    docs_qs = Document.objects.filter(project=project).exclude(status=Document.Status.DELETED)
     total_docs = docs_qs.count()
 
     if total_docs == 0:
@@ -191,9 +190,7 @@ def compute_score_for_job(job):
         return None
 
     project = job.project
-    docs_qs = Document.objects.filter(project=project).exclude(
-        status=Document.Status.DELETED
-    )
+    docs_qs = Document.objects.filter(project=project).exclude(status=Document.Status.DELETED)
     total_docs = docs_qs.count()
     if total_docs == 0:
         return {"grade": "E", "score": 0}
@@ -254,19 +251,22 @@ def compute_score_for_job(job):
 
 def compute_score_detail(project):
     """Return the full score with per-dimension explanations and recommendations."""
-    docs_qs = Document.objects.filter(project=project).exclude(
-        status=Document.Status.DELETED
-    )
+    docs_qs = Document.objects.filter(project=project).exclude(status=Document.Status.DELETED)
     total_docs = docs_qs.count()
 
     if total_docs == 0:
         return {
             "score": 0,
             "grade": "E",
-            "summary": _("Your knowledge base is empty. Add documents and connectors to get started."),
+            "summary": _(
+                "Your knowledge base is empty. Add documents and connectors to get started."
+            ),
             "dimensions": [],
             "top_recommendations": [
-                {"icon": "plus-circle", "text": _("Configure a connector and ingest your first documents.")},
+                {
+                    "icon": "plus-circle",
+                    "text": _("Configure a connector and ingest your first documents."),
+                },
             ],
         }
 
@@ -284,17 +284,29 @@ def compute_score_detail(project):
         health = health_score(ready_docs, error_docs, total_docs)
         score = max(0, round(health * 0.10))
         no_analysis_dims = [
-            _dim(_("Health"), health, _("Document pipeline readiness status."),
-                 _health_details(ready_docs, error_docs, total_docs),
-                 _health_recs(ready_docs, error_docs, total_docs)),
+            _dim(
+                _("Health"),
+                health,
+                _("Document pipeline readiness status."),
+                _health_details(ready_docs, error_docs, total_docs),
+                _health_recs(ready_docs, error_docs, total_docs),
+            ),
         ]
         no_analysis_recs = [
-            {"icon": "play-circle", "text": _("Run your first analysis to evaluate uniqueness, consistency, coverage, and structure.")},
+            {
+                "icon": "play-circle",
+                "text": _(
+                    "Run your first analysis to evaluate uniqueness, consistency, coverage, and structure."
+                ),
+            },
         ]
         return {
             "score": score,
             "grade": _grade(score),
-            "summary": _("You have %(count)d documents but no completed analysis. Run an analysis to get your full score.") % {"count": total_docs},
+            "summary": _(
+                "You have %(count)d documents but no completed analysis. Run an analysis to get your full score."
+            )
+            % {"count": total_docs},
             "dimensions": no_analysis_dims,
             "top_recommendations": no_analysis_recs,
         }
@@ -315,7 +327,9 @@ def compute_score_detail(project):
     uniqueness_penalty = min(15, dup_ratio / 0.30 * 15)
     uniqueness_score = round(100 - uniqueness_penalty / 15 * 100)
 
-    dup_details = _("%(actionable)d actionable duplicate groups out of %(total)d total (%(ratio)s of documents).") % {"actionable": dup_actionable, "total": dup_total, "ratio": f"{dup_ratio:.0%}"}
+    dup_details = _(
+        "%(actionable)d actionable duplicate groups out of %(total)d total (%(ratio)s of documents)."
+    ) % {"actionable": dup_actionable, "total": dup_total, "ratio": f"{dup_ratio:.0%}"}
     dup_recs = []
     if dup_actionable > 0:
         merge_count = DuplicateGroup.objects.filter(
@@ -328,18 +342,39 @@ def compute_score_detail(project):
             analysis_job=latest, recommended_action=DuplicateGroup.Action.REVIEW
         ).count()
         if merge_count:
-            dup_recs.append(_("Merge %(count)d duplicate group(s) where documents are identical.") % {"count": merge_count})
+            dup_recs.append(
+                _("Merge %(count)d duplicate group(s) where documents are identical.")
+                % {"count": merge_count}
+            )
         if delete_count:
-            dup_recs.append(_("Delete older versions in %(count)d group(s) where newer documents replace them.") % {"count": delete_count})
+            dup_recs.append(
+                _("Delete older versions in %(count)d group(s) where newer documents replace them.")
+                % {"count": delete_count}
+            )
         if review_count:
-            dup_recs.append(_("Manually review %(count)d group(s) flagged for inspection.") % {"count": review_count})
-        top_recs.append({"icon": "copy", "text": _("Resolve %(count)d duplicate groups to improve uniqueness.") % {"count": dup_actionable}})
+            dup_recs.append(
+                _("Manually review %(count)d group(s) flagged for inspection.")
+                % {"count": review_count}
+            )
+        top_recs.append(
+            {
+                "icon": "copy",
+                "text": _("Resolve %(count)d duplicate groups to improve uniqueness.")
+                % {"count": dup_actionable},
+            }
+        )
     else:
         dup_details = _("No actionable duplicates detected. Your content is unique.")
 
-    dims.append(_dim(_("Uniqueness"), uniqueness_score,
-                      _("Measures the absence of duplicated content in the repository."),
-                      dup_details, dup_recs))
+    dims.append(
+        _dim(
+            _("Uniqueness"),
+            uniqueness_score,
+            _("Measures the absence of duplicated content in the repository."),
+            dup_details,
+            dup_recs,
+        )
+    )
 
     # 2. Cohérence
     contras = ContradictionPair.objects.filter(
@@ -364,21 +399,55 @@ def compute_score_detail(project):
             parts.append(_("%(count)d medium") % {"count": med_c})
         if low_c:
             parts.append(_("%(count)d low") % {"count": low_c})
-        contra_details = _("%(total)d contradictions found (severity: %(parts)s).") % {"total": total_c, "parts": ", ".join(parts)}
+        contra_details = _("%(total)d contradictions found (severity: %(parts)s).") % {
+            "total": total_c,
+            "parts": ", ".join(parts),
+        }
         if high_c:
-            contra_recs.append(_("Prioritize resolving %(count)d high-severity contradiction(s) — these are direct factual conflicts.") % {"count": high_c})
+            contra_recs.append(
+                _(
+                    "Prioritize resolving %(count)d high-severity contradiction(s) — these are direct factual conflicts."
+                )
+                % {"count": high_c}
+            )
         outdated = contras.filter(classification="outdated").count()
         if outdated:
-            contra_recs.append(_("Update or remove %(count)d outdated statement(s) superseded by newer information.") % {"count": outdated})
+            contra_recs.append(
+                _(
+                    "Update or remove %(count)d outdated statement(s) superseded by newer information."
+                )
+                % {"count": outdated}
+            )
         if med_c + low_c > 0:
-            contra_recs.append(_("Review the remaining %(count)d lower-severity contradictions for possible clarifications.") % {"count": med_c + low_c})
-        top_recs.append({"icon": "alert-triangle", "text": _("Fix %(total)d contradictions (%(high)d high-severity) to improve consistency.") % {"total": total_c, "high": high_c}})
+            contra_recs.append(
+                _(
+                    "Review the remaining %(count)d lower-severity contradictions for possible clarifications."
+                )
+                % {"count": med_c + low_c}
+            )
+        top_recs.append(
+            {
+                "icon": "alert-triangle",
+                "text": _(
+                    "Fix %(total)d contradictions (%(high)d high-severity) to improve consistency."
+                )
+                % {"total": total_c, "high": high_c},
+            }
+        )
     else:
-        contra_details = _("No contradictions or outdated statements detected. Your content is consistent.")
+        contra_details = _(
+            "No contradictions or outdated statements detected. Your content is consistent."
+        )
 
-    dims.append(_dim(_("Consistency"), consistency_score,
-                      _("Measures the absence of contradictory or outdated information in the repository."),
-                      contra_details, contra_recs))
+    dims.append(
+        _dim(
+            _("Consistency"),
+            consistency_score,
+            _("Measures the absence of contradictory or outdated information in the repository."),
+            contra_details,
+            contra_recs,
+        )
+    )
 
     # 3. Couverture
     gap_qs = GapReport.objects.filter(analysis_job=latest).exclude(resolution="resolved")
@@ -395,7 +464,9 @@ def compute_score_detail(project):
         llm_gap_penalty += min(4, (1 - avg_coverage) * 4)
 
     audit_coverage_score_val = _get_audit_axis_score(linked_audit, "coverage")
-    audit_cov_penalty = (100 - audit_coverage_score_val) / 100 * 8 if audit_coverage_score_val is not None else 4
+    audit_cov_penalty = (
+        (100 - audit_coverage_score_val) / 100 * 8 if audit_coverage_score_val is not None else 4
+    )
     total_coverage_penalty = min(20, llm_gap_penalty + audit_cov_penalty)
     coverage_score = round(100 - total_coverage_penalty / 20 * 100)
 
@@ -408,8 +479,16 @@ def compute_score_detail(project):
             parts.append(_("%(count)d medium") % {"count": med_g})
         if low_g:
             parts.append(_("%(count)d low") % {"count": low_g})
-        avg_str = _(" Average coverage depth: %(avg)s.") % {"avg": f"{avg_coverage:.0%}"} if avg_coverage is not None else ""
-        gap_details = _("%(total)d coverage gaps detected (severity: %(parts)s).%(avg)s") % {"total": total_g, "parts": ", ".join(parts), "avg": avg_str}
+        avg_str = (
+            _(" Average coverage depth: %(avg)s.") % {"avg": f"{avg_coverage:.0%}"}
+            if avg_coverage is not None
+            else ""
+        )
+        gap_details = _("%(total)d coverage gaps detected (severity: %(parts)s).%(avg)s") % {
+            "total": total_g,
+            "parts": ", ".join(parts),
+            "avg": avg_str,
+        }
 
         missing = gap_qs.filter(gap_type="missing_topic").count()
         stale = gap_qs.filter(gap_type="stale_area").count()
@@ -417,23 +496,52 @@ def compute_score_detail(project):
         orphan = gap_qs.filter(gap_type="orphan_topic").count()
 
         if missing:
-            gap_recs.append(_("Create documentation for %(count)d missing topic(s) identified by the analysis.") % {"count": missing})
+            gap_recs.append(
+                _("Create documentation for %(count)d missing topic(s) identified by the analysis.")
+                % {"count": missing}
+            )
         if stale:
-            gap_recs.append(_("Refresh %(count)d stale area(s) that have not been updated recently.") % {"count": stale})
+            gap_recs.append(
+                _("Refresh %(count)d stale area(s) that have not been updated recently.")
+                % {"count": stale}
+            )
         if low_cov:
-            gap_recs.append(_("Expand %(count)d topic(s) with low coverage depth.") % {"count": low_cov})
+            gap_recs.append(
+                _("Expand %(count)d topic(s) with low coverage depth.") % {"count": low_cov}
+            )
         if orphan:
-            gap_recs.append(_("Integrate %(count)d orphan topic(s) — isolated content not linked to other themes.") % {"count": orphan})
+            gap_recs.append(
+                _(
+                    "Integrate %(count)d orphan topic(s) — isolated content not linked to other themes."
+                )
+                % {"count": orphan}
+            )
         if high_g:
-            top_recs.append({"icon": "target", "text": _("Address %(count)d high-severity coverage gap(s) to improve completeness.") % {"count": high_g}})
+            top_recs.append(
+                {
+                    "icon": "target",
+                    "text": _(
+                        "Address %(count)d high-severity coverage gap(s) to improve completeness."
+                    )
+                    % {"count": high_g},
+                }
+            )
     else:
         gap_details = _("No coverage gaps detected. Your knowledge base covers topics well.")
     if audit_coverage_score_val is not None:
-        gap_details += _(" Audit coverage score: %(score).0f/100.") % {"score": audit_coverage_score_val}
+        gap_details += _(" Audit coverage score: %(score).0f/100.") % {
+            "score": audit_coverage_score_val
+        }
 
-    dims.append(_dim(_("Coverage"), coverage_score,
-                      _("Measures knowledge base completeness (LLM + audit)."),
-                      gap_details, gap_recs))
+    dims.append(
+        _dim(
+            _("Coverage"),
+            coverage_score,
+            _("Measures knowledge base completeness (LLM + audit)."),
+            gap_details,
+            gap_recs,
+        )
+    )
 
     # 4. Structure
     avg_cohesion = ClusterMembership.objects.filter(
@@ -457,23 +565,52 @@ def compute_score_detail(project):
 
     struct_recs = []
     if cluster_count > 0 and avg_cohesion is not None:
-        struct_details = _("%(count)d topic clusters detected with average cohesion of %(cohesion)s.") % {"count": cluster_count, "cohesion": f"{avg_cohesion:.0%}"}
+        struct_details = _(
+            "%(count)d topic clusters detected with average cohesion of %(cohesion)s."
+        ) % {"count": cluster_count, "cohesion": f"{avg_cohesion:.0%}"}
         if avg_cohesion < 0.6:
-            struct_recs.append(_("Improve document organization — many documents do not fit clearly into a single theme. Consider splitting overly broad documents."))
-            top_recs.append({"icon": "layers", "text": _("Restructure poorly organized content to improve thematic cohesion.")})
+            struct_recs.append(
+                _(
+                    "Improve document organization — many documents do not fit clearly into a single theme. Consider splitting overly broad documents."
+                )
+            )
+            top_recs.append(
+                {
+                    "icon": "layers",
+                    "text": _("Restructure poorly organized content to improve thematic cohesion."),
+                }
+            )
         if avg_cohesion < 0.8 and avg_cohesion >= 0.6:
-            struct_recs.append(_("Some topic clusters overlap moderately. Review cluster boundaries and consider reorganizing ambiguous documents."))
+            struct_recs.append(
+                _(
+                    "Some topic clusters overlap moderately. Review cluster boundaries and consider reorganizing ambiguous documents."
+                )
+            )
     elif cluster_count == 0:
-        struct_details = _("No topic clusters detected. The analysis may need more documents to identify structure.")
-        struct_recs.append(_("Ingest more documents so the clustering algorithm can identify meaningful topic groups."))
+        struct_details = _(
+            "No topic clusters detected. The analysis may need more documents to identify structure."
+        )
+        struct_recs.append(
+            _(
+                "Ingest more documents so the clustering algorithm can identify meaningful topic groups."
+            )
+        )
     else:
         struct_details = _("Topic clusters exist but cohesion data is not yet available.")
     if audit_struct_score is not None:
-        struct_details += _(" Audit structure score: %(score).0f/100.") % {"score": audit_struct_score}
+        struct_details += _(" Audit structure score: %(score).0f/100.") % {
+            "score": audit_struct_score
+        }
 
-    dims.append(_dim(_("Structure"), structure_score,
-                      _("Measures content organization quality (LLM clusters + audit structure)."),
-                      struct_details, struct_recs))
+    dims.append(
+        _dim(
+            _("Structure"),
+            structure_score,
+            _("Measures content organization quality (LLM clusters + audit structure)."),
+            struct_details,
+            struct_recs,
+        )
+    )
 
     # 5. Santé
     health = health_score(ready_docs, error_docs, total_docs)
@@ -482,9 +619,15 @@ def compute_score_detail(project):
     if health_recs:
         top_recs.append({"icon": "heart", "text": health_recs[0]})
 
-    dims.append(_dim(_("Health"), health,
-                      _("Document ingestion pipeline operational status."),
-                      health_details_str, health_recs))
+    dims.append(
+        _dim(
+            _("Health"),
+            health,
+            _("Document ingestion pipeline operational status."),
+            health_details_str,
+            health_recs,
+        )
+    )
 
     # 6. Retrievability
     retriev_val = _get_audit_axis_score(linked_audit, "retrievability")
@@ -504,19 +647,33 @@ def compute_score_detail(project):
         retriev_details = _("Audit scores: %(parts)s.") % {"parts": ", ".join(retriev_parts)}
         retriev_recs = []
         if retriev_val is not None and retriev_val < 60:
-            retriev_recs.append(_("Improve chunk retrievability — queries are not finding enough relevant results."))
+            retriev_recs.append(
+                _("Improve chunk retrievability — queries are not finding enough relevant results.")
+            )
         if hygiene_val is not None and hygiene_val < 60:
-            retriev_recs.append(_("Improve corpus hygiene — chunk format or size issues were detected."))
-        if (retriev_val is not None and retriev_val < 60) or (hygiene_val is not None and hygiene_val < 60):
-            top_recs.append({"icon": "target", "text": _("Improve retrievability and corpus hygiene.")})
+            retriev_recs.append(
+                _("Improve corpus hygiene — chunk format or size issues were detected.")
+            )
+        if (retriev_val is not None and retriev_val < 60) or (
+            hygiene_val is not None and hygiene_val < 60
+        ):
+            top_recs.append(
+                {"icon": "target", "text": _("Improve retrievability and corpus hygiene.")}
+            )
     else:
         retriev_score = None
         retriev_details = _("No completed audit. Run a full analysis to evaluate retrievability.")
         retriev_recs = [_("Run a full analysis including RAG audit to evaluate retrievability.")]
 
-    dims.append(_dim(_("Retrievability"), retriev_score,
-                      _("System's ability to find relevant information (retrievability + hygiene)."),
-                      retriev_details, retriev_recs))
+    dims.append(
+        _dim(
+            _("Retrievability"),
+            retriev_score,
+            _("System's ability to find relevant information (retrievability + hygiene)."),
+            retriev_details,
+            retriev_recs,
+        )
+    )
 
     # 7. Gouvernance
     gov_val = _get_audit_axis_score(linked_audit, "governance")
@@ -536,31 +693,58 @@ def compute_score_detail(project):
         gov_details = _("Audit scores: %(parts)s.") % {"parts": ", ".join(gov_parts)}
         gov_recs = []
         if gov_val is not None and gov_val < 60:
-            gov_recs.append(_("Improve document metadata and governance (authors, dates, classifications)."))
+            gov_recs.append(
+                _("Improve document metadata and governance (authors, dates, classifications).")
+            )
         if coh_val is not None and coh_val < 60:
-            gov_recs.append(_("Improve internal corpus coherence — format or structure inconsistencies were detected."))
+            gov_recs.append(
+                _(
+                    "Improve internal corpus coherence — format or structure inconsistencies were detected."
+                )
+            )
         if (gov_val is not None and gov_val < 60) or (coh_val is not None and coh_val < 60):
-            top_recs.append({"icon": "target", "text": _("Improve governance and internal corpus coherence.")})
+            top_recs.append(
+                {"icon": "target", "text": _("Improve governance and internal corpus coherence.")}
+            )
     else:
         gov_score_val = None
         gov_details = _("No completed audit. Run a full analysis to evaluate governance.")
         gov_recs = [_("Run a full analysis including RAG audit to evaluate governance.")]
 
-    dims.append(_dim(_("Governance"), gov_score_val,
-                      _("Document governance quality (metadata, classification, internal coherence)."),
-                      gov_details, gov_recs))
+    dims.append(
+        _dim(
+            _("Governance"),
+            gov_score_val,
+            _("Document governance quality (metadata, classification, internal coherence)."),
+            gov_details,
+            gov_recs,
+        )
+    )
 
     # Final
     score_result = compute_score(project)
     grade = score_result["grade"]
     score = score_result["score"]
 
-    grade_labels = {"A": _("Excellent"), "B": _("Good"), "C": _("Acceptable"), "D": _("Poor"), "E": _("Critical")}
-    summary = _("Your knowledge base scores %(score)d/100 (Grade %(grade)s — %(label)s). ") % {"score": score, "grade": grade, "label": grade_labels[grade]}
+    grade_labels = {
+        "A": _("Excellent"),
+        "B": _("Good"),
+        "C": _("Acceptable"),
+        "D": _("Poor"),
+        "E": _("Critical"),
+    }
+    summary = _("Your knowledge base scores %(score)d/100 (Grade %(grade)s — %(label)s). ") % {
+        "score": score,
+        "grade": grade,
+        "label": grade_labels[grade],
+    }
     scored_dims = [(d["name"], d["score"]) for d in dims if d["score"] is not None]
     scored_dims.sort(key=lambda x: x[1])
     if scored_dims and scored_dims[0][1] < 70:
-        summary += _("The main area for improvement is %(dim)s (%(score)d/100).") % {"dim": scored_dims[0][0], "score": scored_dims[0][1]}
+        summary += _("The main area for improvement is %(dim)s (%(score)d/100).") % {
+            "dim": scored_dims[0][0],
+            "score": scored_dims[0][1],
+        }
     else:
         summary += _("All dimensions are performing well.")
 
@@ -587,20 +771,30 @@ def _health_details(ready, errors, total):
     ready_pct = round(ready / total * 100) if total else 0
     error_pct = round(errors / total * 100) if total else 0
     pending = total - ready - errors
-    return _("%(ready)d documents ready out of %(total)d (%(ready_pct)d%%), %(errors)d errors (%(error_pct)d%%), %(pending)d pending.") % {
-        "ready": ready, "total": total, "ready_pct": ready_pct,
-        "errors": errors, "error_pct": error_pct, "pending": pending,
+    return _(
+        "%(ready)d documents ready out of %(total)d (%(ready_pct)d%%), %(errors)d errors (%(error_pct)d%%), %(pending)d pending."
+    ) % {
+        "ready": ready,
+        "total": total,
+        "ready_pct": ready_pct,
+        "errors": errors,
+        "error_pct": error_pct,
+        "pending": pending,
     }
 
 
 def _health_recs(ready, errors, total):
     recs = []
     if errors > 0:
-        recs.append(_("Investigate and fix %(count)d document(s) stuck in error state.") % {"count": errors})
+        recs.append(
+            _("Investigate and fix %(count)d document(s) stuck in error state.") % {"count": errors}
+        )
     if total > 0:
         pending = total - ready - errors
         if pending > 0:
-            recs.append(_("Complete ingestion of %(count)d pending document(s).") % {"count": pending})
+            recs.append(
+                _("Complete ingestion of %(count)d pending document(s).") % {"count": pending}
+            )
         ready_ratio = ready / total
         if ready_ratio < 0.8 and errors == 0:
             recs.append(_("Run a sync on your connectors to finish processing pending documents."))
@@ -648,10 +842,10 @@ _RADAR_AXES = [
 def build_breakdown_json(breakdown):
     """Serialize a SCORE breakdown dict to JSON for the radar chart."""
     import json
-    return json.dumps([
-        {"axis": str(_(label)), "score": breakdown.get(key) or 0}
-        for key, label in _RADAR_AXES
-    ])
+
+    return json.dumps(
+        [{"axis": str(_(label)), "score": breakdown.get(key) or 0} for key, label in _RADAR_AXES]
+    )
 
 
 def compute_penalty_score(
@@ -680,22 +874,32 @@ def compute_penalty_score(
 
     # 1. Uniqueness
     dup_ratio = dup_count / total_docs
-    uniqueness_penalty = min(MAX_UNIQUENESS_PENALTY, dup_ratio / DUP_RATIO_THRESHOLD * MAX_UNIQUENESS_PENALTY)
+    uniqueness_penalty = min(
+        MAX_UNIQUENESS_PENALTY, dup_ratio / DUP_RATIO_THRESHOLD * MAX_UNIQUENESS_PENALTY
+    )
     score -= uniqueness_penalty
     breakdown["uniqueness"] = round(100 - uniqueness_penalty / MAX_UNIQUENESS_PENALTY * 100)
 
     # 2. Consistency
     contra_ratio = weighted_contra / total_docs
-    consistency_penalty = min(MAX_CONSISTENCY_PENALTY, contra_ratio / CONTRA_RATIO_THRESHOLD * MAX_CONSISTENCY_PENALTY)
+    consistency_penalty = min(
+        MAX_CONSISTENCY_PENALTY, contra_ratio / CONTRA_RATIO_THRESHOLD * MAX_CONSISTENCY_PENALTY
+    )
     score -= consistency_penalty
     breakdown["consistency"] = round(100 - consistency_penalty / MAX_CONSISTENCY_PENALTY * 100)
 
     # 3. Coverage — LLM gaps + depth + audit
     gap_ratio = weighted_gaps / total_docs
-    llm_gap_penalty = min(COVERAGE_LLM_GAPS_MAX, gap_ratio / GAP_RATIO_THRESHOLD * COVERAGE_LLM_GAPS_MAX)
+    llm_gap_penalty = min(
+        COVERAGE_LLM_GAPS_MAX, gap_ratio / GAP_RATIO_THRESHOLD * COVERAGE_LLM_GAPS_MAX
+    )
     if avg_coverage is not None:
         llm_gap_penalty += min(COVERAGE_LLM_DEPTH_MAX, (1 - avg_coverage) * COVERAGE_LLM_DEPTH_MAX)
-    audit_cov_penalty = (100 - audit_coverage) / 100 * COVERAGE_AUDIT_MAX if audit_coverage is not None else COVERAGE_AUDIT_MAX / 2
+    audit_cov_penalty = (
+        (100 - audit_coverage) / 100 * COVERAGE_AUDIT_MAX
+        if audit_coverage is not None
+        else COVERAGE_AUDIT_MAX / 2
+    )
     total_coverage_penalty = min(MAX_COVERAGE_PENALTY, llm_gap_penalty + audit_cov_penalty)
     score -= total_coverage_penalty
     breakdown["coverage"] = round(100 - total_coverage_penalty / MAX_COVERAGE_PENALTY * 100)
@@ -709,7 +913,11 @@ def compute_penalty_score(
     if cluster_count == 0:
         llm_struct_penalty += 3
     llm_struct_penalty = min(STRUCTURE_LLM_MAX, llm_struct_penalty)
-    audit_struct_penalty = (100 - audit_structure) / 100 * STRUCTURE_AUDIT_MAX if audit_structure is not None else STRUCTURE_AUDIT_MAX / 2
+    audit_struct_penalty = (
+        (100 - audit_structure) / 100 * STRUCTURE_AUDIT_MAX
+        if audit_structure is not None
+        else STRUCTURE_AUDIT_MAX / 2
+    )
     total_struct_penalty = min(MAX_STRUCTURE_PENALTY, llm_struct_penalty + audit_struct_penalty)
     score -= total_struct_penalty
     breakdown["structure"] = round(100 - total_struct_penalty / MAX_STRUCTURE_PENALTY * 100)
@@ -720,18 +928,36 @@ def compute_penalty_score(
     breakdown["health"] = health
 
     # 6. Retrievability — audit retrievability + hygiene
-    ret_penalty = (100 - audit_retrievability) / 100 * RETRIEVABILITY_AUDIT_MAX if audit_retrievability is not None else RETRIEVABILITY_AUDIT_MAX / 2
-    hyg_penalty = (100 - audit_hygiene) / 100 * HYGIENE_AUDIT_MAX if audit_hygiene is not None else HYGIENE_AUDIT_MAX / 2
+    ret_penalty = (
+        (100 - audit_retrievability) / 100 * RETRIEVABILITY_AUDIT_MAX
+        if audit_retrievability is not None
+        else RETRIEVABILITY_AUDIT_MAX / 2
+    )
+    hyg_penalty = (
+        (100 - audit_hygiene) / 100 * HYGIENE_AUDIT_MAX
+        if audit_hygiene is not None
+        else HYGIENE_AUDIT_MAX / 2
+    )
     total_ret_penalty = min(MAX_RETRIEVABILITY_PENALTY, ret_penalty + hyg_penalty)
     score -= total_ret_penalty
     if audit_retrievability is not None or audit_hygiene is not None:
-        breakdown["retrievability"] = round(100 - total_ret_penalty / MAX_RETRIEVABILITY_PENALTY * 100)
+        breakdown["retrievability"] = round(
+            100 - total_ret_penalty / MAX_RETRIEVABILITY_PENALTY * 100
+        )
     else:
         breakdown["retrievability"] = None
 
     # 7. Governance — audit governance + coherence
-    gov_penalty = (100 - audit_governance) / 100 * GOVERNANCE_AUDIT_MAX if audit_governance is not None else GOVERNANCE_AUDIT_MAX / 2
-    coh_penalty = (100 - audit_coherence) / 100 * COHERENCE_AUDIT_MAX if audit_coherence is not None else COHERENCE_AUDIT_MAX / 2
+    gov_penalty = (
+        (100 - audit_governance) / 100 * GOVERNANCE_AUDIT_MAX
+        if audit_governance is not None
+        else GOVERNANCE_AUDIT_MAX / 2
+    )
+    coh_penalty = (
+        (100 - audit_coherence) / 100 * COHERENCE_AUDIT_MAX
+        if audit_coherence is not None
+        else COHERENCE_AUDIT_MAX / 2
+    )
     total_gov_penalty = min(MAX_GOVERNANCE_PENALTY, gov_penalty + coh_penalty)
     score -= total_gov_penalty
     if audit_governance is not None or audit_coherence is not None:

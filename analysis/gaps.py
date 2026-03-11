@@ -9,6 +9,7 @@ Identifies gaps via:
 
 Outputs a ranked "missing topics" list with suggested document titles.
 """
+
 import json
 import logging
 from datetime import timedelta
@@ -36,11 +37,15 @@ class GapDetector:
         self.on_progress = on_progress
         self.llm = get_llm_client()
         self.vec_store = get_vector_store()
-        self.config = config if config is not None else settings.ANALYSIS_CONFIG.get("gap_detection", {})
+        self.config = (
+            config if config is not None else settings.ANALYSIS_CONFIG.get("gap_detection", {})
+        )
         self.question_count = self.config.get("coverage_question_count", 5)
         self.confidence_threshold = self.config.get("confidence_threshold", 0.5)
         self.orphan_max_size = self.config.get("orphan_cluster_max_size", 2)
-        self.staleness_days = settings.ANALYSIS_CONFIG.get("contradiction", {}).get("staleness_days", 180)
+        self.staleness_days = settings.ANALYSIS_CONFIG.get("contradiction", {}).get(
+            "staleness_days", 180
+        )
         # Similarity pre-filter: skip LLM call when top passage similarity is
         # above (auto-answered) or below (auto-unanswered) these thresholds.
         self.sim_auto_answer = self.config.get("similarity_auto_answer", 0.82)
@@ -51,8 +56,9 @@ class GapDetector:
         logger.info("Starting gap detection for tenant=%s", self.tenant.slug)
 
         clusters = list(
-            TopicCluster.objects.filter(project=self.project, analysis_job=self.job)
-            .order_by("label")
+            TopicCluster.objects.filter(project=self.project, analysis_job=self.job).order_by(
+                "label"
+            )
         )
 
         if not clusters:
@@ -116,8 +122,14 @@ class GapDetector:
             qg_prompts.append(prompt)
             cluster_indices.append(i)
 
-        logger.info("[gaps/qg_rag] Generating questions for %d clusters (%d prompts)...", len(clusters), len(qg_prompts))
-        qg_responses = self.llm.chat_batch_or_concurrent(qg_prompts, json_mode=True, on_progress=self.on_progress)
+        logger.info(
+            "[gaps/qg_rag] Generating questions for %d clusters (%d prompts)...",
+            len(clusters),
+            len(qg_prompts),
+        )
+        qg_responses = self.llm.chat_batch_or_concurrent(
+            qg_prompts, json_mode=True, on_progress=self.on_progress
+        )
         logger.info("[gaps/qg_rag] Question generation done, parsing responses...")
 
         # Parse questions per cluster
@@ -178,7 +190,9 @@ class GapDetector:
         no_results_indices: list[tuple[int, int, dict]] = []
         auto_answered: list[tuple[int, int, dict, float]] = []  # high-sim → skip LLM
 
-        for (cluster_idx, q_idx, q_info), search_results in zip(all_questions_flat, all_search_results):
+        for (cluster_idx, q_idx, q_info), search_results in zip(
+            all_questions_flat, all_search_results
+        ):
             question = q_info.get("question", "")
 
             if not search_results:
@@ -219,40 +233,58 @@ class GapDetector:
         logger.info(
             "[gaps/qg_rag] Coverage pre-filter: %d auto-answered (sim>=%.2f), "
             "%d auto-unanswered (sim<%.2f), %d sent to LLM",
-            len(auto_answered), self.sim_auto_answer,
-            len(no_results_indices), self.sim_auto_unanswered,
+            len(auto_answered),
+            self.sim_auto_answer,
+            len(no_results_indices),
+            self.sim_auto_unanswered,
             len(coverage_prompts),
         )
-        coverage_responses = self.llm.chat_batch_or_concurrent(coverage_prompts, json_mode=True, on_progress=self.on_progress)
+        coverage_responses = self.llm.chat_batch_or_concurrent(
+            coverage_prompts, json_mode=True, on_progress=self.on_progress
+        )
         logger.info("[gaps/qg_rag] Coverage check done")
 
         # Build per-cluster results
         cluster_coverage: dict[int, list[dict]] = {}  # cluster_idx -> list of coverage results
         for (cluster_idx, q_idx, q_info), resp in zip(coverage_meta, coverage_responses):
-            coverage = {"answered": False, "confidence": 0.0, "missing_info": q_info.get("question", "")}
+            coverage = {
+                "answered": False,
+                "confidence": 0.0,
+                "missing_info": q_info.get("question", ""),
+            }
             if resp:
                 try:
                     coverage = json.loads(resp.content)
                 except (json.JSONDecodeError, AttributeError):
                     pass
-            cluster_coverage.setdefault(cluster_idx, []).append({
-                "q_info": q_info,
-                "coverage": coverage,
-            })
+            cluster_coverage.setdefault(cluster_idx, []).append(
+                {
+                    "q_info": q_info,
+                    "coverage": coverage,
+                }
+            )
 
         # Add auto-answered (high similarity, skipped LLM)
         for cluster_idx, q_idx, q_info, top_sim in auto_answered:
-            cluster_coverage.setdefault(cluster_idx, []).append({
-                "q_info": q_info,
-                "coverage": {"answered": True, "confidence": top_sim, "missing_info": ""},
-            })
+            cluster_coverage.setdefault(cluster_idx, []).append(
+                {
+                    "q_info": q_info,
+                    "coverage": {"answered": True, "confidence": top_sim, "missing_info": ""},
+                }
+            )
 
         # Add no-results as unanswered
         for cluster_idx, q_idx, q_info in no_results_indices:
-            cluster_coverage.setdefault(cluster_idx, []).append({
-                "q_info": q_info,
-                "coverage": {"answered": False, "confidence": 0.0, "missing_info": q_info.get("question", "")},
-            })
+            cluster_coverage.setdefault(cluster_idx, []).append(
+                {
+                    "q_info": q_info,
+                    "coverage": {
+                        "answered": False,
+                        "confidence": 0.0,
+                        "missing_info": q_info.get("question", ""),
+                    },
+                }
+            )
 
         # Step 5: Create GapReport records
         gaps = []
@@ -269,16 +301,21 @@ class GapDetector:
                 coverage = entry["coverage"]
                 total_confidence += coverage.get("confidence", 0.0)
 
-                if not coverage.get("answered", True) or coverage.get("confidence", 1.0) < self.confidence_threshold:
+                if (
+                    not coverage.get("answered", True)
+                    or coverage.get("confidence", 1.0) < self.confidence_threshold
+                ):
                     missing_info = coverage.get("missing_info", "")
                     if not isinstance(missing_info, str):
                         missing_info = str(missing_info)
-                    unanswered.append({
-                        "question": q_info.get("question", ""),
-                        "importance": q_info.get("importance", "medium"),
-                        "confidence": coverage.get("confidence", 0.0),
-                        "missing_info": missing_info,
-                    })
+                    unanswered.append(
+                        {
+                            "question": q_info.get("question", ""),
+                            "importance": q_info.get("importance", "medium"),
+                            "confidence": coverage.get("confidence", 0.0),
+                            "missing_info": missing_info,
+                        }
+                    )
 
             if unanswered:
                 coverage_score = 1.0 - (len(unanswered) / total_questions) if total_questions else 0
@@ -297,7 +334,9 @@ class GapDetector:
                     project=self.project,
                     analysis_job=self.job,
                     gap_type=GapReport.GapType.LOW_COVERAGE,
-                    title=f"Manquant : {primary_gap['missing_info'][:200]}" if primary_gap.get("missing_info") else f"Lacune dans : {cluster.label}",
+                    title=f"Manquant : {primary_gap['missing_info'][:200]}"
+                    if primary_gap.get("missing_info")
+                    else f"Lacune dans : {cluster.label}",
                     description=f"Le cluster « {cluster.label} » a {len(unanswered)}/{total_questions} questions sans réponse.",
                     severity=severity,
                     related_cluster=cluster,
@@ -339,9 +378,8 @@ class GapDetector:
         stale_threshold = timezone.now() - timedelta(days=self.staleness_days)
 
         # Batch-load all cluster → document mappings
-        memberships = (
-            ClusterMembership.objects.filter(cluster__in=clusters)
-            .values_list("cluster_id", "document_id")
+        memberships = ClusterMembership.objects.filter(cluster__in=clusters).values_list(
+            "cluster_id", "document_id"
         )
         cluster_doc_ids: dict[str, set[str]] = {}
         all_doc_ids: set[str] = set()
@@ -353,9 +391,10 @@ class GapDetector:
 
         # Batch-load stale status for all docs
         stale_doc_ids = set(
-            str(d) for d in
-            Document.objects.filter(id__in=all_doc_ids, source_modified_at__lt=stale_threshold)
-            .values_list("id", flat=True)
+            str(d)
+            for d in Document.objects.filter(
+                id__in=all_doc_ids, source_modified_at__lt=stale_threshold
+            ).values_list("id", flat=True)
         )
 
         gaps = []
@@ -382,7 +421,11 @@ class GapDetector:
                     severity="medium" if stale_ratio < 0.9 else "high",
                     related_cluster=cluster,
                     coverage_score=1.0 - stale_ratio,
-                    evidence={"stale_count": stale, "total_count": total, "stale_ratio": stale_ratio},
+                    evidence={
+                        "stale_count": stale,
+                        "total_count": total,
+                        "stale_ratio": stale_ratio,
+                    },
                 )
                 gaps.append(gap)
 
@@ -407,8 +450,8 @@ class GapDetector:
                 f"- Sujets adjacents : {', '.join(neighbor_labels)}\n\n"
                 f"Existe-t-il un sujet qui devrait logiquement exister entre ces clusters "
                 f"mais qui semble manquer ? Si oui, quel document devrait être créé ?\n\n"
-                f"Réponds avec un JSON : {{\"has_gap\": true/false, \"suggested_title\": \"...\", "
-                f"\"description\": \"...\"}}"
+                f'Réponds avec un JSON : {{"has_gap": true/false, "suggested_title": "...", '
+                f'"description": "..."}}'
             )
             prompts.append(prompt)
             cluster_data.append((cluster, neighbor_labels))
@@ -417,7 +460,9 @@ class GapDetector:
             return []
 
         # Concurrent LLM calls
-        responses = self.llm.chat_batch_or_concurrent(prompts, json_mode=True, on_progress=self.on_progress)
+        responses = self.llm.chat_batch_or_concurrent(
+            prompts, json_mode=True, on_progress=self.on_progress
+        )
 
         gaps = []
         for (cluster, neighbor_labels), resp in zip(cluster_data, responses):
@@ -521,14 +566,12 @@ class GapDetector:
         if cluster.centroid_x is None or cluster.centroid_y is None:
             return []
 
-        others = [
-            c for c in all_clusters
-            if c.id != cluster.id and c.centroid_x is not None
-        ]
+        others = [c for c in all_clusters if c.id != cluster.id and c.centroid_x is not None]
 
-        others.sort(key=lambda c: (
-            (c.centroid_x - cluster.centroid_x) ** 2 +
-            (c.centroid_y - cluster.centroid_y) ** 2
-        ))
+        others.sort(
+            key=lambda c: (
+                (c.centroid_x - cluster.centroid_x) ** 2 + (c.centroid_y - cluster.centroid_y) ** 2
+            )
+        )
 
         return others[:5]

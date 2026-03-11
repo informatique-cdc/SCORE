@@ -1,4 +1,5 @@
 """Tests for analysis.tasks — Pipeline orchestration."""
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -22,6 +23,7 @@ from tests.conftest import make_chunk, make_document
 # ---------------------------------------------------------------------------
 # _build_effective_config
 # ---------------------------------------------------------------------------
+
 
 class TestBuildEffectiveConfig:
     def test_base_config_returned_when_no_overrides(self, settings):
@@ -71,13 +73,16 @@ class TestBuildEffectiveConfig:
 # _cleanup_phase
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestCleanupPhase:
     def test_cleanup_duplicates(self, tenant, project, connector, analysis_job):
         make_document(tenant, project, connector, title="A")
         make_document(tenant, project, connector, title="B")
         DuplicateGroup.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
         )
 
         _cleanup_phase(analysis_job, "duplicates")
@@ -90,17 +95,34 @@ class TestCleanupPhase:
         doc = make_document(tenant, project, connector, title="ContraDoc")
         chunk = make_chunk(tenant, doc, 0, "text")
         claim_a = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="x", predicate="y", object_value="z", raw_text="a",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="x",
+            predicate="y",
+            object_value="z",
+            raw_text="a",
         )
         claim_b = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="x", predicate="y", object_value="w", raw_text="b",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="x",
+            predicate="y",
+            object_value="w",
+            raw_text="b",
         )
         ContradictionPair.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
-            claim_a=claim_a, claim_b=claim_b,
-            classification="contradiction", confidence=0.9, evidence="test",
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            claim_a=claim_a,
+            claim_b=claim_b,
+            classification="contradiction",
+            confidence=0.9,
+            evidence="test",
         )
 
         _cleanup_phase(analysis_job, "contradictions")
@@ -109,9 +131,13 @@ class TestCleanupPhase:
 
     def test_cleanup_gaps(self, tenant, project, analysis_job):
         GapReport.objects.create(
-            tenant=tenant, project=project, analysis_job=analysis_job,
-            gap_type="orphan_topic", title="Test Gap",
-            description="A test gap.", severity="low",
+            tenant=tenant,
+            project=project,
+            analysis_job=analysis_job,
+            gap_type="orphan_topic",
+            title="Test Gap",
+            description="A test gap.",
+            severity="low",
         )
 
         _cleanup_phase(analysis_job, "gaps")
@@ -122,6 +148,7 @@ class TestCleanupPhase:
 # ---------------------------------------------------------------------------
 # Resume logic
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestResumeLogic:
@@ -157,6 +184,7 @@ class TestResumeLogic:
 # _make_progress_cb
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestProgressTracking:
     def test_make_progress_cb_writes_detail(self, tenant, project, analysis_job):
@@ -174,7 +202,7 @@ class TestProgressTracking:
     def test_make_progress_cb_last_call_always_writes(self, tenant, project, analysis_job):
         cb = _make_progress_cb(analysis_job.pk, "Final step")
 
-        cb(1, 10)   # first call
+        cb(1, 10)  # first call
         cb(10, 10)  # last call (done >= total)
 
         analysis_job.refresh_from_db()

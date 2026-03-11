@@ -30,6 +30,7 @@ class BaseConceptIndex(ABC):
 # FAISS-backed index
 # ------------------------------------------------------------------
 
+
 class FaissConceptIndex(BaseConceptIndex):
     """Wraps a FAISS ``IndexFlatIP`` (inner-product on L2-normalised vectors)."""
 
@@ -61,7 +62,11 @@ class FaissConceptIndex(BaseConceptIndex):
     def search(self, query_vector: np.ndarray, top_k: int = 12) -> list[tuple[str, float]]:
         if self._index is None or self._index.ntotal == 0:
             return []
-        qv = (query_vector / (np.linalg.norm(query_vector) + 1e-10)).reshape(1, -1).astype(np.float32)
+        qv = (
+            (query_vector / (np.linalg.norm(query_vector) + 1e-10))
+            .reshape(1, -1)
+            .astype(np.float32)
+        )
         k = min(top_k, self._index.ntotal)
         scores, indices = self._index.search(qv, k)
         results: list[tuple[str, float]] = []
@@ -78,6 +83,7 @@ class FaissConceptIndex(BaseConceptIndex):
 # ------------------------------------------------------------------
 # Brute-force fallback
 # ------------------------------------------------------------------
+
 
 class BruteForceConceptIndex(BaseConceptIndex):
     """Pure-NumPy cosine-similarity scan — no external deps beyond numpy."""
@@ -113,6 +119,7 @@ class BruteForceConceptIndex(BaseConceptIndex):
 # ------------------------------------------------------------------
 # Factory
 # ------------------------------------------------------------------
+
 
 def make_concept_index() -> BaseConceptIndex:
     """Return FAISS index if available, otherwise fall back to brute force."""

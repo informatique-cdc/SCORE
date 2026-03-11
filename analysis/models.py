@@ -1,6 +1,7 @@
 """
 Analysis result models: duplicates, contradictions, claims, clusters, gaps, analysis jobs.
 """
+
 import uuid
 
 from django.db import models
@@ -44,7 +45,8 @@ class AnalysisJob(ProjectScopedModel):
     error_message = models.TextField(blank=True, default="")
     phase_detail = models.JSONField(default=dict, blank=True)
     config_overrides = models.JSONField(
-        default=dict, blank=True,
+        default=dict,
+        blank=True,
         help_text="Per-job analysis config overrides (merged on top of config.yaml defaults)",
     )
 
@@ -63,7 +65,9 @@ class DuplicateGroup(ProjectScopedModel):
     """A group of documents detected as duplicates or near-duplicates."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    analysis_job = models.ForeignKey(AnalysisJob, on_delete=models.CASCADE, related_name="duplicate_groups")
+    analysis_job = models.ForeignKey(
+        AnalysisJob, on_delete=models.CASCADE, related_name="duplicate_groups"
+    )
 
     # Recommended action
     class Action(models.TextChoices):
@@ -72,7 +76,9 @@ class DuplicateGroup(ProjectScopedModel):
         REVIEW = "review", _("Vérification manuelle")
         KEEP = "keep", _("Conserver les deux (liés, pas doublons)")
 
-    recommended_action = models.CharField(max_length=20, choices=Action.choices, default=Action.REVIEW)
+    recommended_action = models.CharField(
+        max_length=20, choices=Action.choices, default=Action.REVIEW
+    )
     rationale = models.TextField(blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -86,8 +92,12 @@ class DuplicatePair(ProjectScopedModel):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     group = models.ForeignKey(DuplicateGroup, on_delete=models.CASCADE, related_name="pairs")
-    doc_a = models.ForeignKey("ingestion.Document", on_delete=models.CASCADE, related_name="dup_pairs_a")
-    doc_b = models.ForeignKey("ingestion.Document", on_delete=models.CASCADE, related_name="dup_pairs_b")
+    doc_a = models.ForeignKey(
+        "ingestion.Document", on_delete=models.CASCADE, related_name="dup_pairs_a"
+    )
+    doc_b = models.ForeignKey(
+        "ingestion.Document", on_delete=models.CASCADE, related_name="dup_pairs_b"
+    )
 
     # Individual similarity scores
     semantic_score = models.FloatField(help_text="Cosine similarity of document embeddings")
@@ -98,12 +108,15 @@ class DuplicatePair(ProjectScopedModel):
     # Cross-encoder / LLM verification
     verified = models.BooleanField(default=False)
     verification_result = models.CharField(
-        max_length=20, blank=True, default="",
+        max_length=20,
+        blank=True,
+        default="",
         help_text="duplicate / related / unrelated",
     )
     verification_confidence = models.FloatField(null=True, blank=True)
     verification_evidence = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         help_text="LLM explanation of why this is/isn't a duplicate",
     )
 
@@ -126,14 +139,20 @@ class Claim(ProjectScopedModel):
     """An atomic claim extracted from a document chunk."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    document = models.ForeignKey("ingestion.Document", on_delete=models.CASCADE, related_name="claims")
-    chunk = models.ForeignKey("ingestion.DocumentChunk", on_delete=models.CASCADE, related_name="claims")
+    document = models.ForeignKey(
+        "ingestion.Document", on_delete=models.CASCADE, related_name="claims"
+    )
+    chunk = models.ForeignKey(
+        "ingestion.DocumentChunk", on_delete=models.CASCADE, related_name="claims"
+    )
 
     # Structured claim
     subject = models.CharField(max_length=500)
     predicate = models.CharField(max_length=500)
     object_value = models.CharField(max_length=1000)
-    qualifiers = models.JSONField(default=dict, help_text="Additional qualifiers (date, version, scope)")
+    qualifiers = models.JSONField(
+        default=dict, help_text="Additional qualifiers (date, version, scope)"
+    )
     claim_date = models.DateField(null=True, blank=True, help_text="Date the claim pertains to")
     raw_text = models.TextField(help_text="Original passage text")
 
@@ -175,9 +194,15 @@ class ContradictionPair(ProjectScopedModel):
         KEPT = "kept", _("Conservé")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    analysis_job = models.ForeignKey(AnalysisJob, on_delete=models.CASCADE, related_name="contradictions")
-    claim_a = models.ForeignKey(Claim, on_delete=models.CASCADE, related_name="contradiction_pairs_a")
-    claim_b = models.ForeignKey(Claim, on_delete=models.CASCADE, related_name="contradiction_pairs_b")
+    analysis_job = models.ForeignKey(
+        AnalysisJob, on_delete=models.CASCADE, related_name="contradictions"
+    )
+    claim_a = models.ForeignKey(
+        Claim, on_delete=models.CASCADE, related_name="contradiction_pairs_a"
+    )
+    claim_b = models.ForeignKey(
+        Claim, on_delete=models.CASCADE, related_name="contradiction_pairs_b"
+    )
 
     classification = models.CharField(max_length=20, choices=Classification.choices)
     severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.MEDIUM)
@@ -185,7 +210,10 @@ class ContradictionPair(ProjectScopedModel):
     evidence = models.TextField(help_text="LLM explanation with citations")
 
     resolution = models.CharField(
-        max_length=10, choices=Resolution.choices, default="", blank=True,
+        max_length=10,
+        choices=Resolution.choices,
+        default="",
+        blank=True,
     )
 
     # For outdated: which is the newer authoritative claim
@@ -212,7 +240,9 @@ class TopicCluster(ProjectScopedModel):
     summary = models.TextField(blank=True, default="", help_text="LLM-generated summary")
     key_concepts = models.JSONField(default=list, help_text="LLM-extracted concept list")
     content_purpose = models.CharField(
-        max_length=500, blank=True, default="",
+        max_length=500,
+        blank=True,
+        default="",
         help_text="One-line purpose of this cluster's content",
     )
     level = models.PositiveIntegerField(default=0, help_text="Hierarchy level (0 = top)")
@@ -237,8 +267,12 @@ class ClusterMembership(ProjectScopedModel):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     cluster = models.ForeignKey(TopicCluster, on_delete=models.CASCADE, related_name="memberships")
-    chunk = models.ForeignKey("ingestion.DocumentChunk", on_delete=models.CASCADE, related_name="cluster_memberships")
-    document = models.ForeignKey("ingestion.Document", on_delete=models.CASCADE, related_name="cluster_memberships")
+    chunk = models.ForeignKey(
+        "ingestion.DocumentChunk", on_delete=models.CASCADE, related_name="cluster_memberships"
+    )
+    document = models.ForeignKey(
+        "ingestion.Document", on_delete=models.CASCADE, related_name="cluster_memberships"
+    )
     similarity_to_centroid = models.FloatField(default=0.0)
 
     class Meta:
@@ -266,10 +300,17 @@ class GapReport(ProjectScopedModel):
 
     gap_type = models.CharField(max_length=20, choices=GapType.choices)
     title = models.CharField(max_length=500, help_text="Suggested topic/document title")
-    description = models.TextField(help_text="Why this gap was detected and what should be documented")
-    severity = models.CharField(max_length=10, choices=ContradictionPair.Severity.choices, default="medium")
+    description = models.TextField(
+        help_text="Why this gap was detected and what should be documented"
+    )
+    severity = models.CharField(
+        max_length=10, choices=ContradictionPair.Severity.choices, default="medium"
+    )
     resolution = models.CharField(
-        max_length=10, choices=Resolution.choices, default="", blank=True,
+        max_length=10,
+        choices=Resolution.choices,
+        default="",
+        blank=True,
     )
 
     # Evidence
@@ -277,7 +318,8 @@ class GapReport(ProjectScopedModel):
         TopicCluster, null=True, blank=True, on_delete=models.SET_NULL
     )
     coverage_score = models.FloatField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="0-1 score of how well this topic is covered (lower = bigger gap)",
     )
     evidence = models.JSONField(
@@ -362,20 +404,28 @@ class TreeNode(ProjectScopedModel):
     """Node in the hierarchical document taxonomy/outline tree."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    analysis_job = models.ForeignKey(AnalysisJob, on_delete=models.CASCADE, related_name="tree_nodes")
-    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, related_name="children")
+    analysis_job = models.ForeignKey(
+        AnalysisJob, on_delete=models.CASCADE, related_name="tree_nodes"
+    )
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.CASCADE, related_name="children"
+    )
 
     label = models.CharField(max_length=500)
     node_type = models.CharField(
         max_length=20,
-        choices=[("category", _("Catégorie")), ("cluster", _("Cluster")), ("subcluster", _("Sous-cluster")), ("document", _("Document")), ("section", _("Section"))],
+        choices=[
+            ("category", _("Catégorie")),
+            ("cluster", _("Cluster")),
+            ("subcluster", _("Sous-cluster")),
+            ("document", _("Document")),
+            ("section", _("Section")),
+        ],
     )
     document = models.ForeignKey(
         "ingestion.Document", null=True, blank=True, on_delete=models.SET_NULL
     )
-    cluster = models.ForeignKey(
-        TopicCluster, null=True, blank=True, on_delete=models.SET_NULL
-    )
+    cluster = models.ForeignKey(TopicCluster, null=True, blank=True, on_delete=models.SET_NULL)
     level = models.PositiveIntegerField(default=0)
     sort_order = models.PositiveIntegerField(default=0)
 
@@ -417,11 +467,12 @@ class HallucinationReport(ProjectScopedModel):
     risk_type = models.CharField(max_length=25, choices=RiskType.choices)
     title = models.CharField(max_length=500)
     description = models.TextField()
-    severity = models.CharField(
-        max_length=10, choices=Severity.choices, default=Severity.MEDIUM
-    )
+    severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.MEDIUM)
     resolution = models.CharField(
-        max_length=10, choices=Resolution.choices, default="", blank=True,
+        max_length=10,
+        choices=Resolution.choices,
+        default="",
+        blank=True,
     )
 
     # The term/acronym itself
@@ -435,16 +486,21 @@ class HallucinationReport(ProjectScopedModel):
 
     # Which documents contain this risk
     document = models.ForeignKey(
-        "ingestion.Document", null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="hallucination_reports",
+        "ingestion.Document",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="hallucination_reports",
     )
     doc_count = models.PositiveIntegerField(
-        default=0, help_text="Number of documents affected",
+        default=0,
+        help_text="Number of documents affected",
     )
 
     # Risk scoring
     risk_score = models.FloatField(
-        default=0.0, help_text="0-1 hallucination risk score (higher = more risky)",
+        default=0.0,
+        help_text="0-1 hallucination risk score (higher = more risky)",
     )
 
     # Evidence and context
@@ -466,9 +522,7 @@ class PipelineTrace(ProjectScopedModel):
     """Aggregated trace for a full pipeline run."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    analysis_job = models.OneToOneField(
-        AnalysisJob, on_delete=models.CASCADE, related_name="trace"
-    )
+    analysis_job = models.OneToOneField(AnalysisJob, on_delete=models.CASCADE, related_name="trace")
 
     total_llm_calls = models.PositiveIntegerField(default=0)
     total_embed_calls = models.PositiveIntegerField(default=0)
@@ -515,9 +569,7 @@ class PhaseTrace(ProjectScopedModel):
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
-    status = models.CharField(
-        max_length=10, choices=Status.choices, default=Status.RUNNING
-    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.RUNNING)
     error_message = models.TextField(blank=True, default="")
     sort_order = models.PositiveIntegerField(default=0)
 
@@ -542,9 +594,7 @@ class TraceEvent(models.Model):
         VEC_UPSERT = "vec_upsert", "Vector Upsert"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    phase_trace = models.ForeignKey(
-        PhaseTrace, on_delete=models.CASCADE, related_name="events"
-    )
+    phase_trace = models.ForeignKey(PhaseTrace, on_delete=models.CASCADE, related_name="events")
     event_type = models.CharField(max_length=25, choices=EventType.choices)
 
     prompt_tokens = models.PositiveIntegerField(default=0)

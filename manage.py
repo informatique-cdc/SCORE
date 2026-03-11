@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Django management script for SCORE."""
+
 import os
 import sys
 

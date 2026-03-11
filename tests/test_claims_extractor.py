@@ -1,4 +1,5 @@
 """Tests for analysis.claims — ClaimsExtractor."""
+
 import json
 from unittest.mock import MagicMock
 
@@ -31,12 +32,34 @@ class TestExtractAll:
 
         ext = _make_extractor(tenant, project)
         ext.llm.chat_batch_or_concurrent.return_value = [
-            make_llm_response(json.dumps({
-                "claims": [{"subject": "sky", "predicate": "is", "object": "blue", "raw_text": "The sky is blue."}]
-            })),
-            make_llm_response(json.dumps({
-                "claims": [{"subject": "water", "predicate": "boils at", "object": "100C", "raw_text": "Water boils at 100C."}]
-            })),
+            make_llm_response(
+                json.dumps(
+                    {
+                        "claims": [
+                            {
+                                "subject": "sky",
+                                "predicate": "is",
+                                "object": "blue",
+                                "raw_text": "The sky is blue.",
+                            }
+                        ]
+                    }
+                )
+            ),
+            make_llm_response(
+                json.dumps(
+                    {
+                        "claims": [
+                            {
+                                "subject": "water",
+                                "predicate": "boils at",
+                                "object": "100C",
+                                "raw_text": "Water boils at 100C.",
+                            }
+                        ]
+                    }
+                )
+            ),
         ]
         ext.llm.embed.return_value = [[0.1] * 1536, [0.2] * 1536]
 
@@ -50,8 +73,14 @@ class TestExtractAll:
         doc = make_document(tenant, project, connector, title="Already Done")
         chunk = make_chunk(tenant, doc, 0, "Old claim.")
         Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="x", predicate="y", object_value="z", raw_text="Old claim.",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="x",
+            predicate="y",
+            object_value="z",
+            raw_text="Old claim.",
         )
 
         ext = _make_extractor(tenant, project)
@@ -83,13 +112,21 @@ class TestExtractAll:
 
         ext = _make_extractor(tenant, project)
         ext.llm.chat_batch_or_concurrent.return_value = [
-            make_llm_response(json.dumps({
-                "claims": [{
-                    "subject": "policy", "predicate": "effective",
-                    "object": "2024-01-15", "date": "2024-01-15",
-                    "raw_text": "Policy effective 2024-01-15.",
-                }]
-            })),
+            make_llm_response(
+                json.dumps(
+                    {
+                        "claims": [
+                            {
+                                "subject": "policy",
+                                "predicate": "effective",
+                                "object": "2024-01-15",
+                                "date": "2024-01-15",
+                                "raw_text": "Policy effective 2024-01-15.",
+                            }
+                        ]
+                    }
+                )
+            ),
         ]
         ext.llm.embed.return_value = [[0.1] * 1536]
 
@@ -105,13 +142,21 @@ class TestExtractAll:
 
         ext = _make_extractor(tenant, project)
         ext.llm.chat_batch_or_concurrent.return_value = [
-            make_llm_response(json.dumps({
-                "claims": [{
-                    "subject": "x", "predicate": "y",
-                    "object": "z", "date": "not-a-date",
-                    "raw_text": "Some fact.",
-                }]
-            })),
+            make_llm_response(
+                json.dumps(
+                    {
+                        "claims": [
+                            {
+                                "subject": "x",
+                                "predicate": "y",
+                                "object": "z",
+                                "date": "not-a-date",
+                                "raw_text": "Some fact.",
+                            }
+                        ]
+                    }
+                )
+            ),
         ]
         ext.llm.embed.return_value = [[0.1] * 1536]
 
@@ -137,8 +182,14 @@ class TestEmbedClaims:
         doc = make_document(tenant, project, connector, title="Embed Test")
         chunk = make_chunk(tenant, doc, 0, "Claim text.")
         claim = Claim.objects.create(
-            tenant=tenant, project=project, document=doc, chunk=chunk,
-            subject="a", predicate="b", object_value="c", raw_text="Claim text.",
+            tenant=tenant,
+            project=project,
+            document=doc,
+            chunk=chunk,
+            subject="a",
+            predicate="b",
+            object_value="c",
+            raw_text="Claim text.",
         )
 
         ext = _make_extractor(tenant, project)

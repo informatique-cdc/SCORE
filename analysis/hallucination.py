@@ -14,6 +14,7 @@ when documents are used as RAG context:
 
 Outputs a ranked list of hallucination risk items with severity and risk scores.
 """
+
 import collections
 import logging
 import re
@@ -35,19 +36,73 @@ EXPANSION_PAREN_RE = re.compile(
     r"(?:"
     r"([A-Z][A-Z0-9]{1,7})\s*\(([^)]{3,80})\)"  # ACRONYM (expansion)
     r"|"
-    r"([^(]{3,80})\s*\(([A-Z][A-Z0-9]{1,7})\)"   # expansion (ACRONYM)
+    r"([^(]{3,80})\s*\(([A-Z][A-Z0-9]{1,7})\)"  # expansion (ACRONYM)
     r")"
 )
 
 # Common non-acronym uppercase tokens to exclude
 ACRONYM_EXCLUSIONS = {
-    "THE", "AND", "FOR", "NOT", "BUT", "ALL", "ARE", "WAS", "HAS",
-    "HIS", "HER", "HIM", "ITS", "OUR", "WHO", "HOW", "WHY", "CAN",
-    "MAY", "DES", "LES", "UNE", "EST", "PAR", "SUR", "AUX", "CES",
-    "SON", "SES", "NOS", "VOS", "QUI", "QUE", "DANS", "AVEC", "POUR",
-    "PLUS", "SANS", "SOUS", "TOUT", "MISE", "NOTE", "NULL", "TRUE",
-    "HTTP", "HTTPS", "HTML", "JSON", "YAML", "TODO", "INFO", "NONE",
-    "PDF", "CSV", "SQL", "URL", "URI", "XML", "SSH", "FTP", "DNS",
+    "THE",
+    "AND",
+    "FOR",
+    "NOT",
+    "BUT",
+    "ALL",
+    "ARE",
+    "WAS",
+    "HAS",
+    "HIS",
+    "HER",
+    "HIM",
+    "ITS",
+    "OUR",
+    "WHO",
+    "HOW",
+    "WHY",
+    "CAN",
+    "MAY",
+    "DES",
+    "LES",
+    "UNE",
+    "EST",
+    "PAR",
+    "SUR",
+    "AUX",
+    "CES",
+    "SON",
+    "SES",
+    "NOS",
+    "VOS",
+    "QUI",
+    "QUE",
+    "DANS",
+    "AVEC",
+    "POUR",
+    "PLUS",
+    "SANS",
+    "SOUS",
+    "TOUT",
+    "MISE",
+    "NOTE",
+    "NULL",
+    "TRUE",
+    "HTTP",
+    "HTTPS",
+    "HTML",
+    "JSON",
+    "YAML",
+    "TODO",
+    "INFO",
+    "NONE",
+    "PDF",
+    "CSV",
+    "SQL",
+    "URL",
+    "URI",
+    "XML",
+    "SSH",
+    "FTP",
+    "DNS",
 }
 
 # Hedging language patterns (French and English)
@@ -73,8 +128,8 @@ class HallucinationDetector:
         self.job = analysis_job
         self.project = project
         self.on_progress = on_progress
-        self.config = config if config is not None else settings.ANALYSIS_CONFIG.get(
-            "hallucination", {}
+        self.config = (
+            config if config is not None else settings.ANALYSIS_CONFIG.get("hallucination", {})
         )
         self.min_acronym_freq = self.config.get("min_acronym_frequency", 2)
         self.jargon_tfidf_threshold = self.config.get("jargon_tfidf_threshold", 0.15)
@@ -108,7 +163,8 @@ class HallucinationDetector:
 
         logger.info(
             "[hallucination] %d chunks across %d documents",
-            len(chunks), len(doc_texts),
+            len(chunks),
+            len(doc_texts),
         )
 
         reports = []
@@ -169,8 +225,8 @@ class HallucinationDetector:
     def _detect_acronym_risks(self, doc_texts, doc_titles):
         """Detect undefined, ambiguous, and conflicting acronyms."""
         # Phase 1: Extract all acronyms and their expansions per document
-        doc_acronyms = {}       # {doc_id: {acronym: count}}
-        doc_expansions = {}     # {doc_id: {acronym: expansion}}
+        doc_acronyms = {}  # {doc_id: {acronym: count}}
+        doc_expansions = {}  # {doc_id: {acronym: expansion}}
         corpus_acronyms = collections.Counter()
         corpus_expansions = collections.defaultdict(
             lambda: collections.defaultdict(set)
@@ -200,13 +256,9 @@ class HallucinationDetector:
                 continue
 
             # Find which docs use this acronym
-            docs_using = [
-                doc_id for doc_id, acrs in doc_acronyms.items() if acr in acrs
-            ]
+            docs_using = [doc_id for doc_id, acrs in doc_acronyms.items() if acr in acrs]
             # Find which docs define this acronym
-            docs_defining = [
-                doc_id for doc_id, exps in doc_expansions.items() if acr in exps
-            ]
+            docs_defining = [doc_id for doc_id, exps in doc_expansions.items() if acr in exps]
             # Find which docs use it without defining it
             docs_undefined = [d for d in docs_using if d not in docs_defining]
 
@@ -274,9 +326,7 @@ class HallucinationDetector:
                     evidence={
                         "total_occurrences": total_count,
                         "docs_using": docs_using[:10],
-                        "doc_titles": [
-                            doc_titles.get(d, "") for d in docs_using[:10]
-                        ],
+                        "doc_titles": [doc_titles.get(d, "") for d in docs_using[:10]],
                     },
                 )
                 reports.append(report)
@@ -355,9 +405,7 @@ class HallucinationDetector:
         # Check if first letters of words match acronym letters
         initials = "".join(w[0].upper() for w in words if w)
         # Allow partial match (at least half the letters)
-        matches = sum(
-            1 for a, b in zip(acronym, initials) if a == b
-        )
+        matches = sum(1 for a, b in zip(acronym, initials) if a == b)
         return matches >= len(acronym) * 0.5
 
     # ── Strategy 2: Jargon without context ────────────────────────────
@@ -398,8 +446,7 @@ class HallucinationDetector:
         mean_tfidf = tfidf_matrix.mean(axis=0).A1
         # Terms with high average TF-IDF are domain-specific
         high_tfidf_indices = [
-            i for i, val in enumerate(mean_tfidf)
-            if val >= self.jargon_tfidf_threshold
+            i for i, val in enumerate(mean_tfidf) if val >= self.jargon_tfidf_threshold
         ]
 
         if not high_tfidf_indices:
@@ -417,16 +464,14 @@ class HallucinationDetector:
         reports = []
         sorted_indices = sorted(high_tfidf_indices, key=lambda i: -mean_tfidf[i])
 
-        for idx in sorted_indices[:self.max_items * 2]:
+        for idx in sorted_indices[: self.max_items * 2]:
             term = str(feature_names[idx])
             if len(term) < 4 or term.isnumeric():
                 continue
 
             # Check which docs use this term
             col = tfidf_matrix.getcol(idx).toarray().flatten()
-            docs_with_term = [
-                doc_ids[i] for i, val in enumerate(col) if val > 0
-            ]
+            docs_with_term = [doc_ids[i] for i, val in enumerate(col) if val > 0]
 
             if len(docs_with_term) < 2:
                 continue
@@ -502,13 +547,13 @@ class HallucinationDetector:
             hedging_matches = []
             for pattern in HEDGING_PATTERNS:
                 for match in pattern.finditer(full_text):
-                    hedging_matches.append({
-                        "phrase": match.group(0),
-                        "position": match.start(),
-                        "context": full_text[
-                            max(0, match.start() - 40):match.end() + 40
-                        ],
-                    })
+                    hedging_matches.append(
+                        {
+                            "phrase": match.group(0),
+                            "position": match.start(),
+                            "context": full_text[max(0, match.start() - 40) : match.end() + 40],
+                        }
+                    )
 
             density = len(hedging_matches) / word_count if word_count > 0 else 0
             if density >= self.hedging_density_threshold and len(hedging_matches) >= 3:
@@ -517,7 +562,7 @@ class HallucinationDetector:
         # Sort by density
         doc_hedging.sort(key=lambda x: -x[1])
 
-        for doc_id, density, matches in doc_hedging[:self.max_items]:
+        for doc_id, density, matches in doc_hedging[: self.max_items]:
             risk_score = min(1.0, density / self.hedging_density_threshold * 0.5)
 
             unique_phrases = list({m["phrase"].lower() for m in matches})
@@ -591,12 +636,14 @@ class HallucinationDetector:
             implicit_matches = []
             for pattern in implicit_patterns:
                 for match in pattern.finditer(full_text):
-                    implicit_matches.append({
-                        "phrase": match.group(0)[:100],
-                        "context": full_text[
-                            max(0, match.start() - 50):match.end() + 50
-                        ][:200],
-                    })
+                    implicit_matches.append(
+                        {
+                            "phrase": match.group(0)[:100],
+                            "context": full_text[max(0, match.start() - 50) : match.end() + 50][
+                                :200
+                            ],
+                        }
+                    )
 
             if len(implicit_matches) >= 3:
                 density = len(implicit_matches) / word_count
@@ -604,7 +651,7 @@ class HallucinationDetector:
 
         doc_scores.sort(key=lambda x: -x[1])
 
-        for doc_id, density, matches in doc_scores[:self.max_items]:
+        for doc_id, density, matches in doc_scores[: self.max_items]:
             risk_score = min(1.0, 0.2 + density * 20)
             unique_phrases = list({m["phrase"][:60] for m in matches})
 
@@ -613,10 +660,7 @@ class HallucinationDetector:
                 project=self.project,
                 analysis_job=self.job,
                 risk_type=HallucinationReport.RiskType.IMPLICIT_KNOWLEDGE,
-                title=(
-                    f"Connaissances implicites : "
-                    f"{doc_titles.get(doc_id, 'Document')}"
-                ),
+                title=(f"Connaissances implicites : {doc_titles.get(doc_id, 'Document')}"),
                 description=(
                     f"Le document « {doc_titles.get(doc_id, '')} » contient "
                     f"{len(matches)} référence(s) à des connaissances supposées "

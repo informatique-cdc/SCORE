@@ -4,6 +4,7 @@ Connector configuration models.
 Each connector defines how to reach a document source (SharePoint, Confluence, etc.)
 and stores credentials securely.
 """
+
 import uuid
 
 from django.db import models
@@ -37,7 +38,9 @@ class ConnectorConfig(ProjectScopedModel):
     )
 
     schedule_cron = models.CharField(
-        max_length=100, blank=True, default="",
+        max_length=100,
+        blank=True,
+        default="",
         help_text="Cron expression for scheduled syncs (empty = manual only)",
     )
     last_sync_at = models.DateTimeField(null=True, blank=True)

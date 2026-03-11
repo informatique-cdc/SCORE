@@ -1,4 +1,5 @@
 """Axe 6 — Gouvernance & metadata: completeness, orphans, staleness, link graph."""
+
 import collections
 import logging
 from datetime import timedelta
@@ -21,8 +22,15 @@ class GovernanceAxis(BaseAuditAxis):
             Document.objects.filter(project=self.project, status="ready")
             .select_related("connector")
             .values_list(
-                "id", "title", "author", "source_modified_at", "doc_type",
-                "path", "source_url", "connector__name", "created_at",
+                "id",
+                "title",
+                "author",
+                "source_modified_at",
+                "doc_type",
+                "path",
+                "source_url",
+                "connector__name",
+                "created_at",
             )
         )
 
@@ -30,7 +38,9 @@ class GovernanceAxis(BaseAuditAxis):
             return 100.0, {"total_docs": 0}, {}, {"message": "Aucun document"}
 
         cfg = self.config
-        required_fields = cfg.get("required_fields", ["author", "source_modified_at", "doc_type", "path"])
+        required_fields = cfg.get(
+            "required_fields", ["author", "source_modified_at", "doc_type", "path"]
+        )
         staleness_days = cfg.get("staleness_days", 180)
 
         total = len(docs)
@@ -55,8 +65,8 @@ class GovernanceAxis(BaseAuditAxis):
                 "total": total,
                 "ratio": round(filled / total, 4),
             }
-        avg_completeness = (
-            sum(fc["ratio"] for fc in field_completeness.values()) / max(len(field_completeness), 1)
+        avg_completeness = sum(fc["ratio"] for fc in field_completeness.values()) / max(
+            len(field_completeness), 1
         )
 
         # Per-source completeness
@@ -86,12 +96,14 @@ class GovernanceAxis(BaseAuditAxis):
                 age = (now - mod_date).days
                 age_days_list.append(age)
                 if mod_date < stale_threshold:
-                    stale_docs.append({
-                        "doc_id": str(d[0]),
-                        "title": d[1][:80],
-                        "age_days": age,
-                        "source": d[7] or "Inconnu",
-                    })
+                    stale_docs.append(
+                        {
+                            "doc_id": str(d[0]),
+                            "title": d[1][:80],
+                            "age_days": age,
+                            "source": d[7] or "Inconnu",
+                        }
+                    )
 
         stale_ratio = len(stale_docs) / total
         freshness_score = max(0, (1 - stale_ratio) * 100)
@@ -102,11 +114,13 @@ class GovernanceAxis(BaseAuditAxis):
             has_path = bool(d[5])
             has_url = bool(d[6])
             if not has_path and not has_url:
-                orphan_docs.append({
-                    "doc_id": str(d[0]),
-                    "title": d[1][:80],
-                    "source": d[7] or "Inconnu",
-                })
+                orphan_docs.append(
+                    {
+                        "doc_id": str(d[0]),
+                        "title": d[1][:80],
+                        "source": d[7] or "Inconnu",
+                    }
+                )
         orphan_ratio = len(orphan_docs) / total
         orphan_score = max(0, (1 - orphan_ratio * 3) * 100)
 
@@ -142,7 +156,12 @@ class GovernanceAxis(BaseAuditAxis):
         # Chart data
         # Completeness per field
         completeness_bar = [
-            {"field": field, "ratio": data["ratio"], "filled": data["filled"], "total": data["total"]}
+            {
+                "field": field,
+                "ratio": data["ratio"],
+                "filled": data["filled"],
+                "total": data["total"],
+            }
             for field, data in field_completeness.items()
         ]
 
@@ -164,10 +183,7 @@ class GovernanceAxis(BaseAuditAxis):
                     if idx and not d[idx]:
                         source_problems[source] += 1
 
-        pareto = [
-            {"source": src, "problems": cnt}
-            for src, cnt in source_problems.most_common(20)
-        ]
+        pareto = [{"source": src, "problems": cnt} for src, cnt in source_problems.most_common(20)]
 
         chart_data = {
             "completeness_bar": completeness_bar,
@@ -217,19 +233,19 @@ class GovernanceAxis(BaseAuditAxis):
                 p1 = prefix_list[i].split("/")
                 p2 = prefix_list[j].split("/")
                 if p1[0] == p2[0]:  # Same top-level
-                    edges.append({
-                        "source": prefix_list[i],
-                        "target": prefix_list[j],
-                        "weight": 1,
-                    })
+                    edges.append(
+                        {
+                            "source": prefix_list[i],
+                            "target": prefix_list[j],
+                            "weight": 1,
+                        }
+                    )
 
         # Connectivity: fraction of docs in connected components > 1
         if not edges:
             connectivity = 30.0
         else:
-            total_connected = sum(
-                len(ids) for ids in prefix_groups.values() if len(ids) > 1
-            )
+            total_connected = sum(len(ids) for ids in prefix_groups.values() if len(ids) > 1)
             connectivity = min(100, (total_connected / len(paths)) * 100)
 
         graph = {"nodes": nodes[:100], "edges": edges[:200]}
@@ -246,6 +262,10 @@ class GovernanceAxis(BaseAuditAxis):
         for i in range(bins):
             lo = mn + i * step
             hi = mn + (i + 1) * step
-            cnt = sum(1 for v in values if lo <= v < hi) if i < bins - 1 else sum(1 for v in values if lo <= v <= hi)
+            cnt = (
+                sum(1 for v in values if lo <= v < hi)
+                if i < bins - 1
+                else sum(1 for v in values if lo <= v <= hi)
+            )
             result.append({"bin_start": round(lo, 1), "bin_end": round(hi, 1), "count": cnt})
         return result

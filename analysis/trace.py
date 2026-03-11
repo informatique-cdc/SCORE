@@ -4,6 +4,7 @@ Thread-safe pipeline trace collector.
 Buffers TraceEvent objects in memory and flushes them to the database
 at phase boundaries to minimize DB writes during the hot path.
 """
+
 import logging
 import threading
 import time
@@ -38,16 +39,18 @@ class PhaseEventBuffer:
         model_name="",
     ):
         with self._lock:
-            self.events.append({
-                "event_type": event_type,
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": total_tokens or (prompt_tokens + completion_tokens),
-                "item_count": item_count,
-                "result_count": result_count,
-                "duration": duration,
-                "model_name": model_name,
-            })
+            self.events.append(
+                {
+                    "event_type": event_type,
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens or (prompt_tokens + completion_tokens),
+                    "item_count": item_count,
+                    "result_count": result_count,
+                    "duration": duration,
+                    "model_name": model_name,
+                }
+            )
 
     def replay_into(self, collector: "TraceCollector"):
         """Replay all buffered events into a TraceCollector's current phase."""
@@ -129,6 +132,7 @@ class TraceCollector:
             for ev in self._event_buffer:
                 ev.phase_trace = phase
             from analysis.models import TraceEvent
+
             TraceEvent.objects.bulk_create(self._event_buffer)
 
         # Aggregate stats from buffer
@@ -183,9 +187,7 @@ class TraceCollector:
 
         from analysis.models import PhaseTrace
 
-        agg = PhaseTrace.objects.filter(
-            pipeline_trace=self._pipeline_trace
-        ).aggregate(
+        agg = PhaseTrace.objects.filter(pipeline_trace=self._pipeline_trace).aggregate(
             total_llm=Sum("llm_calls"),
             total_embed=Sum("embed_calls"),
             total_search=Sum("search_calls"),
@@ -207,4 +209,6 @@ class TraceCollector:
         try:
             pt.save()
         except Exception:
-            logger.warning("Could not save pipeline trace %s (may have been replaced by a retry)", pt.pk)
+            logger.warning(
+                "Could not save pipeline trace %s (may have been replaced by a retry)", pt.pk
+            )

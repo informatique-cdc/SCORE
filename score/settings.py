@@ -3,6 +3,7 @@ Django settings for SCORE.
 
 Reads .env file and config.yaml for configuration layering.
 """
+
 import os
 from pathlib import Path
 

@@ -1,4 +1,5 @@
 """Tests for llm/client.py — LLMClient initialization, chat, embed, retry, fallback."""
+
 from unittest.mock import patch
 
 
@@ -38,8 +39,21 @@ class TestLLMClientInit:
                 "embedding_model": "text-embedding-3-small",
                 "embedding_dimensions": 1536,
             },
-            "azure": {"api_key": "", "endpoint": "", "api_version": "", "embedding_deployment": "", "embedding_endpoint": "", "embedding_api_key": "", "embedding_dimensions": 1536},
-            "azure_mistral": {"api_key": "", "endpoint": "", "deployment_name": "", "chat_model": ""},
+            "azure": {
+                "api_key": "",
+                "endpoint": "",
+                "api_version": "",
+                "embedding_deployment": "",
+                "embedding_endpoint": "",
+                "embedding_api_key": "",
+                "embedding_dimensions": 1536,
+            },
+            "azure_mistral": {
+                "api_key": "",
+                "endpoint": "",
+                "deployment_name": "",
+                "chat_model": "",
+            },
             "requests_per_minute": 60,
             "embedding_batch_size": 100,
             "fallback_models": [],
@@ -60,7 +74,12 @@ class TestLLMClientInit:
     def test_azure_provider(self, mock_azure_cls, settings):
         settings.LLM_CONFIG = {
             "provider": "azure",
-            "openai": {"api_key": "", "chat_model": "", "embedding_model": "", "embedding_dimensions": 1536},
+            "openai": {
+                "api_key": "",
+                "chat_model": "",
+                "embedding_model": "",
+                "embedding_dimensions": 1536,
+            },
             "azure": {
                 "api_key": "az-key",
                 "endpoint": "https://myendpoint.openai.azure.com",
@@ -71,7 +90,12 @@ class TestLLMClientInit:
                 "embedding_api_key": "",
                 "embedding_dimensions": 1536,
             },
-            "azure_mistral": {"api_key": "", "endpoint": "", "deployment_name": "", "chat_model": ""},
+            "azure_mistral": {
+                "api_key": "",
+                "endpoint": "",
+                "deployment_name": "",
+                "chat_model": "",
+            },
             "requests_per_minute": 60,
             "embedding_batch_size": 100,
             "fallback_models": [],
@@ -97,9 +121,27 @@ class TestRateLimiting:
     def test_rate_limit_sleeps(self, mock_openai_cls, settings):
         settings.LLM_CONFIG = {
             "provider": "openai",
-            "openai": {"api_key": "k", "chat_model": "m", "embedding_model": "e", "embedding_dimensions": 1536},
-            "azure": {"api_key": "", "endpoint": "", "api_version": "", "embedding_deployment": "", "embedding_endpoint": "", "embedding_api_key": "", "embedding_dimensions": 1536},
-            "azure_mistral": {"api_key": "", "endpoint": "", "deployment_name": "", "chat_model": ""},
+            "openai": {
+                "api_key": "k",
+                "chat_model": "m",
+                "embedding_model": "e",
+                "embedding_dimensions": 1536,
+            },
+            "azure": {
+                "api_key": "",
+                "endpoint": "",
+                "api_version": "",
+                "embedding_deployment": "",
+                "embedding_endpoint": "",
+                "embedding_api_key": "",
+                "embedding_dimensions": 1536,
+            },
+            "azure_mistral": {
+                "api_key": "",
+                "endpoint": "",
+                "deployment_name": "",
+                "chat_model": "",
+            },
             "requests_per_minute": 6000,  # very high RPM
             "embedding_batch_size": 100,
             "fallback_models": [],
@@ -124,9 +166,27 @@ class TestSupportsTemperature:
     def test_normal_model(self, mock_openai_cls, settings):
         settings.LLM_CONFIG = {
             "provider": "openai",
-            "openai": {"api_key": "k", "chat_model": "gpt-4o", "embedding_model": "e", "embedding_dimensions": 1536},
-            "azure": {"api_key": "", "endpoint": "", "api_version": "", "embedding_deployment": "", "embedding_endpoint": "", "embedding_api_key": "", "embedding_dimensions": 1536},
-            "azure_mistral": {"api_key": "", "endpoint": "", "deployment_name": "", "chat_model": ""},
+            "openai": {
+                "api_key": "k",
+                "chat_model": "gpt-4o",
+                "embedding_model": "e",
+                "embedding_dimensions": 1536,
+            },
+            "azure": {
+                "api_key": "",
+                "endpoint": "",
+                "api_version": "",
+                "embedding_deployment": "",
+                "embedding_endpoint": "",
+                "embedding_api_key": "",
+                "embedding_dimensions": 1536,
+            },
+            "azure_mistral": {
+                "api_key": "",
+                "endpoint": "",
+                "deployment_name": "",
+                "chat_model": "",
+            },
             "requests_per_minute": 60,
             "embedding_batch_size": 100,
             "fallback_models": [],
@@ -144,9 +204,27 @@ class TestSupportsTemperature:
     def test_reasoning_models(self, mock_openai_cls, settings):
         settings.LLM_CONFIG = {
             "provider": "openai",
-            "openai": {"api_key": "k", "chat_model": "o1", "embedding_model": "e", "embedding_dimensions": 1536},
-            "azure": {"api_key": "", "endpoint": "", "api_version": "", "embedding_deployment": "", "embedding_endpoint": "", "embedding_api_key": "", "embedding_dimensions": 1536},
-            "azure_mistral": {"api_key": "", "endpoint": "", "deployment_name": "", "chat_model": ""},
+            "openai": {
+                "api_key": "k",
+                "chat_model": "o1",
+                "embedding_model": "e",
+                "embedding_dimensions": 1536,
+            },
+            "azure": {
+                "api_key": "",
+                "endpoint": "",
+                "api_version": "",
+                "embedding_deployment": "",
+                "embedding_endpoint": "",
+                "embedding_api_key": "",
+                "embedding_dimensions": 1536,
+            },
+            "azure_mistral": {
+                "api_key": "",
+                "endpoint": "",
+                "deployment_name": "",
+                "chat_model": "",
+            },
             "requests_per_minute": 60,
             "embedding_batch_size": 100,
             "fallback_models": [],
@@ -173,9 +251,27 @@ class TestGetLLMClient:
     def test_singleton(self, mock_openai_cls, settings):
         settings.LLM_CONFIG = {
             "provider": "openai",
-            "openai": {"api_key": "k", "chat_model": "m", "embedding_model": "e", "embedding_dimensions": 1536},
-            "azure": {"api_key": "", "endpoint": "", "api_version": "", "embedding_deployment": "", "embedding_endpoint": "", "embedding_api_key": "", "embedding_dimensions": 1536},
-            "azure_mistral": {"api_key": "", "endpoint": "", "deployment_name": "", "chat_model": ""},
+            "openai": {
+                "api_key": "k",
+                "chat_model": "m",
+                "embedding_model": "e",
+                "embedding_dimensions": 1536,
+            },
+            "azure": {
+                "api_key": "",
+                "endpoint": "",
+                "api_version": "",
+                "embedding_deployment": "",
+                "embedding_endpoint": "",
+                "embedding_api_key": "",
+                "embedding_dimensions": 1536,
+            },
+            "azure_mistral": {
+                "api_key": "",
+                "endpoint": "",
+                "deployment_name": "",
+                "chat_model": "",
+            },
             "requests_per_minute": 60,
             "embedding_batch_size": 100,
             "fallback_models": [],
@@ -187,6 +283,7 @@ class TestGetLLMClient:
         settings.ANALYSIS_CONFIG = {}
 
         import llm.client as mod
+
         mod._client = None  # Reset singleton
 
         c1 = get_llm_client()

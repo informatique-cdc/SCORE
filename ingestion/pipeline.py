@@ -8,6 +8,7 @@ The pipeline handles:
   4. Embedding generation (batched)
   5. Vector storage in sqlite-vec
 """
+
 import logging
 from datetime import datetime
 
@@ -41,12 +42,20 @@ class IngestionPipeline:
         self.llm = get_llm_client()
         self.vec_store = get_vector_store()
         self._stats = {
-            "new": 0, "updated": 0, "deleted": 0, "errors": 0, "unchanged": 0,
+            "new": 0,
+            "updated": 0,
+            "deleted": 0,
+            "errors": 0,
+            "unchanged": 0,
         }
 
     def run(self):
         """Execute the full ingestion pipeline."""
-        logger.info("Starting ingestion for connector=%s tenant=%s", self.connector_config.name, self.tenant.slug)
+        logger.info(
+            "Starting ingestion for connector=%s tenant=%s",
+            self.connector_config.name,
+            self.tenant.slug,
+        )
 
         self.job.status = IngestionJob.Status.RUNNING
         self.job.started_at = django_tz.now()
@@ -59,9 +68,7 @@ class IngestionPipeline:
                 connector=self.connector_config,
             ).exclude(status=Document.Status.DELETED)
 
-            known_versions = {
-                doc.source_id: doc.source_version for doc in known_docs
-            }
+            known_versions = {doc.source_id: doc.source_version for doc in known_docs}
 
             # Step 2: Detect changes
             new_or_changed, deleted_ids = self.connector.list_changed_documents(known_versions)
@@ -101,8 +108,10 @@ class IngestionPipeline:
 
             logger.info(
                 "Ingestion completed: new=%d updated=%d deleted=%d errors=%d",
-                self._stats["new"], self._stats["updated"],
-                self._stats["deleted"], self._stats["errors"],
+                self._stats["new"],
+                self._stats["updated"],
+                self._stats["deleted"],
+                self._stats["errors"],
             )
 
         except Exception as e:
@@ -233,23 +242,23 @@ class IngestionPipeline:
 
         vec_items = []
         for chunk, embedding in zip(chunks, embeddings):
-            vec_items.append((
-                str(chunk.id),
-                str(self.tenant.id),
-                embedding,
-                {
-                    "document_id": str(doc.id),
-                    "doc_type": doc.doc_type,
-                    "source_type": self.connector_config.connector_type,
-                },
-            ))
+            vec_items.append(
+                (
+                    str(chunk.id),
+                    str(self.tenant.id),
+                    embedding,
+                    {
+                        "document_id": str(doc.id),
+                        "doc_type": doc.doc_type,
+                        "source_type": self.connector_config.connector_type,
+                    },
+                )
+            )
 
         self.vec_store.upsert_batch(vec_items, project_id=str(self.project.id))
 
         # Mark chunks as having embeddings
-        DocumentChunk.objects.filter(
-            id__in=[c.id for c in chunks]
-        ).update(has_embedding=True)
+        DocumentChunk.objects.filter(id__in=[c.id for c in chunks]).update(has_embedding=True)
 
         doc.status = Document.Status.READY
         doc.save()

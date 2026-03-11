@@ -3,7 +3,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("reports", "0001_initial"),
         ("tenants", "0002_project_projectmembership"),

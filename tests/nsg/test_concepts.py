@@ -40,9 +40,21 @@ class TestNormalizeConcept:
     def test_collapses_whitespace(self) -> None:
         assert normalize_concept("deep   learning") == "deep learning"
 
-    @pytest.mark.parametrize("word", [
-        "les", "le", "la", "un", "une", "des", "du", "au", "aux", "de",
-    ])
+    @pytest.mark.parametrize(
+        "word",
+        [
+            "les",
+            "le",
+            "la",
+            "un",
+            "une",
+            "des",
+            "du",
+            "au",
+            "aux",
+            "de",
+        ],
+    )
     def test_standalone_french_article_normalizes_to_empty(self, word: str) -> None:
         assert normalize_concept(word) == ""
 
@@ -73,6 +85,7 @@ class TestExtractConcepts:
 
     def test_no_french_stopwords_leak(self) -> None:
         from nsg.stopwords import STOPWORDS_FR
+
         text = (
             "Le système de gestion des données permet un traitement "
             "efficace des résultats dans les bases de données."
@@ -83,6 +96,7 @@ class TestExtractConcepts:
 
     def test_no_english_stopwords_leak(self) -> None:
         from nsg.stopwords import STOPWORDS_EN
+
         text = "The system provides a framework for the analysis of data."
         concepts = extract_concepts(text)
         for c in concepts:

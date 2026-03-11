@@ -111,7 +111,9 @@ class NeuralSemanticGraph:
 
             # Add co-occurrence edges for every pair within the chunk.
             for src, dst in combinations(concepts, 2):
-                _add_or_update_edge(sub, src, dst, "co_occurs", doc_id, chunk, self.config.evidence_cap)
+                _add_or_update_edge(
+                    sub, src, dst, "co_occurs", doc_id, chunk, self.config.evidence_cap
+                )
 
         return sub
 
@@ -167,9 +169,7 @@ class NeuralSemanticGraph:
         seed_results = self._index.search(query_vec, top_k=top_k)
 
         # Only keep seeds that are actually in the graph.
-        seeds: list[tuple[str, float]] = [
-            (c, s) for c, s in seed_results if self.graph.has_node(c)
-        ]
+        seeds: list[tuple[str, float]] = [(c, s) for c, s in seed_results if self.graph.has_node(c)]
 
         # Weighted BFS expansion.
         visited: set[str] = set()
@@ -209,14 +209,16 @@ class NeuralSemanticGraph:
 
         edges_out: list[dict[str, Any]] = []
         for s, t, d in sg.edges(data=True):
-            edges_out.append({
-                "source": s,
-                "target": t,
-                "relation_type": d.get("relation_type", "co_occurs"),
-                "weight": d.get("weight", 1.0),
-                "doc_id": d.get("doc_id", ""),
-                "evidence": d.get("evidence", []),
-            })
+            edges_out.append(
+                {
+                    "source": s,
+                    "target": t,
+                    "relation_type": d.get("relation_type", "co_occurs"),
+                    "weight": d.get("weight", 1.0),
+                    "doc_id": d.get("doc_id", ""),
+                    "evidence": d.get("evidence", []),
+                }
+            )
 
         return {
             "query": query,
@@ -229,6 +231,7 @@ class NeuralSemanticGraph:
 # ------------------------------------------------------------------
 # Internal helpers
 # ------------------------------------------------------------------
+
 
 def _add_or_update_edge(
     g: nx.MultiDiGraph,

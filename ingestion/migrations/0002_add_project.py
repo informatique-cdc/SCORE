@@ -3,7 +3,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ingestion", "0001_initial"),
         ("tenants", "0002_project_projectmembership"),
@@ -45,6 +44,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="document",
-            index=models.Index(fields=["tenant", "project", "status"], name="ingestion_d_tenant_proj_st_idx"),
+            index=models.Index(
+                fields=["tenant", "project", "status"], name="ingestion_d_tenant_proj_st_idx"
+            ),
         ),
     ]

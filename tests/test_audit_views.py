@@ -1,4 +1,5 @@
 """Tests for audit views: detail, axis, retry, delete, progress, API."""
+
 import pytest
 from django.contrib.auth.models import User
 from django.test import Client
@@ -30,8 +31,12 @@ def _client(user, tenant, project):
 def _make_audit(tenant, project, status=AuditJob.Status.COMPLETED):
     analysis = AnalysisJob.objects.create(tenant=tenant, project=project, status="completed")
     job = AuditJob.objects.create(
-        tenant=tenant, project=project, analysis_job=analysis,
-        status=status, overall_score=75.0, overall_grade="B",
+        tenant=tenant,
+        project=project,
+        analysis_job=analysis,
+        status=status,
+        overall_score=75.0,
+        overall_grade="B",
     )
     return job
 
@@ -48,7 +53,9 @@ class TestAuditDetail:
     def test_wrong_project_404(self, audit_setup):
         user, tenant, project = audit_setup
         other_tenant = Tenant.objects.create(name="Other", slug="other-aud")
-        other_project = Project.objects.create(tenant=other_tenant, name="OtherP", slug="other-aud-p")
+        other_project = Project.objects.create(
+            tenant=other_tenant, name="OtherP", slug="other-aud-p"
+        )
         job = _make_audit(other_tenant, other_project)
         client = _client(user, tenant, project)
         resp = client.get(f"/analysis/audit/{job.id}/")
@@ -69,8 +76,14 @@ class TestAuditAxisView:
         user, tenant, project = audit_setup
         job = _make_audit(tenant, project)
         AuditAxisResult.objects.create(
-            tenant=tenant, project=project, audit_job=job,
-            axis="hygiene", score=80.0, metrics={}, chart_data={}, details={},
+            tenant=tenant,
+            project=project,
+            audit_job=job,
+            axis="hygiene",
+            score=80.0,
+            metrics={},
+            chart_data={},
+            details={},
         )
         client = _client(user, tenant, project)
         resp = client.get(f"/analysis/audit/{job.id}/hygiene/")
@@ -118,9 +131,14 @@ class TestApiAuditAxis:
         user, tenant, project = audit_setup
         job = _make_audit(tenant, project)
         AuditAxisResult.objects.create(
-            tenant=tenant, project=project, audit_job=job,
-            axis="structure", score=65.0,
-            metrics={"avg_chunk_size": 500}, chart_data={"bins": [1, 2, 3]}, details={},
+            tenant=tenant,
+            project=project,
+            audit_job=job,
+            axis="structure",
+            score=65.0,
+            metrics={"avg_chunk_size": 500},
+            chart_data={"bins": [1, 2, 3]},
+            details={},
         )
         client = _client(user, tenant, project)
         resp = client.get(f"/analysis/audit/{job.id}/api/structure/")

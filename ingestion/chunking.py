@@ -8,6 +8,7 @@ Two strategies:
 
 Both use tiktoken for accurate token counting.
 """
+
 import logging
 from dataclasses import dataclass
 
@@ -33,6 +34,7 @@ def _get_encoder() -> tiktoken.Encoding:
 @dataclass
 class Chunk:
     """A text chunk with metadata."""
+
     index: int
     content: str
     token_count: int
@@ -92,25 +94,31 @@ def _chunk_heading_aware(
         section_tokens = enc.encode(section_text)
         if len(section_tokens) <= chunk_size:
             if len(section_tokens) >= min_chunk_size:
-                chunks.append(Chunk(
-                    index=chunk_idx,
-                    content=section_text.strip(),
-                    token_count=len(section_tokens),
-                    heading_path=heading_path,
-                    content_hash=hash_chunk(section_text),
-                ))
+                chunks.append(
+                    Chunk(
+                        index=chunk_idx,
+                        content=section_text.strip(),
+                        token_count=len(section_tokens),
+                        heading_path=heading_path,
+                        content_hash=hash_chunk(section_text),
+                    )
+                )
                 chunk_idx += 1
         else:
             # Subdivide large section with overlap
-            sub_chunks = _split_tokens(section_text, section_tokens, enc, chunk_size, chunk_overlap, min_chunk_size)
+            sub_chunks = _split_tokens(
+                section_text, section_tokens, enc, chunk_size, chunk_overlap, min_chunk_size
+            )
             for sc_text, sc_token_count in sub_chunks:
-                chunks.append(Chunk(
-                    index=chunk_idx,
-                    content=sc_text.strip(),
-                    token_count=sc_token_count,
-                    heading_path=heading_path,
-                    content_hash=hash_chunk(sc_text),
-                ))
+                chunks.append(
+                    Chunk(
+                        index=chunk_idx,
+                        content=sc_text.strip(),
+                        token_count=sc_token_count,
+                        heading_path=heading_path,
+                        content_hash=hash_chunk(sc_text),
+                    )
+                )
                 chunk_idx += 1
 
     return chunks

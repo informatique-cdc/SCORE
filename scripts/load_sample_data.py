@@ -7,6 +7,7 @@ Usage:
     OR
     python scripts/load_sample_data.py  (with DJANGO_SETTINGS_MODULE set)
 """
+
 import os
 import sys
 
@@ -15,6 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "score.settings")
 
 import django
+
 django.setup()
 
 from django.contrib.auth.models import User  # noqa: E402
@@ -59,15 +61,9 @@ def main():
     print(f"  Espaces : {tenant1.name}, {tenant2.name}")
 
     # Memberships
-    TenantMembership.objects.get_or_create(
-        tenant=tenant1, user=admin, defaults={"role": "admin"}
-    )
-    TenantMembership.objects.get_or_create(
-        tenant=tenant1, user=demo, defaults={"role": "editor"}
-    )
-    TenantMembership.objects.get_or_create(
-        tenant=tenant2, user=admin, defaults={"role": "admin"}
-    )
+    TenantMembership.objects.get_or_create(tenant=tenant1, user=admin, defaults={"role": "admin"})
+    TenantMembership.objects.get_or_create(tenant=tenant1, user=demo, defaults={"role": "editor"})
+    TenantMembership.objects.get_or_create(tenant=tenant2, user=admin, defaults={"role": "admin"})
 
     # Create sample connector
     connector, _ = ConnectorConfig.objects.get_or_create(
@@ -184,7 +180,9 @@ def main():
             )
             print(f"  Document créé : {doc.title}")
 
-    print(f"\nDonnées d'exemple chargées. {Document.objects.filter(tenant=tenant1).count()} documents dans {tenant1.name}.")
+    print(
+        f"\nDonnées d'exemple chargées. {Document.objects.filter(tenant=tenant1).count()} documents dans {tenant1.name}."
+    )
     print("\nIdentifiants de connexion :")
     print("  Admin : admin / admin")
     print("  Démo :  demo / demo")

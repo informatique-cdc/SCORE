@@ -4,6 +4,7 @@ Document and chunk models.
 Documents represent ingested files/pages. Each document is split into chunks
 for embedding and analysis. Content hashing enables incremental re-ingestion.
 """
+
 import uuid
 
 from django.db import models
@@ -36,11 +37,15 @@ class Document(ProjectScopedModel):
     source_url = models.URLField(max_length=2000, blank=True, default="")
     author = models.CharField(max_length=500, blank=True, default="")
     doc_type = models.CharField(
-        max_length=50, blank=True, default="",
+        max_length=50,
+        blank=True,
+        default="",
         help_text="File type or document category",
     )
     path = models.CharField(
-        max_length=2000, blank=True, default="",
+        max_length=2000,
+        blank=True,
+        default="",
         help_text="Path/hierarchy in the source system",
     )
 
@@ -50,7 +55,9 @@ class Document(ProjectScopedModel):
         help_text="SHA-256 hash of extracted text content",
     )
     source_version = models.CharField(
-        max_length=200, blank=True, default="",
+        max_length=200,
+        blank=True,
+        default="",
         help_text="Version ID from source (etag, revision, modified timestamp)",
     )
     version_number = models.PositiveIntegerField(default=1)
@@ -91,7 +98,9 @@ class DocumentChunk(TenantScopedModel):
 
     # Heading context for heading-aware chunking
     heading_path = models.CharField(
-        max_length=1000, blank=True, default="",
+        max_length=1000,
+        blank=True,
+        default="",
         help_text="Hierarchical heading path, e.g. 'Chapter 1 > Section 2 > Subsection A'",
     )
 

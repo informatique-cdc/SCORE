@@ -6,6 +6,7 @@ import pytest
 def _spacy_model_available(model: str = "en_core_web_sm") -> bool:
     try:
         import spacy
+
         spacy.load(model)
         return True
     except Exception:

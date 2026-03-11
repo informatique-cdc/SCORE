@@ -71,7 +71,12 @@ def save(nsg: "NeuralSemanticGraph", base_path: str | Path) -> None:
             indent=2,
         )
 
-    logger.info("Saved NSG to %s (%d nodes, %d edges)", base, nsg.graph.number_of_nodes(), nsg.graph.number_of_edges())
+    logger.info(
+        "Saved NSG to %s (%d nodes, %d edges)",
+        base,
+        nsg.graph.number_of_nodes(),
+        nsg.graph.number_of_edges(),
+    )
 
 
 def load(base_path: str | Path) -> "NeuralSemanticGraph":
@@ -127,5 +132,10 @@ def load(base_path: str | Path) -> "NeuralSemanticGraph":
     # Rebuild the vector index from stored embeddings.
     nsg.build_or_update_index()
 
-    logger.info("Loaded NSG from %s (%d nodes, %d edges)", base, nsg.graph.number_of_nodes(), nsg.graph.number_of_edges())
+    logger.info(
+        "Loaded NSG from %s (%d nodes, %d edges)",
+        base,
+        nsg.graph.number_of_nodes(),
+        nsg.graph.number_of_edges(),
+    )
     return nsg
