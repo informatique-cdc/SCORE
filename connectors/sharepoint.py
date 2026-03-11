@@ -33,7 +33,7 @@ class SharePointConnector(BaseConnector):
         try:
             import msal
         except ImportError:
-            raise ImportError("Install sharepoint extras: pip install docuscore[sharepoint]")
+            raise ImportError("Install sharepoint extras: pip install score[sharepoint]")
 
         authority = f"https://login.microsoftonline.com/{self._tenant_id}"
         app = msal.ConfidentialClientApplication(

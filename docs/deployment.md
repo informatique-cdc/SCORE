@@ -54,7 +54,7 @@ python manage.py createsuperuser
 
 ### SQLite (Default)
 
-DocuScore ships with SQLite as the default database, which is suitable for:
+SCORE ships with SQLite as the default database, which is suitable for:
 - Single-server deployments with low concurrency
 - Evaluation and testing
 - Small teams (< 10 concurrent users)
@@ -71,12 +71,12 @@ For production deployments with concurrent users, migrate to PostgreSQL:
 
 1. Install PostgreSQL and create a database:
    ```bash
-   createdb docuscore
+   createdb score
    ```
 
 2. Update `.env`:
    ```
-   DATABASE_URL=postgres://user:password@localhost:5432/docuscore
+   DATABASE_URL=postgres://user:password@localhost:5432/score
    ```
 
 3. Add `psycopg2-binary` to your dependencies:
@@ -103,7 +103,7 @@ For production deployments with concurrent users, migrate to PostgreSQL:
 
 ## Celery Workers
 
-DocuScore uses Celery for background task processing (analysis pipelines, audits).
+SCORE uses Celery for background task processing (analysis pipelines, audits).
 
 ### With Redis (recommended)
 ```bash
@@ -112,7 +112,7 @@ CELERY_BROKER_BACKEND=redis
 CELERY_BROKER_URL=redis://localhost:6379/0
 
 # Start worker
-celery -A docuscore worker -l info --pool=threads
+celery -A score worker -l info --pool=threads
 ```
 
 ### Without Redis (SQLite broker)
@@ -121,12 +121,12 @@ celery -A docuscore worker -l info --pool=threads
 CELERY_BROKER_BACKEND=database
 
 # Start worker
-celery -A docuscore worker -l info --pool=threads
+celery -A score worker -l info --pool=threads
 ```
 
 ## Reverse Proxy
 
-Place DocuScore behind a reverse proxy (nginx, Caddy) for:
+Place SCORE behind a reverse proxy (nginx, Caddy) for:
 - TLS termination
 - Static file serving
 - Request buffering
@@ -136,10 +136,10 @@ Example nginx configuration:
 ```nginx
 server {
     listen 443 ssl;
-    server_name docuscore.example.com;
+    server_name score.example.com;
 
-    ssl_certificate /etc/ssl/certs/docuscore.pem;
-    ssl_certificate_key /etc/ssl/private/docuscore.key;
+    ssl_certificate /etc/ssl/certs/score.pem;
+    ssl_certificate_key /etc/ssl/private/score.key;
 
     location /static/ {
         alias /app/staticfiles/;
@@ -157,7 +157,7 @@ server {
 ## Monitoring
 
 - Health endpoint: `GET /health/` — returns 200 if the app is running
-- Celery: use `celery -A docuscore inspect active` to check worker status
+- Celery: use `celery -A score inspect active` to check worker status
 - Logs: structured logging to stdout (configure your log aggregator accordingly)
 
 ## Backups

@@ -1,4 +1,4 @@
-"""Shared utilities for the DocuScore project."""
+"""Shared utilities for the SCORE project."""
 
 import json
 

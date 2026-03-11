@@ -7,8 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from docuscore.ratelimit import ratelimit
-from docuscore.utils import parse_json_body
+from score.ratelimit import ratelimit
+from score.utils import parse_json_body
 from ingestion.models import Document
 from llm.client import get_llm_client
 from llm.prompt_loader import get_prompt

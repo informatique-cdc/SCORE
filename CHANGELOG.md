@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to DocuScore will be documented in this file.
+All notable changes to SCORE will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `compute_penalty_score()` shared scoring function (eliminates 3x duplication)
 
 ### Changed
-- Moved `scoring.py` from `dashboard/` to `docuscore/` (shared across apps)
+- Moved `scoring.py` from `dashboard/` to `score/` (shared across apps)
 - Consolidated `_grade()` / `_audit_grade()` into single `grade()` function
 - Synced `pyproject.toml` and `requirements.txt` dependencies
 - Pinned `sqlite-vec==0.1.6` consistently across both dep files
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gap analysis with coverage scoring
 - Topic clustering (HDBSCAN)
 - RAG-based audit (hygiene, structure, coverage, coherence, retrievability, governance)
-- DocuScore 0-100 scoring with A-E letter grades
+- SCORE 0-100 scoring with A-E letter grades
 - PDF report generation with radar charts
 - RAG chat interface
 - SharePoint and Confluence connectors

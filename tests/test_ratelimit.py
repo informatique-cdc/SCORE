@@ -1,11 +1,11 @@
-"""Tests for docuscore/ratelimit.py — per-user rate limiting decorator."""
+"""Tests for score/ratelimit.py — per-user rate limiting decorator."""
 import pytest
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.test import RequestFactory
 
-from docuscore.ratelimit import ratelimit
+from score.ratelimit import ratelimit
 
 
 @pytest.fixture(autouse=True)

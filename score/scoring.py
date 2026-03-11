@@ -1,5 +1,5 @@
 """
-DocuScore — Nutri-Score-style quality grade for a knowledge base.
+SCORE — Nutri-Score-style quality grade for a knowledge base.
 
 Computes a 0-100 score from the latest completed analysis, then maps to
 a letter grade A through E.  Seven dimensions are evaluated:
@@ -84,7 +84,7 @@ def _get_audit_axis_score(audit_job, axis_key):
         return None
 
 
-def compute_docuscore(project):
+def compute_score(project):
     """Return a dict with grade, score (0-100), breakdown, and metadata."""
     docs_qs = Document.objects.filter(project=project).exclude(
         status=Document.Status.DELETED
@@ -185,7 +185,7 @@ def compute_docuscore(project):
     }
 
 
-def compute_docuscore_for_job(job):
+def compute_score_for_job(job):
     """Return grade + score for a specific AnalysisJob (lightweight)."""
     if job.status != AnalysisJob.Status.COMPLETED:
         return None
@@ -252,7 +252,7 @@ def compute_docuscore_for_job(job):
     return {"grade": grade(score), "score": score}
 
 
-def compute_docuscore_detail(project):
+def compute_score_detail(project):
     """Return the full score with per-dimension explanations and recommendations."""
     docs_qs = Document.objects.filter(project=project).exclude(
         status=Document.Status.DELETED
@@ -551,7 +551,7 @@ def compute_docuscore_detail(project):
                       gov_details, gov_recs))
 
     # Final
-    score_result = compute_docuscore(project)
+    score_result = compute_score(project)
     grade = score_result["grade"]
     score = score_result["score"]
 
@@ -646,7 +646,7 @@ _RADAR_AXES = [
 
 
 def build_breakdown_json(breakdown):
-    """Serialize a DocuScore breakdown dict to JSON for the radar chart."""
+    """Serialize a SCORE breakdown dict to JSON for the radar chart."""
     import json
     return json.dumps([
         {"axis": str(_(label)), "score": breakdown.get(key) or 0}

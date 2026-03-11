@@ -1,10 +1,10 @@
 #!/bin/bash
-# DocuScore development setup and run script
+# SCORE development setup and run script
 set -e
 
 cd "$(dirname "$0")/.."
 
-echo "=== DocuScore Development Setup 2 ==="
+echo "=== SCORE Development Setup 2 ==="
 
 # Detect Python command (python3 on macOS/Linux, python on Windows/some envs)
 PYTHON=python
@@ -54,11 +54,11 @@ echo "  python manage.py runserver"
 echo ""
 echo "To start the Celery worker (in a separate terminal):"
 echo "  source .venv/bin/activate"
-echo "  celery -A docuscore worker -l info"
+echo "  celery -A score worker -l info"
 echo ""
 echo "Or for no-Redis dev mode (using DB broker):"
 echo "  Set CELERY_BROKER_BACKEND=database in .env"
-echo "  celery -A docuscore worker -l info -P solo"
+echo "  celery -A score worker -l info -P solo"
 echo ""
 echo "To run tests:"
 echo "  pytest tests/"

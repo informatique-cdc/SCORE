@@ -1,5 +1,5 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Audit RAG — DocuScore{% endblock %}
+{% block title %}Audit RAG — SCORE{% endblock %}
 {% block nav_analysis %}active{% endblock %}
 
 {% block content %}
@@ -61,7 +61,7 @@
                     </td>
                     <td>
                         {% if job.overall_grade %}
-                            <span class="docuscore-pill active docuscore-{{ job.overall_grade }}" style="width:32px;height:32px;font-size:16px;">{{ job.overall_grade }}</span>
+                            <span class="score-pill active score-{{ job.overall_grade }}" style="width:32px;height:32px;font-size:16px;">{{ job.overall_grade }}</span>
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}

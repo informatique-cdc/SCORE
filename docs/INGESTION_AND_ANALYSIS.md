@@ -1,6 +1,6 @@
 # Ingestion Pipeline & Semantic Analysis
 
-Complete technical reference for DocuScore's document ingestion pipeline and all analysis methods.
+Complete technical reference for SCORE's document ingestion pipeline and all analysis methods.
 
 ---
 
@@ -588,7 +588,7 @@ Builds a concept-level knowledge graph from all project documents and claims usi
 
 #### How It Works
 
-The NSG library extracts concepts (named entities, noun phrases) from text via spaCy, then links co-occurring concepts within each chunk as edges in a directed multigraph. DocuScore plugs its own LLM embedding provider into NSG (via the `embed_fn` parameter), so all vectors use the same `text-embedding-3-small` model as the rest of the pipeline.
+The NSG library extracts concepts (named entities, noun phrases) from text via spaCy, then links co-occurring concepts within each chunk as edges in a directed multigraph. SCORE plugs its own LLM embedding provider into NSG (via the `embed_fn` parameter), so all vectors use the same `text-embedding-3-small` model as the rest of the pipeline.
 
 #### Process
 

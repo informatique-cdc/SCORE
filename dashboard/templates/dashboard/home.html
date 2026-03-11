@@ -1,6 +1,6 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Tableau de bord" %} - DocuScore{% endblock %}
+{% block title %}{% trans "Tableau de bord" %} - SCORE{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
 
 {% block extra_css %}
@@ -126,7 +126,7 @@
     .issue-action.sev-medium { background: #ffc107; color: #1f2024; }
     .issue-action.sev-low { background: var(--ds-grey-500); color: var(--ds-grey-100); }
 
-    /* ── DocuScore hero ── */
+    /* ── SCORE hero ── */
     .ds-hero {
         display: flex; align-items: center; gap: 24px;
         padding: 20px 24px;
@@ -191,18 +191,18 @@
 
 <!-- ═══ KPI ROW ═══ -->
 <div class="kpi-row mb-4">
-    <div class="kpi-card" style="border-left: 3px solid {% if docuscore.grade == 'A' %}#038141{% elif docuscore.grade == 'B' %}#85bb2f{% elif docuscore.grade == 'C' %}#c9a300{% elif docuscore.grade == 'D' %}#ee8100{% else %}#e63e11{% endif %};">
+    <div class="kpi-card" style="border-left: 3px solid {% if ds.grade == 'A' %}#038141{% elif ds.grade == 'B' %}#85bb2f{% elif ds.grade == 'C' %}#c9a300{% elif ds.grade == 'D' %}#ee8100{% else %}#e63e11{% endif %};">
         <div class="kpi-label">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
-            DocuScore
+            SCORE
         </div>
         <div class="d-flex align-items-baseline gap-2">
-            <span class="kpi-value docuscore-color-{{ docuscore.grade }}">{{ docuscore.score }}</span>
+            <span class="kpi-value score-color-{{ ds.grade }}">{{ ds.score }}</span>
             <span style="font-size:13px;color:var(--ds-text-muted);">/100</span>
         </div>
-        <div class="docuscore-badge d-flex" style="gap:2px;">
+        <div class="score-badge d-flex" style="gap:2px;">
             {% for letter in "ABCDE" %}
-            <span class="docuscore-pill docuscore-{{ letter }}{% if docuscore.grade == letter %} active{% endif %}" style="{% if docuscore.grade != letter %}width:20px;height:20px;font-size:10px;{% endif %}">{{ letter }}</span>
+            <span class="score-pill score-{{ letter }}{% if ds.grade == letter %} active{% endif %}" style="{% if ds.grade != letter %}width:20px;height:20px;font-size:10px;{% endif %}">{{ letter }}</span>
             {% endfor %}
         </div>
     </div>
@@ -250,17 +250,17 @@
     </div>
 </div>
 
-<!-- ═══ DOCUSCORE DETAIL + ISSUES ═══ -->
+<!-- ═══ SCORE DETAIL + ISSUES ═══ -->
 <div class="row g-3 mb-4">
-    <!-- DocuScore breakdown + radar -->
+    <!-- SCORE breakdown + radar -->
     <div class="col-lg-7">
         <div class="section-title">{% trans "Qualité de la base" %}</div>
-        <div class="section-subtitle">{% trans "Détail du DocuScore par dimension." %}</div>
-        <div class="ds-hero" id="docuscore-trigger" data-bs-toggle="offcanvas" data-bs-target="#docuscore-panel" title="Cliquer pour les d&eacute;tails et recommandations">
+        <div class="section-subtitle">{% trans "Détail du SCORE par dimension." %}</div>
+        <div class="ds-hero" id="score-trigger" data-bs-toggle="offcanvas" data-bs-target="#score-panel" title="Cliquer pour les d&eacute;tails et recommandations">
             <!-- Breakdown bars -->
             <div class="ds-hero-bars" style="flex:1;min-width:0;">
-                {% if docuscore.has_analysis %}
-                {% with b=docuscore.breakdown %}
+                {% if ds.has_analysis %}
+                {% with b=ds.breakdown %}
                 <div class="ds-bar-row">
                     <span class="ds-bar-label">{% trans "Unicité" %}</span>
                     <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.uniqueness >= 70 %}success{% elif b.uniqueness >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.uniqueness|default:0 }}%"></div></div>
@@ -303,12 +303,12 @@
                 {% endwith %}
                 {% else %}
                 <p class="text-muted mb-0" style="font-size:12px;">
-                    {% if not docuscore.has_docs %}{% trans "Ajoutez des documents et lancez une analyse." %}{% else %}{% trans "Lancez une analyse pour calculer votre score." %}{% endif %}
+                    {% if not ds.has_docs %}{% trans "Ajoutez des documents et lancez une analyse." %}{% else %}{% trans "Lancez une analyse pour calculer votre score." %}{% endif %}
                 </p>
                 {% endif %}
             </div>
             <!-- Right: radar chart -->
-            {% if docuscore.has_analysis %}
+            {% if ds.has_analysis %}
             <div style="flex:1;min-width:180px;height:200px;" id="ds-radar"></div>
             {% endif %}
         </div>
@@ -477,8 +477,8 @@
     </div>
 </div>
 
-<!-- DocuScore Detail Offcanvas -->
-{% include "dashboard/_docuscore_offcanvas.html" %}
+<!-- SCORE Detail Offcanvas -->
+{% include "dashboard/_score_offcanvas.html" %}
 
 {% if connector_count == 0 and doc_count == 0 %}
 <!-- Onboarding Modal -->
@@ -491,7 +491,7 @@
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
                 </div>
 
-                <h5 id="onboardingModalLabel" style="text-align:center;font-weight:700;font-size:20px;margin-bottom:6px;color:var(--ds-grey-100);">{% trans "Bienvenue sur DocuScore" %}</h5>
+                <h5 id="onboardingModalLabel" style="text-align:center;font-weight:700;font-size:20px;margin-bottom:6px;color:var(--ds-grey-100);">{% trans "Bienvenue sur SCORE" %}</h5>
                 <p style="text-align:center;font-size:13px;color:var(--ds-text-muted);margin-bottom:28px;line-height:1.5;">
                     {% trans "Votre tableau de bord est vide pour le moment. Suivez ces étapes pour analyser la qualité de votre base documentaire." %}
                 </p>
@@ -513,7 +513,7 @@
                         </div>
                         <div>
                             <div style="font-weight:600;font-size:14px;color:var(--ds-grey-100);">{% trans "Indexez vos documents" %}</div>
-                            <div style="font-size:12px;color:var(--ds-text-muted);margin-top:2px;">{% trans "Lancez une ingération pour que DocuScore analyse le contenu de vos fichiers." %}</div>
+                            <div style="font-size:12px;color:var(--ds-text-muted);margin-top:2px;">{% trans "Lancez une ingération pour que SCORE analyse le contenu de vos fichiers." %}</div>
                         </div>
                     </div>
                     <div style="display:flex;align-items:flex-start;gap:14px;">
@@ -531,7 +531,7 @@
                         </div>
                         <div>
                             <div style="font-weight:600;font-size:14px;color:var(--ds-grey-100);">{% trans "Explorez les résultats" %}</div>
-                            <div style="font-size:12px;color:var(--ds-text-muted);margin-top:2px;">{% trans "Consultez votre DocuScore, générez des rapports et interrogez votre base via l'assistant IA." %}</div>
+                            <div style="font-size:12px;color:var(--ds-text-muted);margin-top:2px;">{% trans "Consultez votre SCORE, générez des rapports et interrogez votre base via l'assistant IA." %}</div>
                         </div>
                     </div>
                 </div>
@@ -553,7 +553,7 @@
 
 {% block extra_js %}
 <script>
-{% if docuscore.has_analysis %}
+{% if ds.has_analysis %}
 (function() {
     var el = document.getElementById("ds-radar");
     if (!el) return;

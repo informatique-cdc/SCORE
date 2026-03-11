@@ -12,7 +12,7 @@ import sys
 
 # Setup Django
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "docuscore.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "score.settings")
 
 import django
 django.setup()
@@ -30,7 +30,7 @@ def main():
     # Create superuser
     admin, created = User.objects.get_or_create(
         username="admin",
-        defaults={"email": "admin@docuscore.local", "is_staff": True, "is_superuser": True},
+        defaults={"email": "admin@score.local", "is_staff": True, "is_superuser": True},
     )
     if created:
         admin.set_password("admin")
@@ -40,7 +40,7 @@ def main():
     # Create demo user
     demo, created = User.objects.get_or_create(
         username="demo",
-        defaults={"email": "demo@docuscore.local"},
+        defaults={"email": "demo@score.local"},
     )
     if created:
         demo.set_password("demo")
@@ -75,7 +75,7 @@ def main():
         name="Sample Docs",
         defaults={
             "connector_type": "generic",
-            "config": {"source_type": "filesystem", "base_path": "/tmp/docuscore-sample"},
+            "config": {"source_type": "filesystem", "base_path": "/tmp/score-sample"},
         },
     )
 

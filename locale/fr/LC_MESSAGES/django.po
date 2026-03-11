@@ -5,11 +5,11 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: DocuScore 1.0\n"
+"Project-Id-Version: SCORE 1.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-10 15:03+0000\n"
 "PO-Revision-Date: 2026-02-10 15:03+0000\n"
-"Last-Translator: DocuScore Team\n"
+"Last-Translator: SCORE Team\n"
 "Language-Team: French\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
@@ -158,7 +158,7 @@ msgstr ""
 msgid "ID"
 msgstr ""
 
-msgid "DocuScore"
+msgid "SCORE"
 msgstr ""
 
 msgid "Statut"
@@ -794,7 +794,7 @@ msgstr ""
 msgid "Assistant"
 msgstr ""
 
-msgid "Assistant — DocuScore"
+msgid "Assistant — SCORE"
 msgstr ""
 
 msgid "Historique"
@@ -1051,12 +1051,12 @@ msgstr ""
 msgid "Fichiers locaux ou URL"
 msgstr ""
 
-msgid "Connecter SharePoint &agrave; DocuScore"
+msgid "Connecter SharePoint &agrave; SCORE"
 msgstr ""
 
 msgid ""
 "Configurez les param&egrave;tres de connexion pour indexer automatiquement "
-"vos documents dans DocuScore."
+"vos documents dans SCORE."
 msgstr ""
 
 msgid "Nom du connecteur"
@@ -1106,7 +1106,7 @@ msgid "Connecter"
 msgstr ""
 
 msgid ""
-"En cr&eacute;ant ce connecteur, vous autorisez DocuScore &agrave; "
+"En cr&eacute;ant ce connecteur, vous autorisez SCORE &agrave; "
 "acc&eacute;der et indexer les documents de la source configur&eacute;e. Vous "
 "pouvez le d&eacute;sactiver &agrave; tout moment depuis la page Connecteurs."
 msgstr ""
@@ -1129,7 +1129,7 @@ msgstr ""
 msgid "Aucune t&acirc;che pour le moment"
 msgstr ""
 
-msgid "Ajouter un connecteur - DocuScore"
+msgid "Ajouter un connecteur - SCORE"
 msgstr ""
 
 msgid "Retour aux connecteurs"
@@ -1293,7 +1293,7 @@ msgstr ""
 msgid "Zoom arri&egrave;re"
 msgstr ""
 
-msgid "Connecteurs - DocuScore"
+msgid "Connecteurs - SCORE"
 msgstr ""
 
 msgid "Aucun contenu disponible."
@@ -1450,7 +1450,7 @@ msgstr ""
 msgid "Lancez une analyse pour calculer votre score complet."
 msgstr ""
 
-msgid "Détails DocuScore"
+msgid "Détails SCORE"
 msgstr ""
 
 msgid "Chargement des détails du score..."
@@ -1468,7 +1468,7 @@ msgstr ""
 msgid "Comment améliorer :"
 msgstr ""
 
-msgid "D&eacute;tails DocuScore"
+msgid "D&eacute;tails SCORE"
 msgstr ""
 
 msgid "Chargement des d&eacute;tails du score..."
@@ -1657,7 +1657,7 @@ msgstr ""
 msgid "Qualité de la base"
 msgstr ""
 
-msgid "Détail du DocuScore par dimension."
+msgid "Détail du SCORE par dimension."
 msgstr ""
 
 msgid "Ajoutez des documents et lancez une analyse."
@@ -1720,7 +1720,7 @@ msgstr ""
 msgid "Rapports générés"
 msgstr ""
 
-msgid "Bienvenue sur DocuScore"
+msgid "Bienvenue sur SCORE"
 msgstr ""
 
 msgid ""
@@ -1740,7 +1740,7 @@ msgid "Indexez vos documents"
 msgstr ""
 
 msgid ""
-"Lancez une ingération pour que DocuScore analyse le contenu de vos fichiers."
+"Lancez une ingération pour que SCORE analyse le contenu de vos fichiers."
 msgstr ""
 
 msgid "Lancez l'analyse"
@@ -1755,7 +1755,7 @@ msgid "Explorez les résultats"
 msgstr ""
 
 msgid ""
-"Consultez votre DocuScore, générez des rapports et interrogez votre base via "
+"Consultez votre SCORE, générez des rapports et interrogez votre base via "
 "l'assistant IA."
 msgstr ""
 
@@ -1852,7 +1852,7 @@ msgstr ""
 msgid "JSON"
 msgstr ""
 
-msgid "Rapports - DocuScore"
+msgid "Rapports - SCORE"
 msgstr ""
 
 msgid "Exporter depuis une analyse"
@@ -1867,7 +1867,7 @@ msgstr ""
 msgid "Aucune analyse terminée disponible pour l'export."
 msgstr ""
 
-msgid "Rapport DocuScore"
+msgid "Rapport SCORE"
 msgstr ""
 
 msgid "G&eacute;n&eacute;r&eacute; le"
@@ -1882,14 +1882,14 @@ msgstr ""
 msgid "Aucun connecteur configur&eacute;."
 msgstr ""
 
-msgid "DocuScore &mdash; Qualit&eacute; de la base"
+msgid "SCORE &mdash; Qualit&eacute; de la base"
 msgstr ""
 
 msgid "Recommandations prioritaires"
 msgstr ""
 
 msgid ""
-"Aucune analyse termin&eacute;e &mdash; le DocuScore n'est pas encore "
+"Aucune analyse termin&eacute;e &mdash; le SCORE n'est pas encore "
 "disponible."
 msgstr ""
 

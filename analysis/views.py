@@ -12,8 +12,8 @@ from django.db import models
 from django.views.decorators.http import require_POST
 
 from analysis.constants import AXIS_COLORS, AXIS_ICONS, AXIS_LABELS, SUB_COLORS, SUB_SCORE_LABELS
-from docuscore.issues import build_analysis_issues
-from docuscore.ratelimit import ratelimit
+from score.issues import build_analysis_issues
+from score.ratelimit import ratelimit
 from analysis.models import (
     AnalysisJob,
     AuditAxisResult,
@@ -30,7 +30,7 @@ from analysis.presenters import contradiction_chart_data, gap_chart_data, halluc
 from analysis.semantic_graph import graph_dir
 from analysis.tasks import UNIFIED_PROGRESS, run_unified_pipeline
 from connectors.models import ConnectorConfig
-from docuscore.scoring import build_breakdown_json, compute_docuscore, compute_docuscore_detail
+from score.scoring import build_breakdown_json, compute_score, compute_score_detail
 from ingestion.models import Document
 from tenants.models import AuditLog, log_audit
 
@@ -107,15 +107,15 @@ def _analysis_jobs_context(project):
     for aj in audit_jobs:
         audit_map[aj.analysis_job_id] = aj
 
-    # Batch compute docuscores to avoid N+1 queries per job
+    # Batch compute scores to avoid N+1 queries per job
     completed_jobs = [j for j in jobs if j.status == AnalysisJob.Status.COMPLETED]
-    docuscores = {}
+    scores = {}
     if completed_jobs:
-        docuscores = _batch_docuscores(project, completed_jobs, audit_map)
+        scores = _batch_scores(project, completed_jobs, audit_map)
 
     for job in jobs:
         job.linked_audit = audit_map.get(job.id)
-        job.docuscore = docuscores.get(job.id)
+        job.score_result = scores.get(job.id)
 
     should_poll = any(
         j.status in (AnalysisJob.Status.QUEUED, AnalysisJob.Status.RUNNING)
@@ -124,14 +124,14 @@ def _analysis_jobs_context(project):
     return {"jobs": jobs, "should_poll": should_poll}
 
 
-def _batch_docuscores(project, completed_jobs, audit_map):
-    """Compute docuscores for multiple jobs with batched queries.
+def _batch_scores(project, completed_jobs, audit_map):
+    """Compute scores for multiple jobs with batched queries.
 
-    Mirror of compute_docuscore_for_job logic but uses aggregated queries
+    Mirror of compute_score_for_job logic but uses aggregated queries
     instead of per-job queries (~8 queries total instead of ~18 × N).
     """
     from django.db.models import Avg, Count, Q
-    from docuscore.scoring import grade, compute_penalty_score, health_score
+    from score.scoring import grade, compute_penalty_score, health_score
 
     job_ids = [j.id for j in completed_jobs]
 
@@ -364,7 +364,7 @@ def _analysis_results_context(job):
         "gap_count": GapReport.objects.filter(analysis_job=job).exclude(resolution="resolved").count(),
         "hallu_count": HallucinationReport.objects.filter(analysis_job=job).exclude(resolution="resolved").count(),
         "doc_count": Document.objects.filter(project=job.project).count(),
-        "docuscore": compute_docuscore(job.project),
+        "ds": compute_score(job.project),
         "should_poll": should_poll,
     }
 
@@ -513,7 +513,7 @@ def analysis_cancel(request, pk):
 
     # Revoke the Celery task
     if job.celery_task_id:
-        from docuscore.celery import app as celery_app
+        from score.celery import app as celery_app
         celery_app.control.revoke(job.celery_task_id, terminate=True)
 
     job.status = AnalysisJob.Status.CANCELLED
@@ -561,12 +561,12 @@ def analysis_detail(request, pk):
     context["top_issues"] = _build_job_issues(job)
 
     if job.status == AnalysisJob.Status.COMPLETED:
-        detail = compute_docuscore_detail(job.project)
+        detail = compute_score_detail(job.project)
         context["top_recommendations"] = detail.get("top_recommendations", [])
 
-    # DocuScore widget data
-    ds = compute_docuscore(job.project)
-    context["docuscore"] = ds
+    # SCORE widget data
+    ds = compute_score(job.project)
+    context["ds"] = ds
     context["breakdown_json"] = build_breakdown_json(ds["breakdown"])
 
     return render(request, "analysis/detail.html", context)

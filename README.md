@@ -20,7 +20,7 @@ Built with Django, SQLite + sqlite-vec, Celery, OpenAI/Azure OpenAI, and spaCy.
 - [Database Schema](#database-schema)
 - [URL Routes](#url-routes)
 - [Authentication & Multi-Tenancy](#authentication--multi-tenancy)
-- [DocuScore Scoring](#docuscore-scoring)
+- [SCORE Scoring](#score-scoring)
 - [Tests](#tests)
 - [Dependencies](#dependencies)
 - [Contributing](#contributing)
@@ -61,7 +61,7 @@ Built with Django, SQLite + sqlite-vec, Celery, OpenAI/Azure OpenAI, and spaCy.
 ## Project Structure
 
 ```
-docuscore/
+score/
 ├── analysis/                  # Document analysis (duplicates, contradictions, gaps, clustering, hallucination)
 │   ├── models.py              #   AnalysisJob, AuditJob, AuditAxisResult, DuplicateGroup,
 │   │                          #   DuplicatePair, Claim, ContradictionPair, TopicCluster,
@@ -108,14 +108,14 @@ docuscore/
 │
 ├── dashboard/                 # Main web UI
 │   ├── views.py               #   Home view with stats, scoring, and recent jobs
-│   ├── scoring.py             #   Re-exports from docuscore.scoring (backward compat)
+│   ├── scoring.py             #   Re-exports from score.scoring (backward compat)
 │   └── templates/dashboard/   #   base.html (Bootstrap 5 + D3.js layout), home.html, login.html
 │
-├── docuscore/                 # Django project root
+├── score/                 # Django project root
 │   ├── settings.py            #   Settings (reads .env + config.yaml), security hardening
 │   ├── urls.py                #   Root URL router
 │   ├── celery.py              #   Celery app configuration
-│   ├── scoring.py             #   DocuScore 0-100 scoring with A-E grades (7 dimensions)
+│   ├── scoring.py             #   SCORE 0-100 scoring with A-E grades (7 dimensions)
 │   ├── utils.py               #   Shared utilities (JSON parsing, etc.)
 │   ├── middleware.py          #   Content Security Policy middleware
 │   ├── health.py              #   Health check endpoint
@@ -256,7 +256,7 @@ A multi-stage Dockerfile is provided for production deployment.
 
 ```bash
 # Build the image
-docker build -t docuscore .
+docker build -t score .
 
 # Run the container
 docker run -p 8000:8000 \
@@ -264,7 +264,7 @@ docker run -p 8000:8000 \
   -e DEBUG=False \
   -e LLM_PROVIDER=openai \
   -e OPENAI_API_KEY=sk-... \
-  docuscore
+  score
 ```
 
 The Docker image:
@@ -277,7 +277,7 @@ The Docker image:
 
 ## Configuration
 
-DocuScore reads configuration from two sources, with environment variables taking precedence:
+SCORE reads configuration from two sources, with environment variables taking precedence:
 
 ### .env (environment variables)
 
@@ -404,14 +404,14 @@ In a separate terminal:
 
 ```bash
 source .venv/bin/activate
-celery -A docuscore worker -l info
+celery -A score worker -l info
 ```
 
 **For dev mode without Redis** (using SQLAlchemy database broker):
 
 ```bash
 # Make sure .env has: CELERY_BROKER_BACKEND=database
-celery -A docuscore worker -l info -P solo
+celery -A score worker -l info -P solo
 ```
 
 The `-P solo` flag runs a single-threaded worker, required for the database broker.
@@ -420,7 +420,7 @@ The `-P solo` flag runs a single-threaded worker, required for the database brok
 
 ## Task Queue (Celery)
 
-DocuScore uses Celery for all long-running operations. Three main task types exist:
+SCORE uses Celery for all long-running operations. Three main task types exist:
 
 ### Ingestion Task (`ingestion.tasks.run_ingestion`)
 
@@ -485,7 +485,7 @@ Configuration is controlled by `CELERY_BROKER_BACKEND` in `.env`. Result backend
 | `nsg`        | Semantic graph: concept extraction (spaCy), knowledge map (NetworkX + FAISS) |
 | `chat`       | RAG chat interface: conversations, document Q&A, configurable system prompt |
 | `reports`    | Report generation: CSV, JSON, and PDF export with radar charts   |
-| `dashboard`  | Web UI with stats, DocuScore grade, job history, and D3.js visualizations |
+| `dashboard`  | Web UI with stats, SCORE grade, job history, and D3.js visualizations |
 
 ---
 
@@ -556,7 +556,7 @@ Tenant isolation is enforced via post-filtering on metadata tables after KNN ret
 | Path                                    | View                    | Description                      |
 |-----------------------------------------|-------------------------|----------------------------------|
 | `/`                                     | redirect                | Redirects to `/dashboard/`       |
-| `/dashboard/`                           | dashboard.home          | Stats, DocuScore grade, quick links |
+| `/dashboard/`                           | dashboard.home          | Stats, SCORE grade, quick links |
 | `/healthz/`                             | healthz                 | Health check (for Docker/LB)     |
 | `/auth/login/`                          | allauth LoginView       | Login page                       |
 | `/auth/logout/`                         | allauth LogoutView      | Logout                           |
@@ -651,9 +651,9 @@ Tenant isolation is enforced via post-filtering on metadata tables after KNN ret
 
 ---
 
-## DocuScore Scoring
+## SCORE Scoring
 
-DocuScore computes a **0-100 quality score** from the latest completed analysis, then maps it to a letter grade (**A** through **E**, Nutri-Score style). Seven dimensions are evaluated:
+SCORE computes a **0-100 quality score** from the latest completed analysis, then maps it to a letter grade (**A** through **E**, Nutri-Score style). Seven dimensions are evaluated:
 
 | Dimension       | Max Penalty | Sources                                      |
 |-----------------|-------------|-----------------------------------------------|
@@ -680,7 +680,7 @@ Test configuration is in `pyproject.toml`:
 
 ```toml
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "docuscore.settings"
+DJANGO_SETTINGS_MODULE = "score.settings"
 ```
 
 The test suite covers all major modules: analysis views, audit views, chat, chunking, claims extraction, clustering, connectors, contradictions, dashboard, duplicates, gaps, hashing, LLM client, middleware, models, pipeline integration, reports, scoring, semantic graph (NSG), tenant isolation, tracing, and vector store.

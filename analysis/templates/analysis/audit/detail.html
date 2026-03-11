@@ -1,6 +1,6 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}Audit #{{ job.id|truncatechars:8 }} — DocuScore{% endblock %}
+{% block title %}Audit #{{ job.id|truncatechars:8 }} — SCORE{% endblock %}
 {% block nav_analysis %}active{% endblock %}
 
 {% block nav_analysis_submenu %}
@@ -56,9 +56,9 @@
 <div class="row mb-4">
     <div class="col-md-4">
         <div class="card text-center p-4">
-            <div class="docuscore-number docuscore-color-{{ job.overall_grade }}">{{ job.overall_score|floatformat:0 }}</div>
+            <div class="score-number score-color-{{ job.overall_grade }}">{{ job.overall_score|floatformat:0 }}</div>
             <div class="mt-2">
-                <span class="docuscore-pill active docuscore-{{ job.overall_grade }}">{{ job.overall_grade }}</span>
+                <span class="score-pill active score-{{ job.overall_grade }}">{{ job.overall_grade }}</span>
             </div>
             <div class="text-muted mt-2" style="font-size:13px;">Score global RAG</div>
         </div>

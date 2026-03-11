@@ -1,6 +1,6 @@
-# DocuScore Formula
+# SCORE Formula
 
-DocuScore is a Nutri-Score-style quality grade (A through E) for a knowledge base. It evaluates the overall health, consistency, and completeness of a document repository by combining metrics from the latest completed LLM analysis **and** the latest RAG audit (if available).
+SCORE is a Nutri-Score-style quality grade (A through E) for a knowledge base. It evaluates the overall health, consistency, and completeness of a document repository by combining metrics from the latest completed LLM analysis **and** the latest RAG audit (if available).
 
 ## Grade Scale
 
@@ -30,7 +30,7 @@ The LLM score is clamped to `[0, 100]`.
 
 ### Composite Score (LLM + RAG Audit)
 
-When both an LLM analysis and a RAG audit are completed, the final DocuScore is a **weighted composite**:
+When both an LLM analysis and a RAG audit are completed, the final SCORE is a **weighted composite**:
 
 ```
 final_score = llm_score × 0.85 + audit_rag_score × 0.15
@@ -190,7 +190,7 @@ overall_audit_score = Σ(axis_score × axis_weight) / Σ(axis_weight)
 
 Default axis weight: `1/6` per axis (uniform). Custom weights can be set in `config.yaml` under `audit.axis_weights`.
 
-The overall audit score is mapped to a letter grade using the same A-E scale as DocuScore.
+The overall audit score is mapped to a letter grade using the same A-E scale as SCORE.
 
 ### Execution Order and Progress
 
@@ -482,7 +482,7 @@ governance_score = 0.30 × completeness_score
 
 Source: `dashboard/scoring.py`
 
-The `compute_docuscore(project)` function returns:
+The `compute_score(project)` function returns:
 ```python
 {
     "grade": "B",        # Letter grade A-E
@@ -500,7 +500,7 @@ The `compute_docuscore(project)` function returns:
 }
 ```
 
-The `compute_docuscore_detail(project)` function returns the same score plus per-dimension explanations, details, and recommendations. It includes a 6th dimension **"Qualité RAG"** with axis-level breakdown when an audit is completed.
+The `compute_score_detail(project)` function returns the same score plus per-dimension explanations, details, and recommendations. It includes a 6th dimension **"Qualité RAG"** with axis-level breakdown when an audit is completed.
 
 ## Python Dependencies (RAG Audit)
 

@@ -16,7 +16,7 @@ services:
 
   celery:
     build: .
-    command: celery -A docuscore worker -l info --pool=threads --concurrency=4
+    command: celery -A score worker -l info --pool=threads --concurrency=4
     env_file: .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -30,7 +30,7 @@ services:
 
   celery-beat:
     build: .
-    command: celery -A docuscore beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A score beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file: .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0

@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in DocuScore, please report it responsibly.
+If you discover a security vulnerability in SCORE, please report it responsibly.
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 

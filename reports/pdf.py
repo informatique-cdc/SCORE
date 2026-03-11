@@ -14,7 +14,7 @@ from analysis.models import (
     HallucinationReport,
 )
 from connectors.models import ConnectorConfig
-from docuscore.scoring import compute_docuscore, compute_docuscore_detail
+from score.scoring import compute_score, compute_score_detail
 
 logger = logging.getLogger(__name__)
 
@@ -148,9 +148,9 @@ def gather_pdf_context(job):
         ConnectorConfig.objects.filter(project=project).order_by("name")
     )
 
-    # --- DocuScore ---
-    docuscore = compute_docuscore(project)
-    docuscore_detail = compute_docuscore_detail(project)
+    # --- SCORE ---
+    ds = compute_score(project)
+    score_detail = compute_score_detail(project)
 
     # --- Duplicates ---
     dup_groups = list(
@@ -209,23 +209,23 @@ def gather_pdf_context(job):
             audit_axes[result.axis] = result
 
     # Build dimension bar data for the PDF chart
-    dimensions = docuscore_detail.get("dimensions", [])
+    dimensions = score_detail.get("dimensions", [])
 
     # ── SVG chart data ──
     radar_points = _radar_points(dimensions)
     radar_axes = _radar_axes(dimensions)
     radar_grid = _radar_grid_rings()
-    donut = _donut_data(docuscore.get("score", 0))
+    donut = _donut_data(ds.get("score", 0))
     findings = _findings_summary(dup_groups, contradictions, gaps, hallucinations)
 
     return {
         "job": job,
         "project": project,
         "connectors": connectors,
-        "docuscore": docuscore,
-        "docuscore_detail": docuscore_detail,
+        "ds": ds,
+        "score_detail": score_detail,
         "dimensions": dimensions,
-        "top_recommendations": docuscore_detail.get("top_recommendations", []),
+        "top_recommendations": score_detail.get("top_recommendations", []),
         "dup_groups": dup_groups,
         "dup_count": len(dup_pairs),
         "contradictions": contradictions,

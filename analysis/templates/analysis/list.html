@@ -1,6 +1,6 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Analyses" %} — DocuScore{% endblock %}
+{% block title %}{% trans "Analyses" %} — SCORE{% endblock %}
 {% block nav_analysis %}active{% endblock %}
 
 {% block content %}
@@ -332,13 +332,13 @@
     color: #6ea8fe;
 }
 
-/* Inline mini docuscore in table */
-.docuscore-inline {
+/* Inline mini score in table */
+.score-inline {
     display: inline-flex;
     align-items: center;
     gap: 1px;
 }
-.docuscore-inline .ds-letter {
+.score-inline .ds-letter {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -351,18 +351,18 @@
     opacity: 0.2;
     transition: all 0.15s;
 }
-.docuscore-inline .ds-letter.active {
+.score-inline .ds-letter.active {
     width: 22px;
     height: 22px;
     font-size: 12px;
     opacity: 1;
     box-shadow: 0 1px 4px var(--ds-shadow);
 }
-.docuscore-inline .ds-letter.ds-A { background: #038141; }
-.docuscore-inline .ds-letter.ds-B { background: #85bb2f; }
-.docuscore-inline .ds-letter.ds-C { background: #fecb02; color: #333; }
-.docuscore-inline .ds-letter.ds-D { background: #ee8100; }
-.docuscore-inline .ds-letter.ds-E { background: #e63e11; }
+.score-inline .ds-letter.ds-A { background: #038141; }
+.score-inline .ds-letter.ds-B { background: #85bb2f; }
+.score-inline .ds-letter.ds-C { background: #fecb02; color: #333; }
+.score-inline .ds-letter.ds-D { background: #ee8100; }
+.score-inline .ds-letter.ds-E { background: #e63e11; }
 
 /* ═══ Analysis Config Modal ═══ */
 .ac-modal-icon {

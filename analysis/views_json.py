@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 
-from docuscore.utils import parse_json_body
+from score.utils import parse_json_body
 
 from analysis.models import (
     AnalysisJob,

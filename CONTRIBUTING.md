@@ -1,6 +1,6 @@
-# Contributing to DocuScore
+# Contributing to SCORE
 
-Thank you for your interest in contributing to DocuScore! This guide will help you get started.
+Thank you for your interest in contributing to SCORE! This guide will help you get started.
 
 ## Development Setup
 
@@ -13,8 +13,8 @@ Thank you for your interest in contributing to DocuScore! This guide will help y
 
 ```bash
 # Clone the repository
-git clone https://github.com/<org>/docuscore.git
-cd docuscore
+git clone https://github.com/<org>/score.git
+cd score
 
 # Create a virtual environment
 python -m venv venv
@@ -122,7 +122,7 @@ All PRs require at least one review before merging. Reviewers will check for:
 | `chat/`         | RAG-based chat interface                    |
 | `llm/`          | LLM client abstraction                      |
 | `nsg/`          | Semantic graph utilities                    |
-| `docuscore/`    | Django project settings and shared modules  |
+| `score/`    | Django project settings and shared modules  |
 
 ## Reporting Issues
 

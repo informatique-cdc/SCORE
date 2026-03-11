@@ -1,6 +1,6 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Analyse" %} {{ job.id|truncatechars:12 }} - DocuScore{% endblock %}
+{% block title %}{% trans "Analyse" %} {{ job.id|truncatechars:12 }} - SCORE{% endblock %}
 {% block nav_analysis %}active{% endblock %}
 
 {% block nav_analysis_submenu %}
@@ -70,7 +70,7 @@
     .issue-action.sev-medium { background: #ffc107; color: #1f2024; }
     .issue-action.sev-low { background: var(--ds-grey-500); color: var(--ds-grey-100); }
 
-    /* ── DocuScore widget ── */
+    /* ── SCORE widget ── */
     .ds-widget {
         background: var(--ds-grey-700);
         border: 1px solid var(--ds-grey-500);
@@ -256,15 +256,15 @@
     </div>
     <div class="col-md-6">
         <div class="h-100">
-            <!-- DocuScore widget -->
-            {% if docuscore.has_analysis %}
+            <!-- SCORE widget -->
+            {% if ds.has_analysis %}
             <div class="ds-widget">
                 <div class="ds-widget-header">
                     <span class="ds-widget-title">{% trans "Qualit&eacute; de la base" %}</span>
                 </div>
                 <div class="ds-widget-body">
                     <div class="ds-widget-bars">
-                        {% with b=docuscore.breakdown %}
+                        {% with b=ds.breakdown %}
                         <div class="ds-bar-row">
                             <span class="ds-bar-label">{% trans "Unicit&eacute;" %}</span>
                             <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.uniqueness >= 70 %}success{% elif b.uniqueness >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.uniqueness|default:0 }}%"></div></div>
@@ -359,8 +359,8 @@
 
 {% block extra_js %}
 <script>
-// --- DocuScore radar (analysis page) ---
-{% if docuscore.has_analysis %}
+// --- SCORE radar (analysis page) ---
+{% if ds.has_analysis %}
 (function() {
     var el = document.getElementById("ds-radar-analysis");
     if (!el) return;

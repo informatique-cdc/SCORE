@@ -1,4 +1,4 @@
-"""Pytest configuration and fixtures for DocuScore tests."""
+"""Pytest configuration and fixtures for SCORE tests."""
 import uuid
 
 import pytest

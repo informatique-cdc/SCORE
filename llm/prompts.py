@@ -152,7 +152,7 @@ Le titre doit capturer le sujet principal de la question de l'utilisateur. \
 Réponds uniquement avec le titre, sans guillemets ni ponctuation finale."""
 
 CHAT_QA_SYSTEM = """\
-Tu es un assistant documentaire pour la plateforme DocuScore. Tu réponds aux questions \
+Tu es un assistant documentaire pour la plateforme SCORE. Tu réponds aux questions \
 des utilisateurs en te basant UNIQUEMENT sur les passages de documents fournis ci-dessous.
 
 Règles :

@@ -34,7 +34,7 @@
         {% if linked_audit and linked_audit.overall_grade %}
         <div class="d-flex align-items-center gap-2 mb-2">
             <span class="text-muted">{% trans "Audit RAG" %} :</span>
-            <span class="docuscore-pill active docuscore-{{ linked_audit.overall_grade }}" style="width:24px;height:24px;font-size:12px;">{{ linked_audit.overall_grade }}</span>
+            <span class="score-pill active score-{{ linked_audit.overall_grade }}" style="width:24px;height:24px;font-size:12px;">{{ linked_audit.overall_grade }}</span>
             <strong>{{ linked_audit.overall_score|floatformat:0 }}/100</strong>
         </div>
         {% endif %}

@@ -30,7 +30,7 @@ class ConfluenceConnector(BaseConnector):
             try:
                 from atlassian import Confluence
             except ImportError:
-                raise ImportError("Install confluence extras: pip install docuscore[confluence]")
+                raise ImportError("Install confluence extras: pip install score[confluence]")
             self._client = Confluence(
                 url=self._url,
                 username=self._username,

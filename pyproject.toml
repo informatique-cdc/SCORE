@@ -1,5 +1,5 @@
 [project]
-name = "docuscore"
+name = "score"
 version = "0.1.0"
 description = "Enterprise document repository analysis: duplicates, contradictions, gaps"
 requires-python = ">=3.12"
@@ -70,7 +70,7 @@ confluence = [
 ]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "docuscore.settings"
+DJANGO_SETTINGS_MODULE = "score.settings"
 python_files = ["tests/*.py", "tests/**/*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

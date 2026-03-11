@@ -5,19 +5,19 @@
      data-auto-refresh-frame-value="analysis-results"
      data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
 <div class="kpi-row mb-4">
-    <!-- DocuScore -->
-    <div class="kpi-card" style="border-left: 3px solid {% if docuscore.grade == 'A' %}#198754{% elif docuscore.grade == 'B' %}#8bc34a{% elif docuscore.grade == 'C' %}#ffc107{% elif docuscore.grade == 'D' %}#fd7e14{% else %}#dc3545{% endif %};">
+    <!-- SCORE -->
+    <div class="kpi-card" style="border-left: 3px solid {% if ds.grade == 'A' %}#198754{% elif ds.grade == 'B' %}#8bc34a{% elif ds.grade == 'C' %}#ffc107{% elif ds.grade == 'D' %}#fd7e14{% else %}#dc3545{% endif %};">
         <div class="kpi-label">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            DocuScore
+            SCORE
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;">
-            <span class="kpi-value">{{ docuscore.score }}</span>
+            <span class="kpi-value">{{ ds.score }}</span>
             <span style="font-size:14px;color:var(--ds-text-muted);font-weight:500;">/100</span>
         </div>
         <div style="display:flex;gap:4px;margin-top:4px;">
             {% for letter in "ABCDE" %}
-            <span class="docuscore-pill {% if docuscore.grade == letter %}active{% endif %} docuscore-{{ letter }}" style="font-size:10px;padding:2px 7px;">{{ letter }}</span>
+            <span class="score-pill {% if ds.grade == letter %}active{% endif %} score-{{ letter }}" style="font-size:10px;padding:2px 7px;">{{ letter }}</span>
             {% endfor %}
         </div>
     </div>

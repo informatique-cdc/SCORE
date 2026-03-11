@@ -1,4 +1,4 @@
-# DocuScore - Stack technique et algorithmes
+# SCORE - Stack technique et algorithmes
 
 ## Stack technique
 
@@ -204,9 +204,9 @@ Fonctionnalites : checkpoint/resume depuis toute phase echouee, overrides de con
 
 ---
 
-## Score final DocuScore (`dashboard/scoring.py`)
+## Score final SCORE (`dashboard/scoring.py`)
 
-**DocuScore = 100 - somme des penalites**
+**SCORE = 100 - somme des penalites**
 
 | Dimension | Penalite max | Sources |
 |-----------|-------------|---------|

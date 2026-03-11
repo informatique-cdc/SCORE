@@ -77,11 +77,11 @@ class TestRecentJobsPartial:
 
 
 @pytest.mark.django_db
-class TestDocuscoreDetailJson:
+class TestSCOREDetailJson:
     def test_returns_json(self, dash_setup):
         user, tenant, project = dash_setup
         client = _client(user, tenant, project)
-        resp = client.get("/dashboard/_docuscore-detail/")
+        resp = client.get("/dashboard/_score-detail/")
         assert resp.status_code == 200
         assert resp["Content-Type"] == "application/json"
 

@@ -295,7 +295,7 @@ class TestAuditPipelineIntegration:
 
     def test_audit_grade_boundaries(self):
         """Verify grade() returns correct grades."""
-        from docuscore.scoring import grade
+        from score.scoring import grade
 
         assert grade(85) == "A"
         assert grade(80) == "A"

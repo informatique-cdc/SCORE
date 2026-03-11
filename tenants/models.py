@@ -1,7 +1,7 @@
 """
 Multi-tenant models.
 
-Every data-bearing model in DocuScore has a FK to Tenant.
+Every data-bearing model in SCORE has a FK to Tenant.
 TenantMembership links users to tenants with role-based access.
 """
 import uuid

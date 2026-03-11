@@ -1,5 +1,5 @@
 """
-Adapter between DocuScore and the Neural Semantic Graph (NSG) library.
+Adapter between SCORE and the Neural Semantic Graph (NSG) library.
 
 Builds, persists, and loads a concept-level knowledge graph from project
 documents and claims, using the project's configured LLM embedding provider.

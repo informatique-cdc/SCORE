@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<title>{% trans "Rapport DocuScore" %} &mdash; {{ project.name }}</title>
+<title>{% trans "Rapport SCORE" %} &mdash; {{ project.name }}</title>
 <style>
 /* ── Reset & base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -200,7 +200,7 @@ td { border-bottom: 1px solid #eef0f2; color: #2d2d2d; }
 <div id="page-footer" style="font-size: 8px; color: #6c757d; border-top: 1px solid #eef0f2; padding-top: 4px;">
     <table class="layout-table" width="100%">
     <tr>
-        <td style="text-align: left;"><pdf:pagenumber /> &mdash; DocuScore</td>
+        <td style="text-align: left;"><pdf:pagenumber /> &mdash; SCORE</td>
         <td style="text-align: right; color: #adb5bd;">{{ project.name|truncatechars:40 }}</td>
     </tr>
     </table>
@@ -208,19 +208,19 @@ td { border-bottom: 1px solid #eef0f2; color: #2d2d2d; }
 
 {# ════════════════════════════════════════════════ COVER ════════════════════════════════════════════════ #}
 <div class="cover">
-    <h1>{% trans "Rapport" %}<br>DocuScore</h1>
+    <h1>{% trans "Rapport" %}<br>SCORE</h1>
     <p class="cover-project">{{ project.name }}</p>
     <p class="cover-date">{% trans "G&eacute;n&eacute;r&eacute; le" %} {% now "d F Y" %}</p>
 
-    {% if docuscore.has_analysis %}
+    {% if ds.has_analysis %}
     <div style="margin-bottom: 20px;">
-        <div class="cover-grade-badge grade-{{ docuscore.grade }}">{{ docuscore.grade }}</div>
-        <span class="cover-score">{{ docuscore.score }} <span>/ 100</span></span>
+        <div class="cover-grade-badge grade-{{ ds.grade }}">{{ ds.grade }}</div>
+        <span class="cover-score">{{ ds.score }} <span>/ 100</span></span>
     </div>
     {% endif %}
 
-    {% if docuscore_detail.summary %}
-    <p class="cover-summary">{{ docuscore_detail.summary }}</p>
+    {% if score_detail.summary %}
+    <p class="cover-summary">{{ score_detail.summary }}</p>
     {% endif %}
 
     <div style="height: 8px; background: #A8518A; margin-top: 40px;"></div>
@@ -238,7 +238,7 @@ td { border-bottom: 1px solid #eef0f2; color: #2d2d2d; }
         </tr>
         <tr>
             <td width="50" style="font-size: 28px; font-weight: 200; color: #00A99D; padding-bottom: 18px;">02</td>
-            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "DocuScore &mdash; Qualit&eacute; de la base" %}</td>
+            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "SCORE &mdash; Qualit&eacute; de la base" %}</td>
         </tr>
         <tr>
             <td width="50" style="font-size: 28px; font-weight: 200; color: #A8518A; padding-bottom: 18px;">03</td>
@@ -301,29 +301,29 @@ td { border-bottom: 1px solid #eef0f2; color: #2d2d2d; }
 {% endif %}
 
 
-{# ════════════════════════════════════════════════ DOCUSCORE ════════════════════════════════════════════ #}
+{# ════════════════════════════════════════════════ SCORE ════════════════════════════════════════════ #}
 <div class="page-break"></div>
 <div class="section-header">
     <table class="layout-table"><tr>
         <td width="60"><span class="section-number">02</span></td>
         <td style="padding-top: 8px;">
-            <h2>{% trans "DocuScore &mdash; Qualit&eacute; de la base" %}</h2>
+            <h2>{% trans "SCORE &mdash; Qualit&eacute; de la base" %}</h2>
             <div class="section-subtitle">{% trans "&Eacute;valuation globale du r&eacute;f&eacute;rentiel documentaire" %}</div>
         </td>
     </tr></table>
 </div>
 
-{% if docuscore.has_analysis %}
+{% if ds.has_analysis %}
 
 {# ── Score donut (replaced with badge) + key metrics ── #}
 <table class="layout-table" width="100%" style="margin-bottom: 20px;">
 <tr>
     <td width="140" style="text-align: center; padding-right: 20px;">
         {# Score circle #}
-        <div style="display: inline-block; width: 100px; height: 100px; line-height: 100px; border-radius: 50%; text-align: center; font-size: 32px; font-weight: 700; color: #fff; background: {% if docuscore.score >= 80 %}#00A99D{% elif docuscore.score >= 60 %}#4db8a4{% elif docuscore.score >= 40 %}#E8A838{% elif docuscore.score >= 20 %}#E07B3C{% else %}#E3001B{% endif %};">
-            {{ docuscore.score }}
+        <div style="display: inline-block; width: 100px; height: 100px; line-height: 100px; border-radius: 50%; text-align: center; font-size: 32px; font-weight: 700; color: #fff; background: {% if ds.score >= 80 %}#00A99D{% elif ds.score >= 60 %}#4db8a4{% elif ds.score >= 40 %}#E8A838{% elif ds.score >= 20 %}#E07B3C{% else %}#E3001B{% endif %};">
+            {{ ds.score }}
         </div>
-        <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">/ 100 &mdash; {% trans "Note" %} {{ docuscore.grade }}</div>
+        <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">/ 100 &mdash; {% trans "Note" %} {{ ds.grade }}</div>
     </td>
     <td>
         {# Key metrics #}
@@ -356,8 +356,8 @@ td { border-bottom: 1px solid #eef0f2; color: #2d2d2d; }
         </tr>
         </table>
 
-        {% if docuscore_detail.summary %}
-        <p style="font-size: 11px; color: #2d2d2d; line-height: 1.6; margin-top: 12px;">{{ docuscore_detail.summary }}</p>
+        {% if score_detail.summary %}
+        <p style="font-size: 11px; color: #2d2d2d; line-height: 1.6; margin-top: 12px;">{{ score_detail.summary }}</p>
         {% endif %}
     </td>
 </tr>
@@ -415,7 +415,7 @@ td { border-bottom: 1px solid #eef0f2; color: #2d2d2d; }
 
 {% else %}
 <div class="bracket-box">
-    <p class="text-muted">{% trans "Aucune analyse termin&eacute;e &mdash; le DocuScore n'est pas encore disponible." %}</p>
+    <p class="text-muted">{% trans "Aucune analyse termin&eacute;e &mdash; le SCORE n'est pas encore disponible." %}</p>
 </div>
 {% endif %}
 

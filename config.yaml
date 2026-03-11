@@ -1,4 +1,4 @@
-# DocuScore configuration
+# SCORE configuration
 # Values here can be overridden by environment variables.
 
 llm:

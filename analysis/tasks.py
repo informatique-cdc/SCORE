@@ -201,7 +201,7 @@ def _make_progress_cb(job_pk, step_label):
 
 def _audit_grade(score):
     """Backward-compatible alias — delegates to shared grade()."""
-    from docuscore.scoring import grade
+    from score.scoring import grade
     return grade(score)
 
 

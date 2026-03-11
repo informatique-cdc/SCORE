@@ -1,17 +1,17 @@
 {% load i18n %}
-<!-- DocuScore Detail Offcanvas -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="docuscore-panel" style="width:50vw;min-width:400px;">
+<!-- SCORE Detail Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="score-panel" style="width:50vw;min-width:400px;">
     <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title">{% trans "D&eacute;tails DocuScore" %}</h5>
+        <h5 class="offcanvas-title">{% trans "D&eacute;tails SCORE" %}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
-    <div class="offcanvas-body" id="docuscore-panel-body">
-        <div class="text-center py-5" id="docuscore-loading">
+    <div class="offcanvas-body" id="score-panel-body">
+        <div class="text-center py-5" id="score-loading">
             <div class="spinner-border text-primary" role="status"></div>
             <p class="text-muted mt-2">{% trans "Chargement des d&eacute;tails du score..." %}</p>
         </div>
-        <div id="docuscore-content" class="d-none"></div>
-        <div id="docuscore-error" class="d-none">
+        <div id="score-content" class="d-none"></div>
+        <div id="score-error" class="d-none">
             <div class="alert alert-danger">{% trans "&Eacute;chec du chargement des d&eacute;tails du score." %}</div>
         </div>
     </div>
@@ -19,22 +19,22 @@
 
 <script>
 (function() {
-    const trigger = document.getElementById('docuscore-trigger');
-    const panel = document.getElementById('docuscore-panel');
+    const trigger = document.getElementById('score-trigger');
+    const panel = document.getElementById('score-panel');
     if (!trigger || !panel) return;
 
     let loaded = false;
     panel.addEventListener('show.bs.offcanvas', function() {
         if (loaded) return;
-        const loading = document.getElementById('docuscore-loading');
-        const content = document.getElementById('docuscore-content');
-        const error = document.getElementById('docuscore-error');
+        const loading = document.getElementById('score-loading');
+        const content = document.getElementById('score-content');
+        const error = document.getElementById('score-error');
 
         loading.classList.remove('d-none');
         content.classList.add('d-none');
         error.classList.add('d-none');
 
-        fetch('{% url "dashboard-docuscore-detail" %}')
+        fetch('{% url "dashboard-score-detail" %}')
             .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(data => {
                 loading.classList.add('d-none');
@@ -70,7 +70,7 @@
         let html = '';
         html += '<div class="alert alert-light border mb-4">';
         html += '<div class="d-flex align-items-center gap-3 mb-2">';
-        html += '<span class="docuscore-number docuscore-color-' + data.grade + '">' + data.score + '</span>';
+        html += '<span class="score-number score-color-' + data.grade + '">' + data.score + '</span>';
         html += '<span class="fs-5 fw-bold">/ 100 &mdash; {% trans "Note" %} ' + data.grade + '</span>';
         html += '</div>';
         html += '<p class="mb-0">' + data.summary + '</p>';

@@ -1,6 +1,6 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Ajouter un connecteur - DocuScore" %}{% endblock %}
+{% block title %}{% trans "Ajouter un connecteur - SCORE" %}{% endblock %}
 {% block nav_connectors %}active{% endblock %}
 
 {% block extra_css %}
@@ -52,7 +52,7 @@
     .cf-icon-box.sharepoint { background: rgba(13,110,253,0.12); color: #60a5fa; }
     .cf-icon-box.confluence { background: rgba(13,202,240,0.12); color: #22d3ee; }
     .cf-icon-box.generic { background: rgba(108,113,126,0.12); color: #9ca3af; }
-    .cf-icon-box.docuscore { background: rgba(13,110,253,0.12); color: #0d6efd; }
+    .cf-icon-box.score-icon { background: rgba(13,110,253,0.12); color: #0d6efd; }
     .cf-arrow { color: var(--ds-text-muted); }
     .cf-arrow svg { width: 20px; height: 20px; }
 
@@ -179,7 +179,7 @@
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </a>
 
-        <!-- Icons: connector type ⇄ DocuScore -->
+        <!-- Icons: connector type ⇄ SCORE -->
         <div class="cf-icons">
             <div class="cf-icon-box" id="cf-type-icon">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -187,14 +187,14 @@
             <div class="cf-arrow">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16l-4-4m0 0l4-4m-4 4h18"/><path d="M17 8l4 4m0 0l-4 4m4-4H3" opacity="0"/></svg>
             </div>
-            <div class="cf-icon-box docuscore">
+            <div class="cf-icon-box score-icon">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
             </div>
         </div>
 
         <!-- Title -->
-        <div class="cf-title" id="cf-title">{% trans "Connecter SharePoint &agrave; DocuScore" %}</div>
-        <div class="cf-subtitle">{% trans "Configurez les param&egrave;tres de connexion pour indexer automatiquement vos documents dans DocuScore." %}</div>
+        <div class="cf-title" id="cf-title">{% trans "Connecter SharePoint &agrave; SCORE" %}</div>
+        <div class="cf-subtitle">{% trans "Configurez les param&egrave;tres de connexion pour indexer automatiquement vos documents dans SCORE." %}</div>
 
         <form method="post">
             {% csrf_token %}
@@ -275,7 +275,7 @@
         <hr class="cf-divider">
 
         <div class="cf-footer">
-            {% trans "En cr&eacute;ant ce connecteur, vous autorisez DocuScore &agrave; acc&eacute;der et indexer les documents de la source configur&eacute;e. Vous pouvez le d&eacute;sactiver &agrave; tout moment depuis la page Connecteurs." %}
+            {% trans "En cr&eacute;ant ce connecteur, vous autorisez SCORE &agrave; acc&eacute;der et indexer les documents de la source configur&eacute;e. Vous pouvez le d&eacute;sactiver &agrave; tout moment depuis la page Connecteurs." %}
             <br>
             <a href="{% url 'connector-list' %}" class="cf-footer-link">
                 {% trans "Retour aux connecteurs" %}
@@ -300,9 +300,9 @@
         generic: 'generic'
     };
     var titles = {
-        sharepoint: 'Connecter SharePoint \u00e0 DocuScore',
-        confluence: 'Connecter Confluence \u00e0 DocuScore',
-        generic: 'Connecter une source \u00e0 DocuScore'
+        sharepoint: 'Connecter SharePoint \u00e0 SCORE',
+        confluence: 'Connecter Confluence \u00e0 SCORE',
+        generic: 'Connecter une source \u00e0 SCORE'
     };
 
     var select = document.getElementById('connector_type');

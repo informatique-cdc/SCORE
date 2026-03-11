@@ -248,6 +248,6 @@ def export_report_pdf(request, job_pk):
     pdf_bytes = render_pdf(context)
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
     response["Content-Disposition"] = (
-        f'attachment; filename="docuscore_report_{str(job.id)[:8]}.pdf"'
+        f'attachment; filename="score_report_{str(job.id)[:8]}.pdf"'
     )
     return response

@@ -286,11 +286,11 @@ class TestEndToEndFlow:
         resp = client.get("/dashboard/_recent-jobs/")
         assert resp.status_code == 200
 
-    def test_docuscore_detail_json(self, tenant_a):
+    def test_score_detail_json(self, tenant_a):
         user, tenant, project, connector = tenant_a
         make_document(tenant, project, connector, title="D", status="ready")
         client = _client(user, tenant, project)
-        resp = client.get("/dashboard/_docuscore-detail/")
+        resp = client.get("/dashboard/_score-detail/")
         assert resp.status_code == 200
         data = resp.json()
         assert "grade" in data

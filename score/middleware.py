@@ -1,4 +1,4 @@
-"""Custom middleware for DocuScore."""
+"""Custom middleware for SCORE."""
 
 
 class ContentSecurityPolicyMiddleware:

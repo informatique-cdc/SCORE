@@ -1,5 +1,5 @@
 """
-Celery application for DocuScore.
+Celery application for SCORE.
 
 Supports two modes:
   - Redis broker (production)
@@ -13,11 +13,11 @@ import os
 from celery import Celery
 from celery.signals import worker_ready
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "docuscore.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "score.settings")
 
 logger = logging.getLogger(__name__)
 
-app = Celery("docuscore")
+app = Celery("score")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 

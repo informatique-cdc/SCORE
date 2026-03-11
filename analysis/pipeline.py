@@ -16,7 +16,7 @@ from analysis.tasks import (
     _make_progress_cb,
     _update_phase,
 )
-from docuscore.scoring import grade as _audit_grade
+from score.scoring import grade as _audit_grade
 
 logger = logging.getLogger(__name__)
 

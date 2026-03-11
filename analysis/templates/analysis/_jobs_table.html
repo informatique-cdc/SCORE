@@ -6,21 +6,21 @@
      data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
 <table class="table table-hover mb-0">
     <thead>
-        <tr><th>{% trans "ID" %}</th><th>{% trans "DocuScore" %}</th><th>{% trans "Statut" %}</th><th>{% trans "Phase" %}</th><th>{% trans "Progression" %}</th><th>{% trans "Audit RAG" %}</th><th>{% trans "Date" %}</th><th></th></tr>
+        <tr><th>{% trans "ID" %}</th><th>{% trans "SCORE" %}</th><th>{% trans "Statut" %}</th><th>{% trans "Phase" %}</th><th>{% trans "Progression" %}</th><th>{% trans "Audit RAG" %}</th><th>{% trans "Date" %}</th><th></th></tr>
     </thead>
     <tbody>
         {% for job in jobs %}
         <tr>
             <td><code>{{ job.id|truncatechars:12 }}</code></td>
             <td>
-                {% if job.docuscore %}
+                {% if job.score_result %}
                 <div class="d-flex align-items-center gap-2">
-                    <span class="docuscore-inline">
+                    <span class="score-inline">
                         {% for letter in "ABCDE" %}
-                        <span class="ds-letter ds-{{ letter }}{% if job.docuscore.grade == letter %} active{% endif %}">{{ letter }}</span>
+                        <span class="ds-letter ds-{{ letter }}{% if job.score_result.grade == letter %} active{% endif %}">{{ letter }}</span>
                         {% endfor %}
                     </span>
-                    <small style="font-weight:600;color:var(--ds-text-muted);">{{ job.docuscore.score }}</small>
+                    <small style="font-weight:600;color:var(--ds-text-muted);">{{ job.score_result.score }}</small>
                 </div>
                 {% else %}
                 <span class="text-muted" style="font-size:12px;">&mdash;</span>
@@ -39,7 +39,7 @@
             </td>
             <td>
                 {% if job.linked_audit and job.linked_audit.overall_grade %}
-                <span class="docuscore-pill active docuscore-{{ job.linked_audit.overall_grade }}" style="width:24px;height:24px;font-size:12px;">{{ job.linked_audit.overall_grade }}</span>
+                <span class="score-pill active score-{{ job.linked_audit.overall_grade }}" style="width:24px;height:24px;font-size:12px;">{{ job.linked_audit.overall_grade }}</span>
                 <small>{{ job.linked_audit.overall_score|floatformat:0 }}</small>
                 {% elif job.linked_audit %}
                 <span class="text-muted">{% trans "En cours" %}</span>

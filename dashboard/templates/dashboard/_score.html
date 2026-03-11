@@ -1,93 +1,93 @@
 {% load i18n %}
 <div class="card mb-4">
     <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3" role="button" id="docuscore-trigger" data-bs-toggle="offcanvas" data-bs-target="#docuscore-panel" style="cursor:pointer;" title="{% trans "Cliquer pour les détails et recommandations" %}">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3" role="button" id="score-trigger" data-bs-toggle="offcanvas" data-bs-target="#score-panel" style="cursor:pointer;" title="{% trans "Cliquer pour les détails et recommandations" %}">
             <!-- Left: grade badge -->
             <div class="d-flex align-items-center gap-3">
                 <div>
                     <h6 class="text-muted mb-1">{% trans "Qualité de la base de connaissances" %}</h6>
-                    <h4 class="mb-0">DocuScore</h4>
+                    <h4 class="mb-0">SCORE</h4>
                 </div>
                 <!-- Nutri-Score style badge -->
-                <div class="docuscore-badge d-flex" role="img" aria-label="DocuScore grade {{ docuscore.grade }}">
+                <div class="score-badge d-flex" role="img" aria-label="SCORE grade {{ ds.grade }}">
                     {% for letter in "ABCDE" %}
-                    <span class="docuscore-pill docuscore-{{ letter }}{% if docuscore.grade == letter %} active{% endif %}">{{ letter }}</span>
+                    <span class="score-pill score-{{ letter }}{% if ds.grade == letter %} active{% endif %}">{{ letter }}</span>
                     {% endfor %}
                 </div>
             </div>
 
             <!-- Right: score + breakdown -->
-            {% if docuscore.has_analysis %}
+            {% if ds.has_analysis %}
             <div class="d-flex align-items-center gap-4">
                 <div class="text-center">
-                    <div class="docuscore-number docuscore-color-{{ docuscore.grade }}">{{ docuscore.score }}</div>
+                    <div class="score-number score-color-{{ ds.grade }}">{{ ds.score }}</div>
                     <small class="text-muted">/100</small>
                 </div>
-                <div class="docuscore-breakdown">
-                    {% if docuscore.breakdown.uniqueness != None %}
+                <div class="score-breakdown">
+                    {% if ds.breakdown.uniqueness != None %}
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <small class="text-muted" style="width:85px">{% trans "Unicité" %}</small>
                         <div class="progress flex-fill" style="height:6px;">
-                            <div class="progress-bar bg-{% if docuscore.breakdown.uniqueness >= 70 %}success{% elif docuscore.breakdown.uniqueness >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ docuscore.breakdown.uniqueness }}%"></div>
+                            <div class="progress-bar bg-{% if ds.breakdown.uniqueness >= 70 %}success{% elif ds.breakdown.uniqueness >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ ds.breakdown.uniqueness }}%"></div>
                         </div>
-                        <small style="width:30px" class="text-end">{{ docuscore.breakdown.uniqueness }}</small>
+                        <small style="width:30px" class="text-end">{{ ds.breakdown.uniqueness }}</small>
                     </div>
                     {% endif %}
-                    {% if docuscore.breakdown.consistency != None %}
+                    {% if ds.breakdown.consistency != None %}
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <small class="text-muted" style="width:85px">{% trans "Cohérence" %}</small>
                         <div class="progress flex-fill" style="height:6px;">
-                            <div class="progress-bar bg-{% if docuscore.breakdown.consistency >= 70 %}success{% elif docuscore.breakdown.consistency >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ docuscore.breakdown.consistency }}%"></div>
+                            <div class="progress-bar bg-{% if ds.breakdown.consistency >= 70 %}success{% elif ds.breakdown.consistency >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ ds.breakdown.consistency }}%"></div>
                         </div>
-                        <small style="width:30px" class="text-end">{{ docuscore.breakdown.consistency }}</small>
+                        <small style="width:30px" class="text-end">{{ ds.breakdown.consistency }}</small>
                     </div>
                     {% endif %}
-                    {% if docuscore.breakdown.coverage != None %}
+                    {% if ds.breakdown.coverage != None %}
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <small class="text-muted" style="width:85px">{% trans "Couverture" %}</small>
                         <div class="progress flex-fill" style="height:6px;">
-                            <div class="progress-bar bg-{% if docuscore.breakdown.coverage >= 70 %}success{% elif docuscore.breakdown.coverage >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ docuscore.breakdown.coverage }}%"></div>
+                            <div class="progress-bar bg-{% if ds.breakdown.coverage >= 70 %}success{% elif ds.breakdown.coverage >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ ds.breakdown.coverage }}%"></div>
                         </div>
-                        <small style="width:30px" class="text-end">{{ docuscore.breakdown.coverage }}</small>
+                        <small style="width:30px" class="text-end">{{ ds.breakdown.coverage }}</small>
                     </div>
                     {% endif %}
-                    {% if docuscore.breakdown.structure != None %}
+                    {% if ds.breakdown.structure != None %}
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <small class="text-muted" style="width:85px">{% trans "Structure" %}</small>
                         <div class="progress flex-fill" style="height:6px;">
-                            <div class="progress-bar bg-{% if docuscore.breakdown.structure >= 70 %}success{% elif docuscore.breakdown.structure >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ docuscore.breakdown.structure }}%"></div>
+                            <div class="progress-bar bg-{% if ds.breakdown.structure >= 70 %}success{% elif ds.breakdown.structure >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ ds.breakdown.structure }}%"></div>
                         </div>
-                        <small style="width:30px" class="text-end">{{ docuscore.breakdown.structure }}</small>
+                        <small style="width:30px" class="text-end">{{ ds.breakdown.structure }}</small>
                     </div>
                     {% endif %}
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <small class="text-muted" style="width:85px">{% trans "Santé" %}</small>
                         <div class="progress flex-fill" style="height:6px;">
-                            <div class="progress-bar bg-{% if docuscore.breakdown.health >= 70 %}success{% elif docuscore.breakdown.health >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ docuscore.breakdown.health }}%"></div>
+                            <div class="progress-bar bg-{% if ds.breakdown.health >= 70 %}success{% elif ds.breakdown.health >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ ds.breakdown.health }}%"></div>
                         </div>
-                        <small style="width:30px" class="text-end">{{ docuscore.breakdown.health }}</small>
+                        <small style="width:30px" class="text-end">{{ ds.breakdown.health }}</small>
                     </div>
-                    {% if docuscore.breakdown.retrievability != None %}
+                    {% if ds.breakdown.retrievability != None %}
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <small class="text-muted" style="width:85px">{% trans "Retrievability" %}</small>
                         <div class="progress flex-fill" style="height:6px;">
-                            <div class="progress-bar bg-{% if docuscore.breakdown.retrievability >= 70 %}success{% elif docuscore.breakdown.retrievability >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ docuscore.breakdown.retrievability }}%"></div>
+                            <div class="progress-bar bg-{% if ds.breakdown.retrievability >= 70 %}success{% elif ds.breakdown.retrievability >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ ds.breakdown.retrievability }}%"></div>
                         </div>
-                        <small style="width:30px" class="text-end">{{ docuscore.breakdown.retrievability }}</small>
+                        <small style="width:30px" class="text-end">{{ ds.breakdown.retrievability }}</small>
                     </div>
                     {% endif %}
-                    {% if docuscore.breakdown.governance != None %}
+                    {% if ds.breakdown.governance != None %}
                     <div class="d-flex align-items-center gap-2">
                         <small class="text-muted" style="width:85px">{% trans "Gouvernance" %}</small>
                         <div class="progress flex-fill" style="height:6px;">
-                            <div class="progress-bar bg-{% if docuscore.breakdown.governance >= 70 %}success{% elif docuscore.breakdown.governance >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ docuscore.breakdown.governance }}%"></div>
+                            <div class="progress-bar bg-{% if ds.breakdown.governance >= 70 %}success{% elif ds.breakdown.governance >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ ds.breakdown.governance }}%"></div>
                         </div>
-                        <small style="width:30px" class="text-end">{{ docuscore.breakdown.governance }}</small>
+                        <small style="width:30px" class="text-end">{{ ds.breakdown.governance }}</small>
                     </div>
                     {% endif %}
                 </div>
             </div>
-            {% elif not docuscore.has_docs %}
+            {% elif not ds.has_docs %}
             <div class="text-muted">{% trans "Ajoutez des documents et lancez une analyse pour obtenir votre score." %}</div>
             {% else %}
             <div class="text-muted">{% trans "Lancez une analyse pour calculer votre score complet." %}</div>
@@ -96,19 +96,19 @@
     </div>
 </div>
 
-<!-- DocuScore Detail Offcanvas -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="docuscore-panel" style="width:50vw;min-width:400px;">
+<!-- SCORE Detail Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="score-panel" style="width:50vw;min-width:400px;">
     <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title">{% trans "Détails DocuScore" %}</h5>
+        <h5 class="offcanvas-title">{% trans "Détails SCORE" %}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
-    <div class="offcanvas-body" id="docuscore-panel-body">
-        <div class="text-center py-5" id="docuscore-loading">
+    <div class="offcanvas-body" id="score-panel-body">
+        <div class="text-center py-5" id="score-loading">
             <div class="spinner-border text-primary" role="status"></div>
             <p class="text-muted mt-2">{% trans "Chargement des détails du score..." %}</p>
         </div>
-        <div id="docuscore-content" class="d-none"></div>
-        <div id="docuscore-error" class="d-none">
+        <div id="score-content" class="d-none"></div>
+        <div id="score-error" class="d-none">
             <div class="alert alert-danger">{% trans "Échec du chargement des détails du score." %}</div>
         </div>
     </div>
@@ -116,22 +116,22 @@
 
 <script>
 (function() {
-    const trigger = document.getElementById('docuscore-trigger');
-    const panel = document.getElementById('docuscore-panel');
+    const trigger = document.getElementById('score-trigger');
+    const panel = document.getElementById('score-panel');
     if (!trigger || !panel) return;
 
     let loaded = false;
     panel.addEventListener('show.bs.offcanvas', function() {
         if (loaded) return;
-        const loading = document.getElementById('docuscore-loading');
-        const content = document.getElementById('docuscore-content');
-        const error = document.getElementById('docuscore-error');
+        const loading = document.getElementById('score-loading');
+        const content = document.getElementById('score-content');
+        const error = document.getElementById('score-error');
 
         loading.classList.remove('d-none');
         content.classList.add('d-none');
         error.classList.add('d-none');
 
-        fetch('{% url "dashboard-docuscore-detail" %}')
+        fetch('{% url "dashboard-score-detail" %}')
             .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(data => {
                 loading.classList.add('d-none');
@@ -179,7 +179,7 @@
         // Summary
         html += '<div class="alert alert-light border mb-4">';
         html += '<div class="d-flex align-items-center gap-3 mb-2">';
-        html += '<span class="docuscore-number docuscore-color-' + data.grade + '">' + data.score + '</span>';
+        html += '<span class="score-number score-color-' + data.grade + '">' + data.score + '</span>';
         html += '<span class="fs-5 fw-bold">/ 100 &mdash; {% trans "Note" %} ' + data.grade + '</span>';
         html += '</div>';
         html += '<p class="mb-0">' + data.summary + '</p>';

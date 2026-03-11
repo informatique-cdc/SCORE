@@ -1,5 +1,5 @@
 """
-Django settings for DocuScore.
+Django settings for SCORE.
 
 Reads .env file and config.yaml for configuration layering.
 """
@@ -59,7 +59,7 @@ INSTALLED_APPS = [
     # Celery
     "django_celery_results",
     "django_celery_beat",
-    # DocuScore apps
+    # SCORE apps
     "tenants",
     "connectors",
     "ingestion",
@@ -74,7 +74,7 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "docuscore.middleware.ContentSecurityPolicyMiddleware",
+    "score.middleware.ContentSecurityPolicyMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -87,7 +87,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "docuscore.urls"
+ROOT_URLCONF = "score.urls"
 
 TEMPLATES = [
     {
@@ -106,7 +106,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "docuscore.wsgi.application"
+WSGI_APPLICATION = "score.wsgi.application"
 
 # --- Runtime data directory ---
 DATA_DIR = BASE_DIR / "data"
@@ -146,7 +146,7 @@ ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_LOGIN_BY_CODE_ENABLED = False
 ACCOUNT_LOGOUT_REDIRECT_URL = "/auth/login/"
-ACCOUNT_ADAPTER = "tenants.adapters.DocuScoreAccountAdapter"
+ACCOUNT_ADAPTER = "tenants.adapters.ScoreAccountAdapter"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
@@ -316,7 +316,7 @@ LOGGING = {
         "level": "INFO",
     },
     "loggers": {
-        "docuscore": {"level": "DEBUG" if DEBUG else "INFO"},
+        "score": {"level": "DEBUG" if DEBUG else "INFO"},
         "celery": {"level": "INFO"},
         # Never log document content
         "ingestion.extraction": {"level": "WARNING"},

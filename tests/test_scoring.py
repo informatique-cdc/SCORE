@@ -1,4 +1,4 @@
-"""Tests for dashboard/scoring.py — DocuScore computation logic."""
+"""Tests for dashboard/scoring.py — SCORE computation logic."""
 import pytest
 
 from analysis.models import (
@@ -7,13 +7,13 @@ from analysis.models import (
     DuplicateGroup,
     Claim,
 )
-from docuscore.scoring import (
+from score.scoring import (
     _empty_result,
     _grade,
     health_score,
-    compute_docuscore,
-    compute_docuscore_detail,
-    compute_docuscore_for_job,
+    compute_score,
+    compute_score_detail,
+    compute_score_for_job,
 )
 from ingestion.models import Document
 from tests.conftest import make_chunk, make_document
@@ -107,21 +107,21 @@ class TestEmptyResult:
 
 
 # ---------------------------------------------------------------------------
-# compute_docuscore
+# compute_score
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
-class TestComputeDocuscore:
+class TestComputeSCORE:
     def test_no_documents(self, project):
-        result = compute_docuscore(project)
+        result = compute_score(project)
         assert result["grade"] == "E"
         assert result["score"] == 0
         assert result["has_docs"] is False
 
     def test_documents_no_analysis(self, tenant, project, connector):
         make_document(tenant, project, connector, title="Doc1", status="ready")
-        result = compute_docuscore(project)
+        result = compute_score(project)
         assert result["has_docs"] is True
         assert result["has_analysis"] is False
         assert result["breakdown"]["health"] is not None
@@ -135,7 +135,7 @@ class TestComputeDocuscore:
             tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
         )
 
-        result = compute_docuscore(project)
+        result = compute_score(project)
         assert result["has_docs"] is True
         assert result["has_analysis"] is True
         assert 0 <= result["score"] <= 100
@@ -161,7 +161,7 @@ class TestComputeDocuscore:
                 recommended_action=DuplicateGroup.Action.MERGE,
             )
 
-        result = compute_docuscore(project)
+        result = compute_score(project)
         assert result["breakdown"]["uniqueness"] < 100
 
     def test_contradictions_lower_score(self, tenant, project, connector):
@@ -192,7 +192,7 @@ class TestComputeDocuscore:
             confidence=0.95, evidence="Direct conflict.",
         )
 
-        result = compute_docuscore(project)
+        result = compute_score(project)
         assert result["breakdown"]["consistency"] < 100
 
     def test_only_uses_latest_completed_job(self, tenant, project, connector):
@@ -208,28 +208,28 @@ class TestComputeDocuscore:
             tenant=tenant, project=project, status=AnalysisJob.Status.RUNNING,
         )
 
-        result = compute_docuscore(project)
+        result = compute_score(project)
         assert result["has_analysis"] is True
 
 
 # ---------------------------------------------------------------------------
-# compute_docuscore_for_job
+# compute_score_for_job
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
-class TestComputeDocuscoreForJob:
+class TestComputeSCOREForJob:
     def test_non_completed_returns_none(self, tenant, project):
         job = AnalysisJob.objects.create(
             tenant=tenant, project=project, status=AnalysisJob.Status.RUNNING,
         )
-        assert compute_docuscore_for_job(job) is None
+        assert compute_score_for_job(job) is None
 
     def test_no_documents_returns_e(self, tenant, project):
         job = AnalysisJob.objects.create(
             tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
         )
-        result = compute_docuscore_for_job(job)
+        result = compute_score_for_job(job)
         assert result["grade"] == "E"
         assert result["score"] == 0
 
@@ -240,21 +240,21 @@ class TestComputeDocuscoreForJob:
         job = AnalysisJob.objects.create(
             tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
         )
-        result = compute_docuscore_for_job(job)
+        result = compute_score_for_job(job)
         assert "grade" in result
         assert "score" in result
         assert 0 <= result["score"] <= 100
 
 
 # ---------------------------------------------------------------------------
-# compute_docuscore_detail
+# compute_score_detail
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
-class TestComputeDocuscoreDetail:
+class TestComputeSCOREDetail:
     def test_no_documents(self, project):
-        result = compute_docuscore_detail(project)
+        result = compute_score_detail(project)
         assert result["grade"] == "E"
         assert result["score"] == 0
         assert "vide" in result["summary"].lower() or "empty" in result["summary"].lower()
@@ -262,12 +262,12 @@ class TestComputeDocuscoreDetail:
 
     def test_documents_no_analysis(self, tenant, project, connector):
         make_document(tenant, project, connector, title="Doc1", status="ready")
-        result = compute_docuscore_detail(project)
+        result = compute_score_detail(project)
         assert result["grade"] in ("A", "B", "C", "D", "E")
         assert "dimensions" in result
         # Should have at least the health dimension
         dim_names = [d["name"] for d in result["dimensions"]]
-        assert "Santé" in dim_names
+        assert "Health" in dim_names
 
     def test_full_detail_with_analysis(self, tenant, project, connector):
         for i in range(5):
@@ -276,16 +276,16 @@ class TestComputeDocuscoreDetail:
         AnalysisJob.objects.create(
             tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
         )
-        result = compute_docuscore_detail(project)
+        result = compute_score_detail(project)
         assert len(result["dimensions"]) == 7
         dim_names = [d["name"] for d in result["dimensions"]]
-        assert "Unicité" in dim_names
-        assert "Cohérence" in dim_names
-        assert "Couverture" in dim_names
+        assert "Uniqueness" in dim_names
+        assert "Consistency" in dim_names
+        assert "Coverage" in dim_names
         assert "Structure" in dim_names
-        assert "Santé" in dim_names
+        assert "Health" in dim_names
         assert "Retrievability" in dim_names
-        assert "Gouvernance" in dim_names
+        assert "Governance" in dim_names
 
     def test_each_dimension_has_required_fields(self, tenant, project, connector):
         for i in range(3):
@@ -293,7 +293,7 @@ class TestComputeDocuscoreDetail:
         AnalysisJob.objects.create(
             tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
         )
-        result = compute_docuscore_detail(project)
+        result = compute_score_detail(project)
         for dim in result["dimensions"]:
             assert "name" in dim
             assert "score" in dim

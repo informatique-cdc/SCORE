@@ -6,8 +6,8 @@ from django.shortcuts import redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from docuscore.issues import build_analysis_issues
-from docuscore.utils import parse_json_body
+from score.issues import build_analysis_issues
+from score.utils import parse_json_body
 
 from analysis.models import (
     AnalysisJob,
@@ -22,7 +22,7 @@ from ingestion.models import Document, IngestionJob
 from reports.models import Report
 
 from .models import Feedback
-from .scoring import build_breakdown_json, compute_docuscore, compute_docuscore_detail
+from .scoring import build_breakdown_json, compute_score, compute_score_detail
 
 
 def _has_active_jobs(project):
@@ -205,8 +205,8 @@ def home(request):
 
     recent_analyses = AnalysisJob.objects.filter(project=project).order_by("-created_at")[:5]
 
-    # DocuScore breakdown as JSON for radar chart
-    ds = compute_docuscore(project)
+    # SCORE breakdown as JSON for radar chart
+    ds = compute_score(project)
     breakdown_json = build_breakdown_json(ds["breakdown"])
 
     context = {
@@ -214,7 +214,7 @@ def home(request):
         "report_count": report_count,
         "cluster_count": cluster_count,
         "recent_analyses": recent_analyses,
-        "docuscore": ds,
+        "ds": ds,
         "breakdown_json": breakdown_json,
         "activity_feed": _build_activity_feed(project),
         "top_issues": _build_top_issues(project),
@@ -251,10 +251,10 @@ def recent_jobs_partial(request):
 
 
 @login_required
-def docuscore_detail_json(request):
+def score_detail_json(request):
     if not request.tenant:
         return JsonResponse({"error": str(_("Aucun espace sélectionné"))}, status=400)
-    data = compute_docuscore_detail(request.project)
+    data = compute_score_detail(request.project)
     return JsonResponse(data)
 
 

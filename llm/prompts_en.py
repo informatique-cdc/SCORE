@@ -152,7 +152,7 @@ The title should capture the main topic of the user's question. \
 Respond only with the title, without quotes or trailing punctuation."""
 
 CHAT_QA_SYSTEM = """\
-You are a document assistant for the DocuScore platform. You answer users' questions \
+You are a document assistant for the SCORE platform. You answer users' questions \
 based ONLY on the document passages provided below.
 
 Rules:
