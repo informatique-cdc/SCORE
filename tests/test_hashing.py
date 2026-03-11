@@ -1,5 +1,4 @@
 """Tests for content hashing module."""
-import pytest
 
 from ingestion.hashing import hash_content, hash_chunk, normalize_text
 

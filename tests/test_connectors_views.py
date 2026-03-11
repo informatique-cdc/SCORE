@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.test import Client
 
 from connectors.models import ConnectorConfig
-from ingestion.models import Document, IngestionJob
+from ingestion.models import IngestionJob
 from tenants.models import Project, ProjectMembership, Tenant, TenantMembership
 from tests.conftest import make_chunk, make_document
 
@@ -196,7 +196,6 @@ class TestConnectorDelete:
             tenant=tenant, project=project,
             name="Deletable", connector_type="generic",
         )
-        mock_vs = mock_get_vs.return_value
 
         client = _client(user, tenant, project)
         resp = client.post(f"/connectors/{connector.pk}/delete/")
@@ -210,7 +209,7 @@ class TestConnectorDelete:
             tenant=tenant, project=project,
             name="WithVecs", connector_type="generic",
         )
-        doc = make_document(tenant, project, connector, title="Vec Doc")
+        make_document(tenant, project, connector, title="Vec Doc")
         mock_vs = mock_get_vs.return_value
 
         client = _client(user, tenant, project)

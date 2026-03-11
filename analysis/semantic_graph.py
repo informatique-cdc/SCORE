@@ -6,7 +6,6 @@ documents and claims, using the project's configured LLM embedding provider.
 """
 import json
 import logging
-import shutil
 from pathlib import Path
 
 import numpy as np
@@ -123,9 +122,9 @@ def load_graph(project_id: str):
     """Load a previously built graph from disk. Returns None if not found."""
     import networkx as nx
 
-    graph_dir = graph_dir(project_id)
-    graph_path = graph_dir / "graph.json"
-    embed_path = graph_dir / "embeddings.npz"
+    gdir = graph_dir(project_id)
+    graph_path = gdir / "graph.json"
+    embed_path = gdir / "embeddings.npz"
 
     if not graph_path.exists():
         return None

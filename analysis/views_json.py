@@ -1,5 +1,4 @@
 """Analysis JSON API views for D3.js visualizations."""
-import json
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse

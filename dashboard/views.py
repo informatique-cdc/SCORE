@@ -1,5 +1,4 @@
 """Dashboard views: home, stats, navigation."""
-import json
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -13,6 +12,9 @@ from docuscore.utils import parse_json_body
 from analysis.models import (
     AnalysisJob,
     AuditJob,
+    ContradictionPair,
+    DuplicateGroup,
+    GapReport,
     TopicCluster,
 )
 from connectors.models import ConnectorConfig

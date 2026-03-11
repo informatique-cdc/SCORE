@@ -17,11 +17,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "docuscore.settings")
 import django
 django.setup()
 
-from django.contrib.auth.models import User
-from tenants.models import Tenant, TenantMembership
-from connectors.models import ConnectorConfig
-from ingestion.models import Document, DocumentChunk
-from ingestion.hashing import hash_content
+from django.contrib.auth.models import User  # noqa: E402
+from tenants.models import Tenant, TenantMembership  # noqa: E402
+from connectors.models import ConnectorConfig  # noqa: E402
+from ingestion.models import Document, DocumentChunk  # noqa: E402
+from ingestion.hashing import hash_content  # noqa: E402
 
 
 def main():

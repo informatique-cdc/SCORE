@@ -9,7 +9,6 @@ from django.utils import timezone
 from analysis.tasks import (
     ANALYSIS_PHASE_ORDER,
     AUDIT_AXIS_LABELS,
-    AUDIT_PHASE_ORDER,
     UNIFIED_PROGRESS,
     _build_effective_config,
     _cleanup_phase,

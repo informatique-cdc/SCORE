@@ -8,8 +8,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-ITEMS_PER_PAGE = 20
-
 from analysis.models import (
     AnalysisJob,
     ContradictionPair,
@@ -21,7 +19,9 @@ from analysis.models import (
     TopicCluster,
     TraceEvent,
 )
-from analysis.semantic_graph import graph_dir, load_graph
+from analysis.semantic_graph import graph_dir
+
+ITEMS_PER_PAGE = 20
 
 
 @login_required

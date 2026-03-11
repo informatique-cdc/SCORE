@@ -4,7 +4,6 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext as _, gettext_lazy as _lazy
@@ -22,17 +21,13 @@ from analysis.models import (
     ClusterMembership,
     ContradictionPair,
     DuplicateGroup,
-    DuplicatePair,
     GapReport,
     HallucinationReport,
-    PhaseTrace,
     PipelineTrace,
     TopicCluster,
-    TraceEvent,
-    TreeNode,
 )
 from analysis.presenters import contradiction_chart_data, gap_chart_data, hallucination_chart_data
-from analysis.semantic_graph import graph_dir, load_graph
+from analysis.semantic_graph import graph_dir
 from analysis.tasks import UNIFIED_PROGRESS, run_unified_pipeline
 from connectors.models import ConnectorConfig
 from docuscore.scoring import build_breakdown_json, compute_docuscore, compute_docuscore_detail
@@ -104,7 +99,6 @@ def _build_job_issues(job):
 
 def _analysis_jobs_context(project):
     """Build context dict for analysis jobs table partial."""
-    from django.db.models import Avg, Count, Q
 
     jobs = list(AnalysisJob.objects.filter(project=project).order_by("-created_at")[:20])
     # Prefetch linked audit jobs for the table
@@ -635,7 +629,7 @@ def analysis_audit_overview(request, pk):
 # Report views moved to analysis/views_reports.py:
 # duplicates_report, contradictions_report, clusters_view, gaps_report, tree_view,
 # trace_view, knowledge_map_view
-from analysis.views_reports import (  # noqa: F401
+from analysis.views_reports import (  # noqa: F401, E402
     clusters_view,
     contradiction_batch_resolve,
     contradiction_resolve,
@@ -656,7 +650,7 @@ from analysis.views_reports import (  # noqa: F401
 
 # JSON API views moved to analysis/views_json.py:
 # clusters_json, tree_json, concept_graph_json, concept_graph_query
-from analysis.views_json import (  # noqa: F401
+from analysis.views_json import (  # noqa: F401, E402
     clusters_json,
     concept_graph_json,
     concept_graph_query,

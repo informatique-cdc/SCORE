@@ -1,5 +1,4 @@
 """Chat views: page rendering, RAG API, and conversation management."""
-import json
 import logging
 
 from django.contrib.auth.decorators import login_required

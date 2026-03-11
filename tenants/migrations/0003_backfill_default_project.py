@@ -6,7 +6,6 @@ Also create ProjectMembership for each existing TenantMembership.
 import uuid
 
 from django.db import migrations
-from django.utils.text import slugify
 
 
 def backfill_default_project(apps, schema_editor):

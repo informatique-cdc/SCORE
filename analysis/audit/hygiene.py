@@ -1,6 +1,5 @@
 """Axe 1 — Hygiène du corpus: dedup, near-dup, boilerplate, language, PII."""
 import collections
-import hashlib
 import logging
 import re
 
@@ -66,7 +65,6 @@ class HygieneAxis(BaseAuditAxis):
         pii_findings, pii_ratio = self._pii_analysis(chunks)
 
         # Score computation
-        cfg = self.config
         uniqueness_score = max(0, 100 * (1 - exact_dup_ratio * 5))
         neardup_score = max(0, 100 * (1 - neardup_ratio * 3))
         boilerplate_score = max(0, 100 * (1 - boilerplate_ratio * 3))

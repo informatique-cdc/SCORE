@@ -1,18 +1,16 @@
 """Cross-tenant data isolation tests and end-to-end integration tests."""
 import json
-from unittest.mock import patch, MagicMock
 
 import pytest
 from django.contrib.auth.models import User
 from django.test import Client
 
-from analysis.models import AnalysisJob, Claim, ContradictionPair, DuplicateGroup, GapReport
-from chat.models import Conversation, Message
+from analysis.models import AnalysisJob, DuplicateGroup
+from chat.models import Conversation
 from connectors.models import ConnectorConfig
-from ingestion.models import Document, DocumentChunk
-from reports.models import Report
+from ingestion.models import Document
 from tenants.models import Project, ProjectMembership, Tenant, TenantMembership
-from tests.conftest import make_chunk, make_document
+from tests.conftest import make_document
 
 
 @pytest.fixture
@@ -150,7 +148,7 @@ class TestAnalysisDataIsolation:
         _, t_b, p_b, _ = tenant_b
 
         job_a = AnalysisJob.objects.create(tenant=t_a, project=p_a, status="completed")
-        job_b = AnalysisJob.objects.create(tenant=t_b, project=p_b, status="completed")
+        AnalysisJob.objects.create(tenant=t_b, project=p_b, status="completed")
 
         assert AnalysisJob.objects.for_project(p_a).count() == 1
         assert AnalysisJob.objects.for_project(p_a).first() == job_a

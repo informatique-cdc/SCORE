@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from analysis.constants import AXIS_ICONS, AXIS_LABELS, AXIS_ORDER
-from analysis.models import AnalysisJob, AuditAxisResult, AuditJob
+from analysis.models import AuditAxisResult, AuditJob
 from analysis.views import analysis_number
 
 logger = logging.getLogger(__name__)

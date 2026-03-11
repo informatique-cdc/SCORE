@@ -1,9 +1,7 @@
 """Tests for model constraints, properties, managers, and helpers across all apps."""
-import hashlib
 import uuid
 
 import pytest
-from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.utils import timezone
 
@@ -12,29 +10,22 @@ from analysis.models import (
     AuditAxisResult,
     AuditJob,
     Claim,
-    ClusterMembership,
-    ContradictionPair,
-    DuplicateGroup,
-    DuplicatePair,
     GapReport,
     PhaseTrace,
     PipelineTrace,
     TopicCluster,
-    TreeNode,
 )
 from chat.models import ChatConfig, Conversation, Message
 from connectors.models import ConnectorConfig
 from dashboard.models import Feedback
-from ingestion.models import Document, DocumentChunk, IngestionJob
+from ingestion.models import Document, IngestionJob
 from reports.models import Report
 from tenants.models import (
     AuditLog,
     Project,
     ProjectMembership,
-    ProjectScopedModel,
     Tenant,
     TenantMembership,
-    TenantScopedModel,
     log_audit,
 )
 from tests.conftest import make_chunk, make_document

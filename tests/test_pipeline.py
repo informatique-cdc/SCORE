@@ -1,6 +1,5 @@
 """Tests for analysis.tasks — Pipeline orchestration."""
-import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,7 +8,6 @@ from analysis.models import (
     ContradictionPair,
     DuplicateGroup,
     GapReport,
-    TopicCluster,
 )
 from analysis.tasks import (
     ANALYSIS_PHASE_ORDER,
@@ -76,9 +74,9 @@ class TestBuildEffectiveConfig:
 @pytest.mark.django_db
 class TestCleanupPhase:
     def test_cleanup_duplicates(self, tenant, project, connector, analysis_job):
-        doc_a = make_document(tenant, project, connector, title="A")
-        doc_b = make_document(tenant, project, connector, title="B")
-        group = DuplicateGroup.objects.create(
+        make_document(tenant, project, connector, title="A")
+        make_document(tenant, project, connector, title="B")
+        DuplicateGroup.objects.create(
             tenant=tenant, project=project, analysis_job=analysis_job,
         )
 

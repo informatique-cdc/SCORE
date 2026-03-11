@@ -1,8 +1,6 @@
 """Tests for llm/client.py — LLMClient initialization, chat, embed, retry, fallback."""
-import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 
 from llm.client import LLMClient, LLMResponse, get_llm_client
 

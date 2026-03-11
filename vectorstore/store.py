@@ -637,7 +637,6 @@ class VectorStore:
 
 
 # Module-level singleton (thread-safe)
-import threading
 
 _store: VectorStore | None = None
 _store_lock = threading.Lock()

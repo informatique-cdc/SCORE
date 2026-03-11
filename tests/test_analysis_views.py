@@ -1,5 +1,4 @@
 """Tests for analysis views: list, detail, run, delete, retry, cancel, reports, resolve."""
-import json
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -8,18 +7,14 @@ from django.test import Client
 
 from analysis.models import (
     AnalysisJob,
-    AuditJob,
     Claim,
     ContradictionPair,
     DuplicateGroup,
     DuplicatePair,
     GapReport,
     TopicCluster,
-    ClusterMembership,
-    TreeNode,
 )
 from connectors.models import ConnectorConfig
-from ingestion.models import Document
 from tenants.models import Project, ProjectMembership, Tenant, TenantMembership
 from tests.conftest import make_chunk, make_document
 

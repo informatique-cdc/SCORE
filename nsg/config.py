@@ -1,6 +1,6 @@
 """Default configuration for the Neural Semantic Graph pipeline."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass

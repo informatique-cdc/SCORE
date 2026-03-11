@@ -36,7 +36,6 @@ UNIFIED_PROGRESS = {
     "done": 100,
 }
 
-from analysis.constants import AUDIT_AXIS_LABELS  # noqa: E402
 
 # Ordered phase values for resume logic
 ANALYSIS_PHASE_ORDER = [
@@ -98,7 +97,7 @@ def _cleanup_phase(job, phase_value):
         gdir = _get_graph_dir(str(job.project_id))
         if gdir.exists():
             shutil.rmtree(gdir)
-            logger.info("Cleanup semantic_graph: removed %s", graph_dir)
+            logger.info("Cleanup semantic_graph: removed %s", gdir)
 
     elif phase_value == "clustering":
         # ClusterMembership cascades via TopicCluster FK
@@ -147,7 +146,6 @@ def _collect_existing_stats(job):
 
 def _update_phase(job, phase: str, progress: int):
     """Update job phase and progress, clearing sub-step detail."""
-    from analysis.models import AnalysisJob
 
     job.current_phase = phase
     job.progress_pct = progress

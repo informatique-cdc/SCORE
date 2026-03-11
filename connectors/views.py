@@ -66,7 +66,7 @@ def connector_create(request):
         return redirect("connector-list")
 
     if request.method == "POST":
-        connector = ConnectorConfig.objects.create(
+        ConnectorConfig.objects.create(
             tenant=request.tenant,
             project=request.project,
             name=request.POST["name"],

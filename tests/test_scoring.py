@@ -3,14 +3,8 @@ import pytest
 
 from analysis.models import (
     AnalysisJob,
-    AuditAxisResult,
-    AuditJob,
-    ClusterMembership,
     ContradictionPair,
     DuplicateGroup,
-    DuplicatePair,
-    GapReport,
-    TopicCluster,
     Claim,
 )
 from docuscore.scoring import (
@@ -137,7 +131,7 @@ class TestComputeDocuscore:
         for i in range(5):
             make_document(tenant, project, connector, title=f"Doc{i}", status="ready")
 
-        job = AnalysisJob.objects.create(
+        AnalysisJob.objects.create(
             tenant=tenant, project=project, status=AnalysisJob.Status.COMPLETED,
         )
 

@@ -1,6 +1,5 @@
 """Tests for chunking module."""
 import pytest
-from unittest.mock import patch
 
 from ingestion.chunking import chunk_document, count_tokens, Chunk
 

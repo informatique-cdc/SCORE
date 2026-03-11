@@ -3,7 +3,6 @@ import json
 from datetime import timedelta
 from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 from django.utils import timezone
 

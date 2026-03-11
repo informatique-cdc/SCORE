@@ -8,7 +8,7 @@ import pytest
 from django.utils import timezone
 
 from analysis.contradictions import ContradictionDetector
-from analysis.models import Claim, ContradictionPair
+from analysis.models import Claim
 from tests.conftest import make_chunk, make_document, make_llm_response, random_embedding
 
 

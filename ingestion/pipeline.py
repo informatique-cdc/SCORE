@@ -9,7 +9,7 @@ The pipeline handles:
   5. Vector storage in sqlite-vec
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 from django.utils import timezone as django_tz
 

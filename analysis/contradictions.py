@@ -19,7 +19,6 @@ from django.conf import settings
 from django.utils import timezone
 
 from analysis.models import Claim, ContradictionPair
-from ingestion.models import Document
 from llm.client import get_llm_client
 from llm.prompt_loader import get_prompt
 from vectorstore.store import get_vector_store
@@ -60,7 +59,6 @@ class ContradictionDetector:
         claim_embeddings = self.vec_store.get_all_claim_embeddings_for_tenant(
             str(self.tenant.id), project_id=str(self.project.id)
         )
-        claims_by_id = {str(c.id): c for c in claims}
 
         # Phase 1: In-memory cosine similarity to find candidate pairs
         # Build matrix of all claim embeddings for a single matmul

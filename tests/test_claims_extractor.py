@@ -1,6 +1,6 @@
 """Tests for analysis.claims — ClaimsExtractor."""
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

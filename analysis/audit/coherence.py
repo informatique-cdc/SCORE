@@ -35,7 +35,7 @@ class CoherenceAxis(BaseAuditAxis):
     axis_label = "Cohérence interne"
 
     def analyze(self):
-        from ingestion.models import Document, DocumentChunk
+        from ingestion.models import DocumentChunk
 
         chunks = list(
             DocumentChunk.objects.filter(

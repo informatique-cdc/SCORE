@@ -203,7 +203,6 @@ class RetrievabilityAxis(BaseAuditAxis):
         from sklearn.feature_extraction.text import TfidfVectorizer
 
         queries = []
-        doc_id_set = set(d[0] for d in docs)
 
         # 1. Document titles as queries
         for doc_id, title, _ in docs:

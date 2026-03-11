@@ -39,7 +39,7 @@ def _mock_llm_client():
         responses = []
         for i, prompt in enumerate(prompts):
             lower_sys = system.lower()
-            lower_prompt = prompt.lower() if prompt else ""
+            prompt.lower() if prompt else ""
             if "doublon" in lower_sys or "duplicate" in lower_sys:
                 resp = make_llm_response(json.dumps({
                     "results": [{"pair_index": 0, "classification": "duplicate",

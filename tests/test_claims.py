@@ -1,7 +1,5 @@
 """Tests for claims extraction prompts and structured output parsing."""
 import json
-import pytest
-from unittest.mock import MagicMock, patch
 
 from llm.prompt_loader import get_prompt
 

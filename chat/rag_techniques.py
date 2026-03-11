@@ -354,7 +354,7 @@ def agentic_rag(question, tenant, project, history, llm, vec_store, max_steps=3)
     Cost: 1-3 LLM per step x max_steps.
     Returns dict with "answer", "sources", "suggestions".
     """
-    from ingestion.models import Document, DocumentChunk
+    from ingestion.models import DocumentChunk
 
     tid, pid = str(tenant.id), str(project.id)
     scratchpad_entries = []

@@ -1,13 +1,11 @@
 """Tests for tenants/context_processors.py — tenant_context and onboarding."""
 import pytest
-from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory
 
 from analysis.models import AnalysisJob
-from connectors.models import ConnectorConfig
-from ingestion.models import Document
 from tenants.context_processors import _get_onboarding_steps, tenant_context
-from tenants.models import Project, ProjectMembership, Tenant, TenantMembership
+from tenants.models import ProjectMembership, TenantMembership
 from tests.conftest import make_document
 
 

@@ -9,7 +9,6 @@ Two strategies:
 Both use tiktoken for accurate token counting.
 """
 import logging
-import re
 from dataclasses import dataclass
 
 import tiktoken

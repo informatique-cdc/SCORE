@@ -1,10 +1,8 @@
 """Axe 6 — Gouvernance & metadata: completeness, orphans, staleness, link graph."""
 import collections
 import logging
-import os
 from datetime import timedelta
 
-import numpy as np
 from django.utils import timezone
 
 from .base import BaseAuditAxis
@@ -17,7 +15,6 @@ class GovernanceAxis(BaseAuditAxis):
     axis_label = "Gouvernance & metadata"
 
     def analyze(self):
-        from connectors.models import ConnectorConfig
         from ingestion.models import Document
 
         docs = list(

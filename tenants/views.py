@@ -342,7 +342,6 @@ def project_delete(request, pk):
         store = get_vector_store()
         store.delete_by_documents([str(d) for d in doc_ids])
 
-    project_name = project.name
     log_audit(
         tenant=request.tenant, user=request.user,
         action=AuditLog.Action.PROJECT_DELETED, target=project,

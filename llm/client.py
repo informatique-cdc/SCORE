@@ -324,7 +324,7 @@ class LLMClient:
         all_embeddings = []
         total_prompt_tokens = 0
         total_tokens = 0
-        total_batches = (len(texts) + self._batch_size - 1) // self._batch_size
+        (len(texts) + self._batch_size - 1) // self._batch_size
         for batch_idx, i in enumerate(range(0, len(texts), self._batch_size)):
             batch = texts[i : i + self._batch_size]
 
@@ -633,7 +633,6 @@ class LLMClient:
 
 
 # Module-level singleton (thread-safe)
-import threading
 
 _client: LLMClient | None = None
 _client_lock = threading.Lock()

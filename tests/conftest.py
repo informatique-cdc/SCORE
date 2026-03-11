@@ -3,7 +3,6 @@ import uuid
 
 import pytest
 from django.contrib.auth.models import User
-from django.test import override_settings
 
 from tenants.models import Tenant, TenantMembership
 
@@ -62,10 +61,10 @@ def editor_membership(tenant, user):
 # Shared fixtures for analysis pipeline tests
 # ---------------------------------------------------------------------------
 
-from tenants.models import Project
-from connectors.models import ConnectorConfig
-from analysis.models import AnalysisJob
-from ingestion.models import Document, DocumentChunk
+from tenants.models import Project  # noqa: E402
+from connectors.models import ConnectorConfig  # noqa: E402
+from analysis.models import AnalysisJob  # noqa: E402
+from ingestion.models import Document, DocumentChunk  # noqa: E402
 
 
 @pytest.fixture
