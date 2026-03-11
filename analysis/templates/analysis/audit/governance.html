@@ -1,0 +1,194 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Gouvernance & metadata — Audit RAG{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block nav_analysis_submenu %}
+<a class="sidebar-subitem" href="{% url 'analysis-detail' job.analysis_job_id %}">Vue d'ensemble</a>
+<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">Audit RAG</a>
+<a class="sidebar-subitem" href="{% url 'analysis-trace' job.analysis_job_id %}">Trace pipeline</a>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2" style="font-size:13px;--bs-breadcrumb-divider:'/';">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyses</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyse {{ analysis_number }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-audit-overview' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Audit RAG</a></li>
+        <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">Gouvernance &amp; metadata</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Gouvernance & metadata</h2>
+    <span class="badge {% if result.score >= 80 %}bg-success{% elif result.score >= 60 %}bg-primary{% elif result.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:18px;padding:8px 16px;">
+        {{ result.score|floatformat:0 }}/100
+    </span>
+</div>
+
+<div class="row g-3 mb-4">
+    {% for key, val in metrics.sub_scores.items %}
+    <div class="col">
+        <div class="card stat-card {% if val >= 80 %}success{% elif val >= 60 %}primary{% elif val >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ val|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">{{ key }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card p-3 text-center"><div style="font-size:20px;font-weight:700;">{{ metrics.total_docs }}</div><div class="text-muted" style="font-size:11px;">Documents</div></div></div>
+    <div class="col-md-3"><div class="card p-3 text-center"><div style="font-size:20px;font-weight:700;">{{ metrics.stale_count }}</div><div class="text-muted" style="font-size:11px;">Docs obsolètes</div></div></div>
+    <div class="col-md-3"><div class="card p-3 text-center"><div style="font-size:20px;font-weight:700;">{{ metrics.orphan_count }}</div><div class="text-muted" style="font-size:11px;">Orphelins</div></div></div>
+    <div class="col-md-3"><div class="card p-3 text-center"><div style="font-size:20px;font-weight:700;">{{ metrics.avg_completeness|floatformat:0 }}%</div><div class="text-muted" style="font-size:11px;">Complétude moy.</div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Complétude par champ</h6>
+            <div id="chart-completeness" style="height:280px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Distribution des âges (jours)</h6>
+            <div id="chart-age" style="height:280px;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Problèmes par source (Pareto)</h6>
+            <div id="chart-pareto" style="height:280px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Complétude par source</h6>
+            <div id="chart-source-completeness" style="height:280px;"></div>
+        </div>
+    </div>
+</div>
+
+{% if details.stale_docs %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="mb-1" style="font-weight:600;">Documents obsolètes (> {{ metrics.staleness_threshold_days }} jours)</h6>
+        <p class="text-muted mb-3" style="font-size:11px;">Documents dont la date de dernière modification dépasse le seuil d'obsolescence configuré. Ces documents risquent de fournir des informations périmées via le RAG.</p>
+        <table class="table align-middle mb-0" style="font-size:13px;">
+            <thead><tr style="border-bottom:2px solid var(--ds-grey-500);"><th style="font-weight:600;">Document</th><th style="font-weight:600;">Source</th><th style="font-weight:600;">Âge (jours)</th></tr></thead>
+            <tbody>
+            {% for d in details.stale_docs %}
+            <tr style="border-bottom:1px solid var(--ds-grey-600);">
+                <td><strong>{{ d.title }}</strong></td>
+                <td>{{ d.source }}</td>
+                <td>{{ d.age_days }}j</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ chart_data|json_script:"chart-data" }}
+<script>
+(function() {
+    const chartData = JSON.parse(document.getElementById("chart-data").textContent);
+
+    // Completeness per field
+    if (chartData.completeness_bar && chartData.completeness_bar.length) {
+        const data = chartData.completeness_bar;
+        const container = d3.select("#chart-completeness");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 60, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+
+        const x = d3.scaleBand().domain(data.map(d => d.field)).range([margin.left, w - margin.right]).padding(0.2);
+        const y = d3.scaleLinear().domain([0, 1]).range([h - margin.bottom, margin.top]);
+
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", d => x(d.field)).attr("y", d => y(d.ratio))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.ratio))
+            .attr("fill", d => d.ratio >= 0.8 ? "#198754" : d.ratio >= 0.5 ? "#ffc107" : "#dc3545").attr("rx", 2);
+
+        svg.selectAll(".pct").data(data).join("text")
+            .attr("x", d => x(d.field) + x.bandwidth()/2).attr("y", d => y(d.ratio) - 4)
+            .attr("text-anchor","middle").attr("fill","var(--ds-grey-100)").style("font-size","11px")
+            .text(d => Math.round(d.ratio * 100) + "%");
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","10px").attr("transform","rotate(-30)").attr("text-anchor","end");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%"))).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Age histogram
+    if (chartData.age_histogram && chartData.age_histogram.length) {
+        const data = chartData.age_histogram;
+        const container = d3.select("#chart-age");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 30, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleBand().domain(data.map((d,i) => i)).range([margin.left, w - margin.right]).padding(0.05);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([h - margin.bottom, margin.top]);
+
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", (d,i) => x(i)).attr("y", d => y(d.count))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.count))
+            .attr("fill", d => d.bin_start >= {{ metrics.staleness_threshold_days }} ? "#dc3545" : "#0d6efd").attr("rx", 1);
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).tickFormat(i => data[i] ? Math.round(data[i].bin_start) : "")).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","9px");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Pareto by source
+    if (chartData.pareto_by_source && chartData.pareto_by_source.length) {
+        const data = chartData.pareto_by_source;
+        const container = d3.select("#chart-pareto");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 60, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+
+        const x = d3.scaleBand().domain(data.map(d => d.source)).range([margin.left, w - margin.right]).padding(0.2);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.problems)]).nice().range([h - margin.bottom, margin.top]);
+
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", d => x(d.source)).attr("y", d => y(d.problems))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.problems))
+            .attr("fill", "#ee8100").attr("rx", 2);
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","10px").attr("transform","rotate(-30)").attr("text-anchor","end");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Source completeness
+    if (chartData.source_completeness && chartData.source_completeness.length) {
+        const data = chartData.source_completeness;
+        const container = d3.select("#chart-source-completeness");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 60, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+
+        const x = d3.scaleBand().domain(data.map(d => d.source)).range([margin.left, w - margin.right]).padding(0.2);
+        const y = d3.scaleLinear().domain([0, 1]).range([h - margin.bottom, margin.top]);
+
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", d => x(d.source)).attr("y", d => y(d.avg_completeness))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.avg_completeness))
+            .attr("fill", d => d.avg_completeness >= 0.8 ? "#198754" : d.avg_completeness >= 0.5 ? "#ffc107" : "#dc3545").attr("rx", 2);
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","10px").attr("transform","rotate(-30)").attr("text-anchor","end");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%"))).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+})();
+</script>
+{% endblock %}

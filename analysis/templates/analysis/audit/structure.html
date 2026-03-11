@@ -1,0 +1,213 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Structure RAG — Audit RAG{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block nav_analysis_submenu %}
+<a class="sidebar-subitem" href="{% url 'analysis-detail' job.analysis_job_id %}">Vue d'ensemble</a>
+<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">Audit RAG</a>
+<a class="sidebar-subitem" href="{% url 'analysis-trace' job.analysis_job_id %}">Trace pipeline</a>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2" style="font-size:13px;--bs-breadcrumb-divider:'/';">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyses</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyse {{ analysis_number }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-audit-overview' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Audit RAG</a></li>
+        <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">Structure RAG</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Structure RAG</h2>
+    <span class="badge {% if result.score >= 80 %}bg-success{% elif result.score >= 60 %}bg-primary{% elif result.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:18px;padding:8px 16px;">
+        {{ result.score|floatformat:0 }}/100
+    </span>
+</div>
+<p class="text-muted mb-4" style="font-size:13px;">
+    Évalue la qualité du découpage (chunking) des documents : taille des fragments, homogénéité, densité informationnelle et lisibilité.
+    Un bon découpage garantit que le moteur de recherche et le LLM travaillent sur des unités de texte cohérentes et exploitables.
+</p>
+
+<!-- Sub-scores with explanations -->
+<div class="row g-3 mb-4">
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.uniformity >= 80 %}success{% elif metrics.sub_scores.uniformity >= 60 %}primary{% elif metrics.sub_scores.uniformity >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.uniformity|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Uniformity</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Homogénéité des tailles de chunks. Un score élevé signifie que les fragments ont des tailles proches, ce qui améliore la cohérence de la recherche.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.outliers >= 80 %}success{% elif metrics.sub_scores.outliers >= 60 %}primary{% elif metrics.sub_scores.outliers >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.outliers|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Outliers</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Proportion de chunks aux tailles extrêmes (trop courts ou trop longs). Un score bas indique de nombreux fragments hors norme qui dégradent la qualité du RAG.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.density >= 80 %}success{% elif metrics.sub_scores.density >= 60 %}primary{% elif metrics.sub_scores.density >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.density|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Density</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Densité informationnelle moyenne des chunks (mots uniques / mots totaux). Un ratio élevé signifie un contenu riche et peu répétitif par fragment.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.readability >= 80 %}success{% elif metrics.sub_scores.readability >= 60 %}primary{% elif metrics.sub_scores.readability >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.readability|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Readability</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Lisibilité du texte (longueur des phrases et des mots). Des chunks lisibles facilitent la compréhension par le LLM et la génération de réponses fiables.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Key metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="card p-3 text-center">
+            <div style="font-size:18px;font-weight:700;">{{ metrics.total_chunks }}</div>
+            <div class="text-muted" style="font-size:10px;">Chunks</div>
+            <div class="text-muted mt-1" style="font-size:9px;">Nombre total de fragments dans le corpus.</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card p-3 text-center">
+            <div style="font-size:18px;font-weight:700;">{{ metrics.mean_tokens|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:10px;">Moy. tokens</div>
+            <div class="text-muted mt-1" style="font-size:9px;">Taille moyenne d'un chunk en tokens. Idéal entre 200 et 500 tokens.</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card p-3 text-center">
+            <div style="font-size:18px;font-weight:700;">{{ metrics.std_tokens|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:10px;">Écart-type</div>
+            <div class="text-muted mt-1" style="font-size:9px;">Dispersion des tailles. Un écart-type faible indique un découpage homogène.</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card p-3 text-center">
+            <div style="font-size:18px;font-weight:700;">{{ metrics.too_small }}</div>
+            <div class="text-muted" style="font-size:10px;">Trop courts</div>
+            <div class="text-muted mt-1" style="font-size:9px;">Chunks sous le seuil minimal. Trop courts = peu de contexte pour le LLM.</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card p-3 text-center">
+            <div style="font-size:18px;font-weight:700;">{{ metrics.too_large }}</div>
+            <div class="text-muted" style="font-size:10px;">Trop longs</div>
+            <div class="text-muted mt-1" style="font-size:9px;">Chunks au-delà du seuil maximal. Trop longs = risque de dilution et de bruit.</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card p-3 text-center">
+            <div style="font-size:18px;font-weight:700;">{{ metrics.avg_density|floatformat:2 }}</div>
+            <div class="text-muted" style="font-size:10px;">Densité moy.</div>
+            <div class="text-muted mt-1" style="font-size:9px;">Ratio mots uniques / total. Proche de 1.0 = contenu varié et informatif.</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Distribution des tailles (tokens)</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Histogramme du nombre de tokens par chunk. Les barres rouges indiquent les chunks hors des seuils (trop courts ou trop longs). Idéalement, la distribution est concentrée dans la zone cible.</p>
+            <div id="chart-histogram" style="height:280px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Taille vs Densité</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Chaque point représente un chunk. L'axe X indique la taille en tokens, l'axe Y la densité lexicale (mots uniques / total). Les chunks idéaux se situent dans la zone centrale avec une densité élevée.</p>
+            <div id="chart-scatter" style="height:280px;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card p-3">
+            <h6 class="mb-3">Distribution par source (connecteur)</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Boîtes à moustaches de la taille des chunks par source. La barre blanche indique la médiane, la boîte couvre les quartiles Q1-Q3, et les moustaches vont du min au max. Permet d'identifier les connecteurs produisant des chunks trop hétérogènes.</p>
+            <div id="chart-violin" style="height:280px;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ chart_data|json_script:"chart-data" }}
+<script>
+(function() {
+    const chartData = JSON.parse(document.getElementById("chart-data").textContent);
+    const thresholds = chartData.thresholds || {};
+
+    // Token histogram with threshold lines
+    if (chartData.token_histogram && chartData.token_histogram.length) {
+        const data = chartData.token_histogram;
+        const container = d3.select("#chart-histogram");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 30, left: 45};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleBand().domain(data.map((d,i) => i)).range([margin.left, w - margin.right]).padding(0.05);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([h - margin.bottom, margin.top]);
+
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", (d,i) => x(i)).attr("y", d => y(d.count))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.count))
+            .attr("fill", d => (d.bin_end <= thresholds.min || d.bin_start >= thresholds.max) ? "#dc3545" : "#0d6efd")
+            .attr("rx", 1);
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).tickFormat(i => data[i] ? Math.round(data[i].bin_start) : "").tickValues(data.map((d,i) => i).filter(i => i % 3 === 0))).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","9px");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Scatter: size vs density
+    if (chartData.size_density_scatter && chartData.size_density_scatter.length) {
+        const data = chartData.size_density_scatter;
+        const container = d3.select("#chart-scatter");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 30, left: 45};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleLinear().domain([0, d3.max(data, d => d.tokens)]).nice().range([margin.left, w - margin.right]);
+        const y = d3.scaleLinear().domain([0, 1]).range([h - margin.bottom, margin.top]);
+
+        svg.selectAll("circle").data(data).join("circle")
+            .attr("cx", d => x(d.tokens)).attr("cy", d => y(d.density))
+            .attr("r", 2.5).attr("fill", "#0d6efd").attr("opacity", 0.5);
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).ticks(6)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","9px");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Violin-like per source (box plot)
+    if (chartData.source_violin && chartData.source_violin.length) {
+        const data = chartData.source_violin;
+        const container = d3.select("#chart-violin");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 40, left: 45};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleBand().domain(data.map(d => d.source)).range([margin.left, w - margin.right]).padding(0.3);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.max) * 1.1]).nice().range([h - margin.bottom, margin.top]);
+
+        data.forEach(d => {
+            const cx = x(d.source) + x.bandwidth() / 2;
+            const bw = x.bandwidth();
+            // Whiskers
+            svg.append("line").attr("x1",cx).attr("x2",cx).attr("y1",y(d.min)).attr("y2",y(d.max)).attr("stroke","var(--ds-grey-100)").attr("stroke-width",1);
+            // Box
+            svg.append("rect").attr("x",x(d.source)).attr("y",y(d.q3)).attr("width",bw).attr("height",Math.max(1,y(d.q1)-y(d.q3))).attr("fill","#0d6efd").attr("opacity",0.7).attr("rx",2);
+            // Median
+            svg.append("line").attr("x1",x(d.source)).attr("x2",x(d.source)+bw).attr("y1",y(d.median)).attr("y2",y(d.median)).attr("stroke","#fff").attr("stroke-width",2);
+        });
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","10px");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% load i18n %}
+{% comment %}
+  Floating toast notifications — include once per page.
+  Reads from Django messages framework. Supports: success, error/danger, warning, info.
+  Usage: {% include "dashboard/includes/toasts.html" %}
+{% endcomment %}
+<style>
+.ds-toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    max-width: 460px;
+    width: 100%;
+    pointer-events: none;
+}
+.ds-toast {
+    pointer-events: auto;
+    display: flex;
+    gap: 12px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    animation: ds-toast-in 0.35s ease-out;
+    transition: opacity 0.25s, transform 0.25s;
+}
+.ds-toast.ds-toast--out {
+    opacity: 0;
+    transform: translateX(20px);
+}
+@keyframes ds-toast-in {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Success (default / matches screenshot) ── */
+.ds-toast--success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+.ds-toast--success .ds-toast-icon { color: #16a34a; }
+.ds-toast--success .ds-toast-action:hover { color: #15803d; }
+
+/* ── Error / Danger ── */
+.ds-toast--error,
+.ds-toast--danger {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+.ds-toast--error .ds-toast-icon,
+.ds-toast--danger .ds-toast-icon { color: #dc2626; }
+.ds-toast--error .ds-toast-action:hover,
+.ds-toast--danger .ds-toast-action:hover { color: #b91c1c; }
+
+/* ── Warning ── */
+.ds-toast--warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+.ds-toast--warning .ds-toast-icon { color: #d97706; }
+.ds-toast--warning .ds-toast-action:hover { color: #b45309; }
+
+/* ── Info ── */
+.ds-toast--info {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e40af;
+}
+.ds-toast--info .ds-toast-icon { color: #2563eb; }
+.ds-toast--info .ds-toast-action:hover { color: #1d4ed8; }
+
+/* ── Dark mode ── */
+[data-bs-theme="dark"] .ds-toast--success {
+    background: rgba(22,101,52,0.18);
+    border-color: rgba(22,163,74,0.30);
+    color: #86efac;
+}
+[data-bs-theme="dark"] .ds-toast--success .ds-toast-icon { color: #4ade80; }
+[data-bs-theme="dark"] .ds-toast--error,
+[data-bs-theme="dark"] .ds-toast--danger {
+    background: rgba(153,27,27,0.18);
+    border-color: rgba(220,38,38,0.30);
+    color: #fca5a5;
+}
+[data-bs-theme="dark"] .ds-toast--error .ds-toast-icon,
+[data-bs-theme="dark"] .ds-toast--danger .ds-toast-icon { color: #f87171; }
+[data-bs-theme="dark"] .ds-toast--warning {
+    background: rgba(146,64,14,0.18);
+    border-color: rgba(217,119,6,0.30);
+    color: #fcd34d;
+}
+[data-bs-theme="dark"] .ds-toast--warning .ds-toast-icon { color: #fbbf24; }
+[data-bs-theme="dark"] .ds-toast--info {
+    background: rgba(30,64,175,0.18);
+    border-color: rgba(37,99,235,0.30);
+    color: #93c5fd;
+}
+[data-bs-theme="dark"] .ds-toast--info .ds-toast-icon { color: #60a5fa; }
+
+/* ── Inner elements ── */
+.ds-toast-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-top: 1px;
+}
+.ds-toast-body {
+    flex: 1;
+    min-width: 0;
+}
+.ds-toast-title {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 2px;
+}
+.ds-toast-desc {
+    font-size: 13px;
+    line-height: 1.5;
+    opacity: 0.85;
+}
+.ds-toast-actions {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+}
+.ds-toast-action {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+}
+.ds-toast-action:hover {
+    opacity: 1;
+}
+</style>
+
+<div class="ds-toast-container" id="dsToastContainer">
+{% if messages %}
+{% for msg in messages %}
+    <div class="ds-toast ds-toast--{{ msg.tags|default:'info' }}" role="alert" data-ds-toast>
+        <div class="ds-toast-icon">
+            {% if 'success' in msg.tags %}
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            {% elif 'error' in msg.tags or 'danger' in msg.tags %}
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            {% elif 'warning' in msg.tags %}
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            {% else %}
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            {% endif %}
+        </div>
+        <div class="ds-toast-body">
+            <div class="ds-toast-title">
+                {% if 'success' in msg.tags %}{% trans "Succès" %}
+                {% elif 'error' in msg.tags or 'danger' in msg.tags %}{% trans "Erreur" %}
+                {% elif 'warning' in msg.tags %}{% trans "Attention" %}
+                {% else %}{% trans "Information" %}{% endif %}
+            </div>
+            <div class="ds-toast-desc">{{ msg }}</div>
+            <div class="ds-toast-actions">
+                <button type="button" class="ds-toast-action" data-ds-toast-dismiss>{% trans "Fermer" %}</button>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+{% endif %}
+</div>
+
+<script>
+(function() {
+    var container = document.getElementById('dsToastContainer');
+    if (!container) return;
+
+    container.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-ds-toast-dismiss]');
+        if (btn) dismissToast(btn.closest('[data-ds-toast]'));
+    });
+
+    function dismissToast(el) {
+        if (!el || el.classList.contains('ds-toast--out')) return;
+        el.classList.add('ds-toast--out');
+        setTimeout(function() { el.remove(); }, 260);
+    }
+
+    // Auto-dismiss after 6 seconds
+    container.querySelectorAll('[data-ds-toast]').forEach(function(toast) {
+        setTimeout(function() { dismissToast(toast); }, 6000);
+    });
+})();
+</script>

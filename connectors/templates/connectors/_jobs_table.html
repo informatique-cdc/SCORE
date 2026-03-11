@@ -1,0 +1,33 @@
+{% load i18n %}
+<turbo-frame id="connector-jobs">
+<div data-controller="auto-refresh"
+     data-auto-refresh-url-value="{% url 'connector-jobs-partial' connector.pk %}"
+     data-auto-refresh-frame-value="connector-jobs"
+     data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+<div class="card">
+    <div class="card-header"><strong>{% trans "T&acirc;ches d'ingestion" %}</strong></div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr><th>{% trans "Statut" %}</th><th>{% trans "Progression" %}</th><th>{% trans "Nouveaux" %}</th><th>{% trans "Mis &agrave; jour" %}</th><th>{% trans "Supprim&eacute;s" %}</th><th>{% trans "Erreurs" %}</th><th>{% trans "Date" %}</th></tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td><span class="badge bg-{% if job.status == 'completed' %}success{% elif job.status == 'running' %}primary{% elif job.status == 'failed' %}danger{% else %}secondary{% endif %}">{{ job.get_status_display }}</span></td>
+                    <td>{{ job.processed_documents }}/{{ job.total_documents }}</td>
+                    <td>{{ job.new_documents }}</td>
+                    <td>{{ job.updated_documents }}</td>
+                    <td>{{ job.deleted_documents }}</td>
+                    <td>{% if job.error_count %}<span class="text-danger">{{ job.error_count }}</span>{% else %}0{% endif %}</td>
+                    <td>{{ job.created_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted">{% trans "Aucune t&acirc;che pour le moment" %}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+</turbo-frame>

@@ -1,0 +1,42 @@
+{% load i18n %}
+<turbo-frame id="dashboard-stats">
+<div data-controller="auto-refresh"
+     data-auto-refresh-url-value="{% url 'dashboard-stats-partial' %}"
+     data-auto-refresh-frame-value="dashboard-stats"
+     data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card primary">
+            <div class="card-body">
+                <h6 class="text-muted">{% trans "Documents" %}</h6>
+                <h3>{{ doc_count }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <h6 class="text-muted">{% trans "Groupes de doublons" %}</h6>
+                <h3>{{ dup_count }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <h6 class="text-muted">{% trans "Contradictions" %}</h6>
+                <h3>{{ contra_count }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <h6 class="text-muted">{% trans "Lacunes de couverture" %}</h6>
+                <h3>{{ gap_count }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</turbo-frame>

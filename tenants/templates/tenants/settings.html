@@ -1,0 +1,370 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Paramètres" %} - DocuScore{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .settings-card .form-control,
+    .settings-card .form-select {
+        border-radius: 8px;
+    }
+    .settings-tabs {
+        border-bottom: 1px solid var(--ds-grey-500);
+        padding: 0 24px;
+        gap: 0;
+        background: var(--ds-grey-700);
+        border-radius: 12px 12px 0 0;
+    }
+    .settings-tabs .nav-link {
+        color: var(--ds-text-muted);
+        font-size: 14px;
+        font-weight: 500;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        padding: 12px 16px;
+        margin-bottom: -1px;
+        transition: color 0.15s, border-color 0.15s;
+    }
+    .settings-tabs .nav-link:hover {
+        color: var(--ds-grey-100);
+        border-bottom-color: var(--ds-grey-500);
+    }
+    .settings-tabs .nav-link.active {
+        color: var(--ds-grey-100);
+        background: transparent;
+        border-bottom-color: var(--ds-grey-100);
+    }
+    .settings-body {
+        padding: 28px;
+    }
+    .btn-save {
+        background: var(--ds-grey-100);
+        color: var(--ds-grey-800);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 24px;
+        font-weight: 600;
+        font-size: 14px;
+        transition: opacity 0.15s;
+    }
+    .btn-save:hover {
+        opacity: 0.85;
+        color: var(--ds-grey-800);
+    }
+    .settings-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ds-grey-100);
+        margin-bottom: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div>
+    <h4 style="font-weight: 700; margin-bottom: 4px;">{% trans "Paramètres" %}</h4>
+    <p style="font-size: 14px; color: var(--ds-text-muted); margin-bottom: 24px;">
+        {% trans "Gérez votre profil et les paramètres de votre espace." %}
+    </p>
+
+    <div class="card settings-card">
+        <!-- Tabs -->
+        <ul class="nav nav-tabs settings-tabs" role="tablist" id="settingsTabs">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link{% if active_tab == 'profil' %} active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-profil" type="button" role="tab">{% trans "Profil" %}</button>
+            </li>
+            {% if membership and membership.is_admin %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link{% if active_tab == 'espace' %} active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-espace" type="button" role="tab">{% trans "Espace" %}</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link{% if active_tab == 'membres' %} active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-membres" type="button" role="tab">{% trans "Membres" %}</button>
+            </li>
+            {% if current_project %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link{% if active_tab == 'projet' %} active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-projet" type="button" role="tab">{% trans "Projet" %}</button>
+            </li>
+            {% endif %}
+            {% endif %}
+        </ul>
+
+        <!-- Tab panes -->
+        <div class="tab-content">
+
+            <!-- ═══ Profil ═══ -->
+            <div class="tab-pane fade{% if active_tab == 'profil' %} show active{% endif %}" id="tab-profil" role="tabpanel">
+                <div class="settings-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="profil">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="settings-label">{% trans "Email" %}</label>
+                                <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="settings-label" for="id_first_name">{% trans "Prénom" %}</label>
+                                <input type="text" class="form-control" id="id_first_name" name="first_name" value="{{ user.first_name }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="settings-label" for="id_last_name">{% trans "Nom" %}</label>
+                                <input type="text" class="form-control" id="id_last_name" name="last_name" value="{{ user.last_name }}">
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="settings-label" for="id_langue">{% trans "Langue" %}</label>
+                                <select class="form-select" id="id_langue" name="language">
+                                    {% for code, label in languages %}
+                                    <option value="{{ code }}" {% if membership.language == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="settings-label" for="id_theme">{% trans "Thème" %}</label>
+                                <select class="form-select" id="id_theme">
+                                    <option value="system">{% trans "Système" %}</option>
+                                    <option value="light">{% trans "Clair" %}</option>
+                                    <option value="dark">{% trans "Sombre" %}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-save">{% trans "Sauvegarder" %}</button>
+                    </form>
+                </div>
+            </div>
+
+            {% if membership and membership.is_admin %}
+            <!-- ═══ Espace ═══ -->
+            <div class="tab-pane fade{% if active_tab == 'espace' %} show active{% endif %}" id="tab-espace" role="tabpanel">
+                <div class="settings-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="espace">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="settings-label" for="id_tenant_name">{% trans "Nom de l'espace" %}</label>
+                                <input type="text" class="form-control" id="id_tenant_name" name="name" value="{{ tenant.name }}" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-save">{% trans "Sauvegarder" %}</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ═══ Membres ═══ -->
+            <div class="tab-pane fade{% if active_tab == 'membres' %} show active{% endif %}" id="tab-membres" role="tabpanel">
+                <div class="settings-body">
+                    <!-- Invite form -->
+                    <div style="margin-bottom: 24px;">
+                        <h6 style="font-weight: 600; font-size: 14px; margin-bottom: 12px;">{% trans "Inviter un utilisateur" %}</h6>
+                        <form method="post" action="{% url 'user-invite' %}" class="d-flex gap-2 align-items-end flex-wrap">
+                            {% csrf_token %}
+                            <div class="flex-grow-1" style="min-width: 200px;">
+                                <label class="settings-label" for="invite-email">Email</label>
+                                <input type="email" name="email" id="invite-email" class="form-control" placeholder="utilisateur@exemple.com" required>
+                            </div>
+                            <div style="min-width: 150px;">
+                                <label class="settings-label" for="invite-role">{% trans "Rôle" %}</label>
+                                <select name="role" id="invite-role" class="form-select">
+                                    {% for value, label in roles %}
+                                    <option value="{{ value }}" {% if value == "viewer" %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-save">{% trans "Inviter" %}</button>
+                        </form>
+                    </div>
+
+                    <!-- Members table -->
+                    <h6 style="font-weight: 600; font-size: 14px; margin-bottom: 12px;">{% trans "Membres" %} ({{ members|length }})</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th>{% trans "Utilisateur" %}</th>
+                                    <th>{% trans "Email" %}</th>
+                                    <th>{% trans "Rôle" %}</th>
+                                    <th>{% trans "Dernière connexion" %}</th>
+                                    <th style="width: 100px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for m in members %}
+                                <tr>
+                                    <td>
+                                        <div class="sidebar-avatar" style="width: 28px; height: 28px; font-size: 11px;">
+                                            {{ m.user.first_name|default:m.user.username|truncatechars:1|upper }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="font-size: 14px; font-weight: 500;">{{ m.user.get_full_name|default:m.user.username }}</div>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 13px; color: var(--ds-text-muted);">{{ m.user.email|default:"—" }}</span>
+                                    </td>
+                                    <td>
+                                        {% if m.user == request.user %}
+                                        <span class="badge {% if m.role == 'admin' %}bg-primary{% elif m.role == 'editor' %}bg-info{% else %}bg-secondary{% endif %}" style="font-size: 11px;">
+                                            {{ m.get_role_display }}
+                                        </span>
+                                        {% else %}
+                                        <form method="post" action="{% url 'user-role-update' pk=m.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <select name="role" class="form-select form-select-sm" style="width: auto; display: inline-block; font-size: 12px; padding: 2px 28px 2px 8px;" onchange="this.form.submit()">
+                                                {% for value, label in roles %}
+                                                <option value="{{ value }}" {% if value == m.role %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 12px; color: var(--ds-text-muted);">
+                                            {% if m.user.last_login %}
+                                                {{ m.user.last_login|date:"d/m/Y H:i" }}
+                                            {% else %}
+                                                {% trans "Jamais" %}
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        {% if m.user != request.user %}
+                                        <form method="post" action="{% url 'user-remove' pk=m.pk %}" class="d-inline"
+                                              data-confirm-title="Retirer le membre"
+                                              data-confirm-message="Retirer {{ m.user.get_full_name|default:m.user.username }} de l'espace ?"
+                                              data-confirm-action="Retirer">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size: 11px; padding: 2px 8px;">
+                                                {% trans "Retirer" %}
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4" style="color: var(--ds-text-muted);">{% trans "Aucun membre" %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {% if current_project %}
+            <!-- ═══ Projet ═══ -->
+            <div class="tab-pane fade{% if active_tab == 'projet' %} show active{% endif %}" id="tab-projet" role="tabpanel">
+                <div class="settings-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="projet">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="settings-label" for="id_project_name">{% trans "Nom du projet" %}</label>
+                                <input type="text" class="form-control" id="id_project_name" name="name" value="{{ current_project.name }}" required>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="settings-label" for="id_project_desc">{% trans "Description" %}</label>
+                            <textarea class="form-control" id="id_project_desc" name="description" rows="3">{{ current_project.description }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-save mb-4">{% trans "Sauvegarder" %}</button>
+                    </form>
+
+                    {% if project_members %}
+                    <h6 style="font-weight: 600; font-size: 14px; margin-bottom: 12px;">{% trans "Membres du projet" %}</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Utilisateur" %}</th>
+                                    <th>{% trans "Rôle" %}</th>
+                                    <th>{% trans "Ajouté le" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for m in project_members %}
+                                <tr>
+                                    <td>{{ m.user.get_full_name|default:m.user.username }}</td>
+                                    <td><span class="badge bg-secondary">{{ m.get_role_display }}</span></td>
+                                    <td>{{ m.created_at|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <!-- Danger zone -->
+                    <div style="margin-top: 32px; border: 1px solid var(--bs-danger); border-radius: 10px; padding: 20px;">
+                        <h6 style="font-weight: 600; font-size: 14px; color: var(--bs-danger); margin-bottom: 8px;">{% trans "Zone dangereuse" %}</h6>
+                        <p style="font-size: 13px; color: var(--ds-text-muted); margin-bottom: 16px;">
+                            {% trans "La suppression du projet est irréversible. Tous les documents, analyses et données associées seront définitivement supprimés." %}
+                        </p>
+                        <form method="post" action="{% url 'project-delete' pk=current_project.pk %}"
+                              data-confirm-title="Supprimer le projet"
+                              data-confirm-message="Êtes-vous sûr de vouloir supprimer le projet « {{ current_project.name }} » ? Cette action est irréversible."
+                              data-confirm-action="Supprimer"
+                              data-confirm-input="OUI">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm">{% trans "Supprimer ce projet" %}</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // Sync theme selector with current theme
+    var sel = document.getElementById('id_theme');
+    if (sel) {
+        var stored = null;
+        try { stored = localStorage.getItem('ds-theme'); } catch(e) {}
+        if (stored === 'light' || stored === 'dark') {
+            sel.value = stored;
+        } else {
+            sel.value = 'system';
+        }
+        sel.addEventListener('change', function() {
+            var v = sel.value;
+            var html = document.documentElement;
+            if (v === 'system') {
+                var t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                html.setAttribute('data-bs-theme', t);
+                try { localStorage.removeItem('ds-theme'); } catch(e) {}
+            } else {
+                html.setAttribute('data-bs-theme', v);
+                try { localStorage.setItem('ds-theme', v); } catch(e) {}
+            }
+        });
+    }
+
+    // Update URL when switching tabs (for bookmarkability)
+    var tabs = document.querySelectorAll('#settingsTabs .nav-link');
+    tabs.forEach(function(tab) {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            var target = e.target.getAttribute('data-bs-target');
+            var tabName = target.replace('#tab-', '');
+            var url = new URL(window.location);
+            url.searchParams.set('tab', tabName);
+            history.replaceState(null, '', url);
+        });
+    });
+})();
+</script>
+{% endblock %}

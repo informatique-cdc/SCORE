@@ -1,0 +1,119 @@
+{% load i18n %}
+<!-- DocuScore Detail Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="docuscore-panel" style="width:50vw;min-width:400px;">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title">{% trans "D&eacute;tails DocuScore" %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body" id="docuscore-panel-body">
+        <div class="text-center py-5" id="docuscore-loading">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">{% trans "Chargement des d&eacute;tails du score..." %}</p>
+        </div>
+        <div id="docuscore-content" class="d-none"></div>
+        <div id="docuscore-error" class="d-none">
+            <div class="alert alert-danger">{% trans "&Eacute;chec du chargement des d&eacute;tails du score." %}</div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const trigger = document.getElementById('docuscore-trigger');
+    const panel = document.getElementById('docuscore-panel');
+    if (!trigger || !panel) return;
+
+    let loaded = false;
+    panel.addEventListener('show.bs.offcanvas', function() {
+        if (loaded) return;
+        const loading = document.getElementById('docuscore-loading');
+        const content = document.getElementById('docuscore-content');
+        const error = document.getElementById('docuscore-error');
+
+        loading.classList.remove('d-none');
+        content.classList.add('d-none');
+        error.classList.add('d-none');
+
+        fetch('{% url "dashboard-docuscore-detail" %}')
+            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(data => {
+                loading.classList.add('d-none');
+                content.classList.remove('d-none');
+                content.innerHTML = renderDetail(data);
+                loaded = true;
+            })
+            .catch(() => {
+                loading.classList.add('d-none');
+                error.classList.remove('d-none');
+            });
+    });
+
+    function scoreBg(score) {
+        if (score >= 70) return 'success';
+        if (score >= 40) return 'warning';
+        return 'danger';
+    }
+
+    const icons = {
+        'copy': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
+        'alert-triangle': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        'target': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+        'layers': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+        'heart': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>',
+        'plus-circle': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
+        'play-circle': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>',
+    };
+
+    function icon(name) { return icons[name] || ''; }
+
+    function renderDetail(data) {
+        let html = '';
+        html += '<div class="alert alert-light border mb-4">';
+        html += '<div class="d-flex align-items-center gap-3 mb-2">';
+        html += '<span class="docuscore-number docuscore-color-' + data.grade + '">' + data.score + '</span>';
+        html += '<span class="fs-5 fw-bold">/ 100 &mdash; {% trans "Note" %} ' + data.grade + '</span>';
+        html += '</div>';
+        html += '<p class="mb-0">' + data.summary + '</p>';
+        html += '</div>';
+
+        if (data.top_recommendations && data.top_recommendations.length > 0) {
+            html += '<div class="card mb-4 border-primary">';
+            html += '<div class="card-header bg-primary text-white fw-bold">{% trans "Recommandations principales" %}</div>';
+            html += '<ul class="list-group list-group-flush">';
+            data.top_recommendations.forEach(function(rec) {
+                html += '<li class="list-group-item d-flex align-items-start gap-2">';
+                html += '<span class="text-primary mt-1">' + icon(rec.icon) + '</span>';
+                html += '<span>' + rec.text + '</span>';
+                html += '</li>';
+            });
+            html += '</ul></div>';
+        }
+
+        if (data.dimensions && data.dimensions.length > 0) {
+            data.dimensions.forEach(function(dim) {
+                var bg = scoreBg(dim.score);
+                html += '<div class="card mb-3">';
+                html += '<div class="card-header d-flex justify-content-between align-items-center">';
+                html += '<strong>' + dim.name + '</strong>';
+                html += '<span class="badge bg-' + bg + '">' + dim.score + ' / 100</span>';
+                html += '</div>';
+                html += '<div class="card-body">';
+                html += '<p class="text-muted small mb-2">' + dim.description + '</p>';
+                html += '<div class="progress mb-3" style="height:8px;">';
+                html += '<div class="progress-bar bg-' + bg + '" style="width:' + dim.score + '%"></div>';
+                html += '</div>';
+                html += '<p class="mb-2">' + dim.details + '</p>';
+                if (dim.recommendations && dim.recommendations.length > 0) {
+                    html += '<div class="mt-2">';
+                    html += '<small class="text-muted fw-bold">{% trans "Comment am&eacute;liorer :" %}</small>';
+                    html += '<ul class="mb-0 mt-1 small">';
+                    dim.recommendations.forEach(function(rec) { html += '<li>' + rec + '</li>'; });
+                    html += '</ul></div>';
+                }
+                html += '</div></div>';
+            });
+        }
+        return html;
+    }
+})();
+</script>

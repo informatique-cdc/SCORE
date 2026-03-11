@@ -1,0 +1,171 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Arbre taxonomique des documents" %} - DocuScore{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{% trans "Arbre taxonomique des documents" %}</h2>
+    <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Retour" %}</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0 position-relative" style="min-height: 800px;">
+        <div id="tree-viz" style="width:100%;height:800px;"></div>
+
+        <!-- Legend overlay -->
+        <div id="tree-legend" style="position:absolute;bottom:16px;left:16px;z-index:10;display:flex;gap:16px;align-items:center;background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:8px;padding:8px 14px;"></div>
+
+        <!-- Zoom controls -->
+        <div style="position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:2px;z-index:10;">
+            <button id="tree-zoom-in" type="button" style="width:36px;height:36px;border:1px solid var(--ds-grey-500);border-radius:8px 8px 0 0;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom avant">+</button>
+            <button id="tree-zoom-out" type="button" style="width:36px;height:36px;border:1px solid var(--ds-grey-500);border-radius:0 0 8px 8px;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom arri&egrave;re">&minus;</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+fetch("{% url 'api-tree' job.pk %}")
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById("tree-viz");
+
+        if (!data.children || !data.children.length) {
+            container.innerHTML = '<p class="text-muted text-center mt-5">Aucune donn\u00e9e d\'arbre \u00e0 afficher</p>';
+            return;
+        }
+
+        const chart = echarts.init(container, null, { renderer: "canvas" });
+        const labelColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim() || "#f8f8f8";
+
+        const colorMap = {root: "#6c757d", category: "#8b5cf6", cluster: "#0d6efd", subcluster: "#60a5fa", document: "#198754", section: "#ffc107"};
+        const sizeMap = {root: 16, category: 14, cluster: 12, subcluster: 10, document: 8, section: 6};
+
+        function transformNode(node) {
+            const item = {
+                name: node.name,
+                value: node.type,
+                itemStyle: { color: colorMap[node.type] || "#6c757d", borderColor: "rgba(255,255,255,0.15)", borderWidth: 1 },
+                symbolSize: sizeMap[node.type] || 8,
+                label: {
+                    fontSize: node.type === "category" || node.type === "root" ? 13 : node.type === "cluster" || node.type === "subcluster" ? 12 : 11,
+                    fontWeight: (node.type === "category" || node.type === "cluster" || node.type === "subcluster") ? "bold" : "normal",
+                },
+                _raw: node,
+            };
+            if (node.children && node.children.length) {
+                item.children = node.children.map(transformNode);
+            }
+            return item;
+        }
+
+        const treeData = transformNode(data);
+
+        const option = {
+            backgroundColor: "transparent",
+            tooltip: {
+                trigger: "item",
+                confine: true,
+                backgroundColor: "#27282a",
+                borderColor: "#37383a",
+                textStyle: { color: "#f8f8f8", fontSize: 12 },
+                extraCssText: "max-width:320px;white-space:normal;word-break:break-word;",
+                formatter: function(params) {
+                    const raw = params.data._raw || {};
+                    let html = '<strong>' + params.name + '</strong><br>Type : ' + (raw.type || '');
+                    if (raw.content_purpose) html += '<br><em>' + raw.content_purpose + '</em>';
+                    if (raw.key_concepts && raw.key_concepts.length) html += '<br>Concepts : ' + raw.key_concepts.join(', ');
+                    if (raw.doc_url) html += '<br><em>Cliquer pour ouvrir</em>';
+                    return html;
+                }
+            },
+            series: [{
+                type: "tree",
+                data: [treeData],
+                layout: "orthogonal",
+                orient: "LR",
+                initialTreeDepth: 3,
+                roam: "move",
+                symbol: "circle",
+                animationDuration: 550,
+                animationDurationUpdate: 750,
+                lineStyle: {
+                    color: "#37383a",
+                    width: 1.5,
+                    curveness: 0.5,
+                },
+                label: {
+                    position: "right",
+                    verticalAlign: "middle",
+                    align: "left",
+                    color: labelColor,
+                    formatter: function(params) {
+                        const name = params.name || "";
+                        return name.length > 50 ? name.slice(0, 47) + "..." : name;
+                    }
+                },
+                leaves: {
+                    label: {
+                        position: "right",
+                        verticalAlign: "middle",
+                        align: "left",
+                    }
+                },
+                emphasis: {
+                    focus: "descendant",
+                    itemStyle: {
+                        borderColor: "#fff",
+                        borderWidth: 2,
+                        shadowBlur: 10,
+                        shadowColor: "rgba(13,110,253,0.4)",
+                    }
+                },
+                expandAndCollapse: true,
+            }],
+        };
+
+        chart.setOption(option);
+
+        // Click to open document URL
+        chart.on("click", function(params) {
+            const raw = params.data._raw || {};
+            if (raw.doc_url) window.open(raw.doc_url, "_blank");
+        });
+
+        // Legend
+        const legendEl = document.getElementById("tree-legend");
+        legendEl.innerHTML = [
+            ["Cat\u00e9gorie", "#8b5cf6"],
+            ["Th\u00e8me", "#0d6efd"],
+            ["Sous-th\u00e8me", "#60a5fa"],
+            ["Document", "#198754"],
+        ].map(function(pair) {
+            return '<span style="display:inline-flex;align-items:center;gap:4px;">'
+                + '<span style="width:10px;height:10px;border-radius:50%;background:' + pair[1] + ';display:inline-block;"></span>'
+                + '<span style="font-size:12px;color:var(--ds-grey-100);">' + pair[0] + '</span></span>';
+        }).join('');
+
+        // Update label color on theme toggle
+        new MutationObserver(function() {
+            const newColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim();
+            chart.setOption({ series: [{ label: { color: newColor } }] });
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+
+        // Zoom controls (programmatic via setOption, scroll zoom stays disabled)
+        let currentZoom = 1;
+        document.getElementById("tree-zoom-in").addEventListener("click", function() {
+            currentZoom *= 1.3;
+            chart.setOption({ series: [{ zoom: currentZoom }] });
+        });
+        document.getElementById("tree-zoom-out").addEventListener("click", function() {
+            currentZoom *= 0.7;
+            chart.setOption({ series: [{ zoom: currentZoom }] });
+        });
+
+        // Responsive
+        window.addEventListener("resize", function() { chart.resize(); });
+    });
+</script>
+{% endblock %}

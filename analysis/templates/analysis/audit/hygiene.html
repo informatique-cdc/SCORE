@@ -1,0 +1,238 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Hygiène du corpus — Audit RAG{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block nav_analysis_submenu %}
+<a class="sidebar-subitem" href="{% url 'analysis-detail' job.analysis_job_id %}">Vue d'ensemble</a>
+<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">Audit RAG</a>
+<a class="sidebar-subitem" href="{% url 'analysis-trace' job.analysis_job_id %}">Trace pipeline</a>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2" style="font-size:13px;--bs-breadcrumb-divider:'/';">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyses</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyse {{ analysis_number }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-audit-overview' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Audit RAG</a></li>
+        <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">Hygi&egrave;ne du corpus</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Hygi&egrave;ne du corpus</h2>
+    <span class="badge {% if result.score >= 80 %}bg-success{% elif result.score >= 60 %}bg-primary{% elif result.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:18px;padding:8px 16px;">
+        {{ result.score|floatformat:0 }}/100
+    </span>
+</div>
+<p class="text-muted mb-4" style="font-size:13px;">
+    &Eacute;value la propret&eacute; de votre corpus documentaire : doublons exacts et quasi-doublons, contenu r&eacute;p&eacute;titif (boilerplate),
+    homog&eacute;n&eacute;it&eacute; linguistique et pr&eacute;sence de donn&eacute;es sensibles (PII).
+    Un score &eacute;lev&eacute; indique un corpus propre, pr&ecirc;t pour l'indexation RAG.
+</p>
+
+<!-- Sub-scores with explanations -->
+<div class="row g-3 mb-4">
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.uniqueness >= 80 %}success{% elif metrics.sub_scores.uniqueness >= 60 %}primary{% elif metrics.sub_scores.uniqueness >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.uniqueness|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Unicit&eacute;</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Proportion de chunks uniques (sans doublons exacts). Un score bas signifie que de nombreux chunks sont dupliqu&eacute;s.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.neardup >= 80 %}success{% elif metrics.sub_scores.neardup >= 60 %}primary{% elif metrics.sub_scores.neardup >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.neardup|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Quasi-doublons</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Mesure l'absence de paires quasi-identiques (similarit&eacute; &eacute;lev&eacute;e sans &ecirc;tre exacte). Un score bas r&eacute;v&egrave;le de la redondance.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.boilerplate >= 80 %}success{% elif metrics.sub_scores.boilerplate >= 60 %}primary{% elif metrics.sub_scores.boilerplate >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.boilerplate|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Boilerplate</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Absence de contenu r&eacute;p&eacute;titif g&eacute;n&eacute;rique (en-t&ecirc;tes, pieds de page, mentions l&eacute;gales). Un score bas indique du bruit dans l'index.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.language >= 80 %}success{% elif metrics.sub_scores.language >= 60 %}primary{% elif metrics.sub_scores.language >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.language|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Langue</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Homog&eacute;n&eacute;it&eacute; linguistique du corpus. Un score bas signifie un m&eacute;lange de langues qui peut d&eacute;grader la recherche.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.pii >= 80 %}success{% elif metrics.sub_scores.pii >= 60 %}primary{% elif metrics.sub_scores.pii >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.pii|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Donn&eacute;es sensibles</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Absence de donn&eacute;es personnelles (emails, t&eacute;l&eacute;phones, num&eacute;ros de s&eacute;curit&eacute; sociale, cl&eacute;s API). Un score bas requiert une action imm&eacute;diate.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Key metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.total_chunks }}</div>
+            <div class="text-muted" style="font-size:11px;">Chunks</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Nombre total de fragments de texte analys&eacute;s dans le corpus.</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.exact_duplicates }}</div>
+            <div class="text-muted" style="font-size:11px;">Doublons exacts</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Chunks dont le contenu est strictement identique &agrave; un autre. &Agrave; supprimer pour r&eacute;duire le bruit.</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.neardup_pairs }}</div>
+            <div class="text-muted" style="font-size:11px;">Paires near-dup</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Paires de chunks tr&egrave;s similaires (m&ecirc;me contenu avec des variations mineures). Peuvent fausser les r&eacute;sultats RAG.</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.pii_findings_count }}</div>
+            <div class="text-muted" style="font-size:11px;">PII/secrets</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Occurrences de donn&eacute;es sensibles d&eacute;tect&eacute;es (emails, t&eacute;l&eacute;phones, cl&eacute;s API). Risque de fuite si expos&eacute; via RAG.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Distribution des longueurs</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">R&eacute;partition de la taille des chunks (en caract&egrave;res). Une distribution trop large ou des chunks tr&egrave;s courts/longs d&eacute;gradent la qualit&eacute; de la recherche.</p>
+            <div id="chart-lengths" style="height:250px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">R&eacute;partition des langues</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Langues d&eacute;tect&eacute;es dans les chunks. Un corpus multilingue non voulu peut d&eacute;grader l'embedding et la recherche s&eacute;mantique.</p>
+            <div id="chart-lang" style="height:250px;"></div>
+        </div>
+    </div>
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">PII par type</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">R&eacute;partition des donn&eacute;es personnelles d&eacute;tect&eacute;es par cat&eacute;gorie. Ces &eacute;l&eacute;ments devraient &ecirc;tre anonymis&eacute;s ou supprim&eacute;s avant indexation.</p>
+            <div id="chart-pii" style="height:250px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Doublons par document</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Nombre de chunks dupliqu&eacute;s par document source. Les documents avec beaucoup de doublons sont prioritaires pour un nettoyage.</p>
+            <div id="chart-dups" style="height:250px;"></div>
+        </div>
+    </div>
+</div>
+
+{% if details.boilerplate_lines %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="mb-1" style="font-weight:600;">Lignes boilerplate fr&eacute;quentes</h6>
+        <p class="text-muted mb-3" style="font-size:11px;">Lignes de texte qui apparaissent dans de nombreux documents (en-t&ecirc;tes, pieds de page, mentions l&eacute;gales). Ce contenu r&eacute;p&eacute;titif pollue l'index et devrait &ecirc;tre filtr&eacute; lors de l'ing&eacute;ration.</p>
+        <table class="table align-middle mb-0" style="font-size:13px;">
+            <thead><tr style="border-bottom:2px solid var(--ds-grey-500);"><th style="font-weight:600;">Ligne</th><th style="font-weight:600;">Documents</th><th style="font-weight:600;">Ratio</th></tr></thead>
+            <tbody>
+            {% for bp in details.boilerplate_lines %}
+            <tr style="border-bottom:1px solid var(--ds-grey-600);">
+                <td><code style="font-size:12px;">{{ bp.line|truncatechars:100 }}</code></td>
+                <td>{{ bp.doc_count }}</td>
+                <td>{{ bp.ratio|floatformat:1 }}%</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ chart_data|json_script:"chart-data" }}
+<script>
+(function() {
+    const chartData = JSON.parse(document.getElementById("chart-data").textContent);
+
+    // Length histogram
+    if (chartData.length_histogram && chartData.length_histogram.length) {
+        const data = chartData.length_histogram;
+        const container = d3.select("#chart-lengths");
+        const w = container.node().clientWidth, h = 250;
+        const margin = {top: 10, right: 10, bottom: 30, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleBand().domain(data.map((d,i) => i)).range([margin.left, w - margin.right]).padding(0.1);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([h - margin.bottom, margin.top]);
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", (d,i) => x(i)).attr("y", d => y(d.count))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.count))
+            .attr("fill", "#0d6efd").attr("rx", 2);
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).tickFormat(i => data[i] ? Math.round(data[i].bin_start) : "")).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","9px");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Language pie
+    if (chartData.language_pie && chartData.language_pie.length) {
+        const data = chartData.language_pie;
+        const container = d3.select("#chart-lang");
+        const w = 250, h = 250, r = Math.min(w,h)/2 - 20;
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`).append("g").attr("transform", `translate(${w/2},${h/2})`);
+        const color = d3.scaleOrdinal(d3.schemeCategory10);
+        const pie = d3.pie().value(d => d.count);
+        const arc = d3.arc().innerRadius(r*0.4).outerRadius(r);
+        svg.selectAll("path").data(pie(data)).join("path").attr("d", arc).attr("fill", (d,i) => color(i)).attr("stroke","var(--ds-grey-700)").attr("stroke-width",2);
+        svg.selectAll("text").data(pie(data)).join("text")
+            .attr("transform", d => `translate(${arc.centroid(d)})`)
+            .attr("text-anchor","middle").attr("fill","#fff").style("font-size","11px")
+            .text(d => d.data.language);
+    }
+
+    // PII bar
+    if (chartData.pii_by_type && chartData.pii_by_type.length) {
+        const data = chartData.pii_by_type;
+        const container = d3.select("#chart-pii");
+        const w = container.node().clientWidth, h = 250;
+        const margin = {top: 10, right: 10, bottom: 60, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleBand().domain(data.map(d => d.type)).range([margin.left, w - margin.right]).padding(0.2);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([h - margin.bottom, margin.top]);
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", d => x(d.type)).attr("y", d => y(d.count))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.count))
+            .attr("fill", "#dc3545").attr("rx", 2);
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","9px").attr("transform","rotate(-30)").attr("text-anchor","end");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Dup distribution bar
+    if (chartData.dup_distribution && chartData.dup_distribution.length) {
+        const data = chartData.dup_distribution.slice(0, 15);
+        const container = d3.select("#chart-dups");
+        const w = container.node().clientWidth, h = 250;
+        const margin = {top: 10, right: 10, bottom: 30, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleBand().domain(data.map((d,i) => i)).range([margin.left, w - margin.right]).padding(0.2);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([h - margin.bottom, margin.top]);
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", (d,i) => x(i)).attr("y", d => y(d.count))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.count))
+            .attr("fill", "#ffc107").attr("rx", 2);
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).tickFormat(() => "")).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+})();
+</script>
+{% endblock %}

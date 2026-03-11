@@ -1,0 +1,38 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Projets" %} - DocuScore{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>{% trans "Sélectionner un projet" %}</h2>
+            {% if membership and membership.is_admin %}
+            <a href="{% url 'project-create' %}" class="btn btn-primary btn-sm">+ {% trans "Nouveau projet" %}</a>
+            {% endif %}
+        </div>
+
+        {% for project in projects %}
+        <form method="post" class="mb-2">
+            {% csrf_token %}
+            <input type="hidden" name="project_id" value="{{ project.id }}">
+            <button type="submit" class="btn btn-outline-primary w-100 text-start p-3{% if project.id not in user_project_ids %} disabled{% endif %}"{% if project.id not in user_project_ids %} disabled{% endif %}>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ project.name }}</strong>
+                        {% if project.description %}
+                        <br><small class="text-muted">{{ project.description|truncatewords:20 }}</small>
+                        {% endif %}
+                    </div>
+                    {% if current_project and current_project.id == project.id %}
+                    <span class="badge bg-success">{% trans "Actif" %}</span>
+                    {% endif %}
+                </div>
+            </button>
+        </form>
+        {% empty %}
+        <div class="alert alert-warning">{% trans "Aucun projet dans cet espace. Créez-en un pour commencer." %}</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

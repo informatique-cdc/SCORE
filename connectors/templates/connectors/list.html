@@ -1,0 +1,321 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Connecteurs - DocuScore" %}{% endblock %}
+{% block nav_connectors %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Search bar ── */
+    .conn-search {
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: var(--ds-radius);
+        color: var(--ds-grey-100);
+        font-size: 13px;
+        padding: 8px 12px 8px 34px;
+        width: 280px;
+        transition: border-color 0.15s;
+    }
+    .conn-search:focus {
+        outline: none;
+        border-color: #0d6efd;
+    }
+    .conn-search::placeholder { color: var(--ds-text-muted); }
+    .conn-search-wrap {
+        position: relative;
+    }
+    .conn-search-wrap svg {
+        position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+        width: 16px; height: 16px; color: var(--ds-text-muted); pointer-events: none;
+    }
+
+    /* ── Table ── */
+    .conn-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .conn-table thead th {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ds-text-muted);
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--ds-grey-500);
+        white-space: nowrap;
+        background: transparent;
+    }
+    .conn-table tbody tr {
+        transition: background 0.1s;
+        cursor: pointer;
+    }
+    .conn-table tbody tr:hover {
+        background: var(--ds-grey-700);
+    }
+    .conn-table tbody td {
+        font-size: 13px;
+        padding: 16px 16px;
+        border-bottom: 1px solid var(--ds-grey-500);
+        color: var(--ds-grey-100);
+        vertical-align: middle;
+    }
+    .conn-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* ── Type cell (icon + name) ── */
+    .conn-type-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .conn-type-icon {
+        width: 36px; height: 36px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .conn-type-icon svg { width: 18px; height: 18px; }
+    .conn-type-icon.sharepoint { background: rgba(13,110,253,0.10); color: #60a5fa; }
+    .conn-type-icon.confluence { background: rgba(13,202,240,0.10); color: #22d3ee; }
+    .conn-type-icon.generic { background: rgba(108,113,126,0.10); color: #9ca3af; }
+    .conn-type-name {
+        font-weight: 600;
+        color: var(--ds-grey-100);
+    }
+
+    /* ── Name column ── */
+    .conn-config-name {
+        color: var(--ds-text-muted);
+        font-size: 13px;
+    }
+
+    /* ── Sync column ── */
+    .conn-sync-ago {
+        font-weight: 500;
+        color: var(--ds-grey-100);
+        font-size: 13px;
+    }
+    .conn-sync-status {
+        font-size: 11px;
+        color: var(--ds-text-muted);
+    }
+
+    /* ── Doc count ── */
+    .conn-doc-count {
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Status dot ── */
+    .conn-status-dot {
+        display: inline-block;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+    }
+    .conn-status-dot.active { background: #34d399; }
+    .conn-status-dot.inactive { background: #f87171; }
+
+    /* ── Dropdown ── */
+    .conn-menu-btn {
+        background: none; border: none; color: var(--ds-text-muted);
+        padding: 4px 6px; border-radius: 4px; cursor: pointer;
+        transition: background 0.1s;
+        line-height: 1;
+    }
+    .conn-menu-btn:hover { background: var(--ds-grey-500); color: var(--ds-grey-100); }
+
+    /* ── Create section ── */
+    .conn-create-section {
+        margin-top: 40px;
+    }
+    .conn-create-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--ds-grey-100);
+        margin-bottom: 4px;
+    }
+    .conn-create-desc {
+        font-size: 13px;
+        color: var(--ds-text-muted);
+        margin-bottom: 20px;
+    }
+    .conn-type-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+    @media (max-width: 768px) { .conn-type-grid { grid-template-columns: 1fr; } }
+    .conn-type-card {
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: var(--ds-radius);
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        color: var(--ds-grey-100);
+        transition: all 0.15s;
+    }
+    .conn-type-card:hover {
+        border-color: #0d6efd;
+        background: rgba(13,110,253,0.04);
+        color: var(--ds-grey-100);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .conn-type-card-name {
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .conn-type-card-desc {
+        font-size: 11px;
+        color: var(--ds-text-muted);
+    }
+
+    /* ── Empty state ── */
+    .conn-empty {
+        text-align: center;
+        padding: 48px 24px;
+    }
+    .conn-empty-icon {
+        width: 48px; height: 48px;
+        color: var(--ds-text-muted);
+        margin-bottom: 12px;
+    }
+    .conn-empty-text {
+        font-size: 13px;
+        color: var(--ds-text-muted);
+        margin-bottom: 16px;
+    }
+
+    /* ── Create modal ── */
+    #conn-create-modal .modal-dialog {
+        max-width: 520px;
+    }
+    #conn-create-modal .modal-content {
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 14px;
+        padding: 36px 36px 28px;
+    }
+    .cf-close {
+        position: absolute;
+        top: 16px; right: 16px;
+        background: none; border: none;
+        color: var(--ds-text-muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: color 0.15s;
+        line-height: 1;
+        z-index: 1;
+    }
+    .cf-close:hover { color: var(--ds-grey-100); }
+    .cf-close svg { width: 20px; height: 20px; }
+    .cf-icons {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+    .cf-icon-box {
+        width: 56px; height: 56px;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .cf-icon-box svg { width: 28px; height: 28px; }
+    .cf-icon-box.sharepoint { background: rgba(13,110,253,0.12); color: #60a5fa; }
+    .cf-icon-box.confluence { background: rgba(13,202,240,0.12); color: #22d3ee; }
+    .cf-icon-box.generic { background: rgba(108,113,126,0.12); color: #9ca3af; }
+    .cf-icon-box.docuscore { background: rgba(13,110,253,0.12); color: #0d6efd; }
+    .cf-arrow { color: var(--ds-text-muted); }
+    .cf-arrow svg { width: 20px; height: 20px; }
+    .cf-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--ds-grey-100);
+        text-align: center;
+        margin-bottom: 6px;
+    }
+    .cf-subtitle {
+        font-size: 13px;
+        color: var(--ds-text-muted);
+        text-align: center;
+        margin-bottom: 28px;
+        line-height: 1.5;
+    }
+    .cf-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ds-grey-100);
+        margin-bottom: 6px;
+        display: block;
+    }
+    .cf-input {
+        width: 100%;
+        background: var(--ds-grey-800);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 10px;
+        color: var(--ds-grey-100);
+        font-size: 13px;
+        padding: 10px 14px;
+        transition: border-color 0.15s;
+    }
+    .cf-input:focus { outline: none; border-color: #0d6efd; }
+    .cf-input::placeholder { color: var(--ds-text-muted); }
+    .cf-hint { font-size: 11px; color: var(--ds-text-muted); margin-top: 4px; }
+    .cf-group { margin-bottom: 18px; }
+    .cf-select {
+        width: 100%;
+        background: var(--ds-grey-800);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 10px;
+        color: var(--ds-grey-100);
+        font-size: 13px;
+        padding: 10px 14px;
+        transition: border-color 0.15s;
+        appearance: auto;
+    }
+    .cf-select:focus { outline: none; border-color: #0d6efd; }
+    .cf-submit {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: #0d6efd;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 6px;
+    }
+    .cf-submit:hover { background: #0b5ed7; }
+    .cf-submit svg { width: 16px; height: 16px; }
+    .cf-divider {
+        border: none;
+        border-top: 1px solid var(--ds-grey-500);
+        margin: 24px 0 16px;
+    }
+    .cf-footer {
+        font-size: 12px;
+        color: var(--ds-text-muted);
+        text-align: center;
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "connectors/_connector_cards.html" %}
+{% endblock %}

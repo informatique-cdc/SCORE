@@ -1,0 +1,31 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Rapports - DocuScore" %}{% endblock %}
+{% block nav_reports %}active{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">{% trans "Rapports" %}</h2>
+
+<div class="card mb-4">
+    <div class="card-header"><strong>{% trans "Exporter depuis une analyse" %}</strong></div>
+    <div class="card-body">
+        {% for a in analyses %}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span>
+                {% trans "Analysis" %} {{ a.id|truncatechars:12 }}
+                <small class="text-muted">({{ a.created_at|date:"M d, Y" }})</small>
+            </span>
+            <div>
+                <a href="{% url 'export-duplicates-csv' a.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Doublons CSV" %}</a>
+                <a href="{% url 'export-contradictions-csv' a.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Contradictions CSV" %}</a>
+                <a href="{% url 'export-gaps-csv' a.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Lacunes CSV" %}</a>
+                <a href="{% url 'export-report-json' a.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "JSON complet" %}</a>
+                <a href="{% url 'analysis-detail' a.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Voir" %}</a>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-muted">{% trans "Aucune analyse terminée disponible pour l'export." %}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

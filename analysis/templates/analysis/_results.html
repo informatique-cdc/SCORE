@@ -1,0 +1,100 @@
+{% load i18n %}
+<turbo-frame id="analysis-results">
+<div data-controller="auto-refresh"
+     data-auto-refresh-url-value="{% url 'analysis-results-partial' job.pk %}"
+     data-auto-refresh-frame-value="analysis-results"
+     data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+<div class="kpi-row mb-4">
+    <!-- DocuScore -->
+    <div class="kpi-card" style="border-left: 3px solid {% if docuscore.grade == 'A' %}#198754{% elif docuscore.grade == 'B' %}#8bc34a{% elif docuscore.grade == 'C' %}#ffc107{% elif docuscore.grade == 'D' %}#fd7e14{% else %}#dc3545{% endif %};">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            DocuScore
+        </div>
+        <div style="display:flex;align-items:baseline;gap:6px;">
+            <span class="kpi-value">{{ docuscore.score }}</span>
+            <span style="font-size:14px;color:var(--ds-text-muted);font-weight:500;">/100</span>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:4px;">
+            {% for letter in "ABCDE" %}
+            <span class="docuscore-pill {% if docuscore.grade == letter %}active{% endif %} docuscore-{{ letter }}" style="font-size:10px;padding:2px 7px;">{{ letter }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="kpi-card" style="border-left: 3px solid #0d6efd;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {% trans "Documents" %}
+        </div>
+        <span class="kpi-value">{{ doc_count }}</span>
+        <div class="kpi-change neutral">{% trans "index&eacute;s dans le projet" %}</div>
+    </div>
+
+    <!-- Doublons -->
+    <a href="{% url 'analysis-duplicates' job.pk %}" class="kpi-card kpi-card-expandable" data-turbo-frame="_top" style="border-left: 3px solid #ffc107; text-decoration:none; color:inherit;">
+        <div class="d-flex gap-3 align-items-start">
+            <div style="flex-shrink:0;">
+                <div class="kpi-label">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><rect x="8" y="2" width="13" height="13" rx="2"/><path d="M4 15.5A2.5 2.5 0 002 18v2.5A2.5 2.5 0 004.5 23H16"/></svg>
+                    {% trans "Doublons" %}
+                </div>
+                <span class="kpi-value">{{ dup_count }}</span>
+            </div>
+            <div class="kpi-hover-chart">
+                <div id="chart-dup-action" style="width:100%;height:110px;"></div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Contradictions -->
+    <a href="{% url 'analysis-contradictions' job.pk %}" class="kpi-card kpi-card-expandable" data-turbo-frame="_top" style="border-left: 3px solid #dc3545; text-decoration:none; color:inherit;">
+        <div class="d-flex gap-3 align-items-start">
+            <div style="flex-shrink:0;">
+                <div class="kpi-label">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    {% trans "Contradictions" %}
+                </div>
+                <span class="kpi-value">{{ contra_count }}</span>
+            </div>
+            <div class="kpi-hover-chart">
+                <div id="chart-contra-severity" style="width:100%;height:110px;"></div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Lacunes -->
+    <a href="{% url 'analysis-gaps' job.pk %}" class="kpi-card kpi-card-expandable" data-turbo-frame="_top" style="border-left: 3px solid #198754; text-decoration:none; color:inherit;">
+        <div class="d-flex gap-3 align-items-start">
+            <div style="flex-shrink:0;">
+                <div class="kpi-label">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                    {% trans "Lacunes" %}
+                </div>
+                <span class="kpi-value">{{ gap_count }}</span>
+            </div>
+            <div class="kpi-hover-chart">
+                <div id="chart-gap-type" style="width:100%;height:110px;"></div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Hallucinations -->
+    <a href="{% url 'analysis-hallucinations' job.pk %}" class="kpi-card kpi-card-expandable" data-turbo-frame="_top" style="border-left: 3px solid #6f42c1; text-decoration:none; color:inherit;">
+        <div class="d-flex gap-3 align-items-start">
+            <div style="flex-shrink:0;">
+                <div class="kpi-label">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+                    {% trans "Hallucinations" %}
+                </div>
+                <span class="kpi-value">{{ hallu_count }}</span>
+            </div>
+            <div class="kpi-hover-chart">
+                <div id="chart-hallu-type" style="width:100%;height:110px;"></div>
+            </div>
+        </div>
+    </a>
+</div>
+</div>
+</turbo-frame>

@@ -1,0 +1,18 @@
+{% extends "account/base_auth.html" %}
+{% load i18n %}
+{% block title %}{% trans "Déconnexion" %} - DocuScore{% endblock %}
+{% block subtitle %}{% trans "Déconnexion" %}{% endblock %}
+
+{% block content %}
+<p class="text-center" style="font-size:14px;color:var(--ds-text-muted);margin-bottom:1.5rem;">
+    {% trans "Êtes-vous sûr de vouloir vous déconnecter ?" %}
+</p>
+<form method="post" action="{% url 'account_logout' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary w-100">{% trans "Se déconnecter" %}</button>
+</form>
+
+<div class="auth-footer">
+    <a href="{% url 'account_login' %}">{% trans "Retour à la connexion" %}</a>
+</div>
+{% endblock %}

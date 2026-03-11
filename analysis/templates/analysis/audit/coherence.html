@@ -1,0 +1,193 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Cohérence interne — Audit RAG{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block nav_analysis_submenu %}
+<a class="sidebar-subitem" href="{% url 'analysis-detail' job.analysis_job_id %}">Vue d'ensemble</a>
+<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">Audit RAG</a>
+<a class="sidebar-subitem" href="{% url 'analysis-trace' job.analysis_job_id %}">Trace pipeline</a>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2" style="font-size:13px;--bs-breadcrumb-divider:'/';">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyses</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyse {{ analysis_number }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-audit-overview' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Audit RAG</a></li>
+        <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">Coh&eacute;rence interne</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Cohérence interne</h2>
+    <span class="badge {% if result.score >= 80 %}bg-success{% elif result.score >= 60 %}bg-primary{% elif result.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:18px;padding:8px 16px;">
+        {{ result.score|floatformat:0 }}/100
+    </span>
+</div>
+<p class="text-muted mb-4" style="font-size:13px;">
+    Vérifie la cohérence factuelle du corpus : valeurs contradictoires pour une même clé (SLA, version, URL…),
+    variantes terminologiques d'un même concept, et entités (dates, IPs, URLs) incohérentes entre documents.
+</p>
+
+<!-- Sub-scores with explanations -->
+<div class="row g-3 mb-4">
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.kv_conflicts >= 80 %}success{% elif metrics.sub_scores.kv_conflicts >= 60 %}primary{% elif metrics.sub_scores.kv_conflicts >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.kv_conflicts|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">KV Conflicts</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Conflits clé-valeur détectés (SLA, version, port, URL, date…). Un score élevé signifie peu de contradictions entre documents pour une même clé technique.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.terminology >= 80 %}success{% elif metrics.sub_scores.terminology >= 60 %}primary{% elif metrics.sub_scores.terminology >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.terminology|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Terminology</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Consistance terminologique. Détecte les variantes orthographiques d'un même concept (ex : « config » vs « configuration »). Moins il y a de groupes de variantes, plus le score est élevé.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.entities >= 80 %}success{% elif metrics.sub_scores.entities >= 60 %}primary{% elif metrics.sub_scores.entities >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.entities|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Entities</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Cohérence des entités extraites (dates, versions, URLs, IPs). Un score bas indique de nombreuses valeurs divergentes pour un même type d'entité à travers le corpus.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Key metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.kv_conflict_keys }}</div>
+            <div class="text-muted" style="font-size:11px;">Clés en conflit</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Nombre de clés techniques (SLA, version, port…) pour lesquelles plusieurs valeurs différentes ont été trouvées dans le corpus.</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.terminology_variant_groups }}</div>
+            <div class="text-muted" style="font-size:11px;">Groupes de variantes</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Nombre de groupes de termes similaires (même racine, similarité ≥ 85%) utilisés de manière inconsistante dans les documents.</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.entity_conflicts }}</div>
+            <div class="text-muted" style="font-size:11px;">Conflits d'entités</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Nombre total de valeurs d'entités conflictuelles (dates, versions, URLs, IPs) détectées par extraction regex à travers le corpus.</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Conflits clé-valeur</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Nombre de valeurs conflictuelles par clé technique. Chaque barre représente une clé (SLA, version, port, URL…) pour laquelle plusieurs valeurs distinctes coexistent dans le corpus.</p>
+            <div id="chart-conflicts" style="height:300px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Variantes terminologiques</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Termes canoniques les plus fréquents ayant des variantes détectées. La longueur de la barre indique le nombre de documents concernés. L'objectif est d'unifier la terminologie.</p>
+            <div id="chart-variants" style="height:300px;"></div>
+        </div>
+    </div>
+</div>
+
+{% if details.kv_conflicts %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="mb-1" style="font-weight:600;">Détail des conflits clé-valeur</h6>
+        <p class="text-muted mb-3" style="font-size:11px;">Pour chaque clé technique, les différentes valeurs trouvées dans le corpus et le nombre de documents les contenant. Des valeurs conflictuelles peuvent indiquer des documents obsolètes ou des incohérences entre environnements.</p>
+        <table class="table align-middle mb-0" style="font-size:13px;">
+            <thead><tr style="border-bottom:2px solid var(--ds-grey-500);"><th style="font-weight:600;">Clé</th><th style="font-weight:600;">Valeurs conflictuelles</th><th style="font-weight:600;">Total</th></tr></thead>
+            <tbody>
+            {% for kv in details.kv_conflicts %}
+            <tr style="border-bottom:1px solid var(--ds-grey-600);">
+                <td><strong>{{ kv.key }}</strong></td>
+                <td>
+                    {% for v in kv.conflicting_values %}
+                    <span class="text-muted me-2">{{ v.value|truncatechars:40 }} <small>({{ v.doc_count }} docs)</small></span>
+                    {% endfor %}
+                </td>
+                <td>{{ kv.total_values }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if details.terminology_variants %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="mb-1" style="font-weight:600;">Variantes terminologiques</h6>
+        <p class="text-muted mb-3" style="font-size:11px;">Groupes de termes partageant la même racine (stemming Snowball) avec une similarité ≥ 85% (SequenceMatcher). Le terme canonique est celui qui apparaît le plus souvent. Unifier ces variantes améliore la qualité de la recherche et réduit l'ambiguïté.</p>
+        <table class="table align-middle mb-0" style="font-size:13px;">
+            <thead><tr style="border-bottom:2px solid var(--ds-grey-500);"><th style="font-weight:600;">Terme canonique</th><th style="font-weight:600;">Variantes</th><th style="font-weight:600;">Documents</th></tr></thead>
+            <tbody>
+            {% for v in details.terminology_variants %}
+            <tr style="border-bottom:1px solid var(--ds-grey-600);">
+                <td><strong>{{ v.canonical }}</strong></td>
+                <td>{{ v.variants|join:", " }}</td>
+                <td>{{ v.doc_count }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ chart_data|json_script:"chart-data" }}
+<script>
+(function() {
+    const chartData = JSON.parse(document.getElementById("chart-data").textContent);
+
+    // Conflict bar chart
+    if (chartData.conflict_bar && chartData.conflict_bar.length) {
+        const data = chartData.conflict_bar;
+        const container = d3.select("#chart-conflicts");
+        const w = container.node().clientWidth, h = 300;
+        const margin = {top: 10, right: 10, bottom: 60, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleBand().domain(data.map(d => d.key)).range([margin.left, w - margin.right]).padding(0.2);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.conflict_count)]).nice().range([h - margin.bottom, margin.top]);
+
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", d => x(d.key)).attr("y", d => y(d.conflict_count))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.conflict_count))
+            .attr("fill", "#dc3545").attr("rx", 2);
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","10px").attr("transform","rotate(-30)").attr("text-anchor","end");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Variant groups as horizontal bar
+    if (chartData.variant_groups && chartData.variant_groups.length) {
+        const data = chartData.variant_groups.slice(0, 15);
+        const container = d3.select("#chart-variants");
+        const w = container.node().clientWidth, h = 300;
+        const margin = {top: 10, right: 10, bottom: 20, left: 100};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const y = d3.scaleBand().domain(data.map(d => d.canonical)).range([margin.top, h - margin.bottom]).padding(0.2);
+        const x = d3.scaleLinear().domain([0, d3.max(data, d => d.doc_count)]).nice().range([margin.left, w - margin.right]);
+
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("y", d => y(d.canonical)).attr("x", margin.left)
+            .attr("height", y.bandwidth()).attr("width", d => x(d.doc_count) - margin.left)
+            .attr("fill", "#ffc107").attr("rx", 2);
+
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","10px");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Créer un espace" %} - DocuScore{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <h2 class="mb-4">{% trans "Créer un espace de travail" %}</h2>
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_name" class="form-label">{% trans "Nom de l'espace" %}</label>
+                        <input type="text" name="name" id="id_name" class="form-control" autofocus required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">{% trans "Créer" %}</button>
+                </form>
+            </div>
+        </div>
+        <div class="text-center mt-3">
+            <a href="{% url 'tenant-select' %}" style="font-size:13px;color:var(--ds-text-muted);">{% trans "Retour à la sélection" %}</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

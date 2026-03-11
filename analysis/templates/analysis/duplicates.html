@@ -1,0 +1,105 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Rapport des doublons" %} - DocuScore{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{% trans "Groupes de doublons" %}</h2>
+    <div>
+        <a href="{% url 'export-duplicates-csv' job.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Exporter CSV" %}</a>
+        <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Retour &agrave; l'analyse" %}</a>
+    </div>
+</div>
+
+<!-- Filter controls -->
+<div class="mb-3">
+    <div class="btn-group btn-group-sm" role="group">
+        <button type="button" class="btn btn-outline-secondary active" onclick="filterGroups('all')">{% trans "Tous" %}</button>
+        <button type="button" class="btn btn-outline-danger" onclick="filterGroups('delete_older')">{% trans "Supprimer l'ancien" %}</button>
+        <button type="button" class="btn btn-outline-warning" onclick="filterGroups('review')">{% trans "&Agrave; v&eacute;rifier" %}</button>
+        <button type="button" class="btn btn-outline-success" onclick="filterGroups('keep')">{% trans "Conserver les deux" %}</button>
+    </div>
+</div>
+
+{% for group in groups %}
+<div class="card mb-3 dup-group" data-action="{{ group.recommended_action }}">
+    <div class="card-header d-flex justify-content-between">
+        <span>
+            <span class="badge bg-{% if group.recommended_action == 'delete_older' %}danger{% elif group.recommended_action == 'review' %}warning{% elif group.recommended_action == 'merge' %}info{% else %}success{% endif %}">
+                {{ group.get_recommended_action_display }}
+            </span>
+            {% trans "Groupe" %} {{ forloop.counter }}
+        </span>
+        <small class="text-muted">{{ group.pairs.count }} {% trans "paire(s)" %}</small>
+    </div>
+    <div class="card-body">
+        {% if group.rationale %}
+        <p class="text-muted mb-3"><em>{{ group.rationale }}</em></p>
+        {% endif %}
+
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>{% trans "Document A" %}</th><th>{% trans "Document B" %}</th>
+                    <th>{% trans "S&eacute;mantique" %}</th><th>{% trans "Lexical" %}</th><th>{% trans "M&eacute;tadonn&eacute;es" %}</th><th>{% trans "Combin&eacute;" %}</th>
+                    <th>{% trans "V&eacute;rification" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pair in group.pairs.all %}
+                <tr>
+                    <td>
+                        <a href="javascript:void(0)" class="doc-read-btn" data-url="{% url 'document-content' pair.doc_a.connector_id pair.doc_a.pk %}"><strong>{{ pair.doc_a.title|truncatechars:50 }}</strong></a>
+                        {% if pair.doc_a.source_url %}<br><a href="{{ pair.doc_a.source_url }}" target="_blank" class="small">{% trans "Source" %}</a>{% endif %}
+                    </td>
+                    <td>
+                        <a href="javascript:void(0)" class="doc-read-btn" data-url="{% url 'document-content' pair.doc_b.connector_id pair.doc_b.pk %}"><strong>{{ pair.doc_b.title|truncatechars:50 }}</strong></a>
+                        {% if pair.doc_b.source_url %}<br><a href="{{ pair.doc_b.source_url }}" target="_blank" class="small">{% trans "Source" %}</a>{% endif %}
+                    </td>
+                    <td><span class="badge bg-{% if pair.semantic_score >= 0.9 %}danger{% elif pair.semantic_score >= 0.7 %}warning{% else %}secondary{% endif %}">{{ pair.semantic_score|floatformat:3 }}</span></td>
+                    <td>{{ pair.lexical_score|floatformat:3 }}</td>
+                    <td>{{ pair.metadata_score|floatformat:3 }}</td>
+                    <td><strong>{{ pair.combined_score|floatformat:3 }}</strong></td>
+                    <td>
+                        {% if pair.verified %}
+                        <span class="badge bg-{% if pair.verification_result == 'duplicate' %}danger{% elif pair.verification_result == 'related' %}warning{% else %}success{% endif %}">
+                            {{ pair.verification_result }}
+                        </span>
+                        {% if pair.verification_confidence %}({{ pair.verification_confidence|floatformat:2 }}){% endif %}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if pair.verification_evidence %}
+                <tr>
+                    <td colspan="7" class="small text-muted" style="background: var(--ds-grey-800);">
+                        <strong>{% trans "Preuve :" %}</strong> {{ pair.verification_evidence|truncatechars:500 }}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-info">{% trans "Aucun groupe de doublons trouv&eacute; dans cette analyse." %}</div>
+{% endfor %}
+
+{% include "analysis/_doc_viewer.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterGroups(action) {
+    document.querySelectorAll('.dup-group').forEach(el => {
+        el.style.display = (action === 'all' || el.dataset.action === action) ? '' : 'none';
+    });
+    document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+}
+</script>
+{% endblock %}
+

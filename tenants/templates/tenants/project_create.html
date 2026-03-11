@@ -1,0 +1,26 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Nouveau projet" %} - DocuScore{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <h2 class="mb-4">{% trans "Créer un projet" %}</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="name" class="form-label">{% trans "Nom du projet" %}</label>
+                <input type="text" class="form-control" id="name" name="name" required maxlength="200">
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">{% trans "Description" %}</label>
+                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">{% trans "Créer" %}</button>
+                <a href="{% url 'project-list' %}" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

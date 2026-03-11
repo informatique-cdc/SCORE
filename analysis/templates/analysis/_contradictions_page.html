@@ -1,0 +1,93 @@
+{% load i18n %}
+<turbo-frame id="contradictions-page-{{ page_obj.number }}">
+{% for c in contradictions %}
+<div class="card mb-3 contra-item {% if c.resolution == 'resolved' %}opacity-50{% endif %}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="d-flex align-items-center gap-2">
+            {% if can_edit %}
+            <input type="checkbox" class="form-check-input contra-checkbox" form="batch-form" name="selected" value="{{ c.pk }}">
+            {% endif %}
+            <span class="badge bg-{% if c.classification == 'contradiction' %}danger{% elif c.classification == 'outdated' %}warning{% else %}info{% endif %}">
+                {{ c.get_classification_display }}
+            </span>
+            <span class="badge badge-severity-{{ c.severity }}">{{ c.severity }}</span>
+            {% if c.resolution == 'resolved' %}
+                <span class="badge bg-success">{% trans "Trait&eacute;" %}</span>
+            {% elif c.resolution == 'kept' %}
+                <span class="badge bg-info">{% trans "Conserv&eacute;" %}</span>
+            {% endif %}
+        </span>
+        <span class="d-flex align-items-center gap-2">
+            <span class="text-muted">{% trans "Confiance :" %} {{ c.confidence|floatformat:2 }}</span>
+            {% if can_edit %}
+            <span class="d-inline-flex gap-1">
+                {% if c.resolution != 'resolved' %}
+                <button type="submit" form="single-{{ c.pk }}" name="resolution" value="resolved" class="btn btn-sm btn-outline-success" title="{% trans 'Marquer comme trait&eacute;' %}">{% trans "Trait&eacute;" %}</button>
+                {% endif %}
+                {% if c.resolution != 'kept' %}
+                <button type="submit" form="single-{{ c.pk }}" name="resolution" value="kept" class="btn btn-sm btn-outline-info" title="{% trans 'Conserver tel quel' %}">{% trans "Conserver" %}</button>
+                {% endif %}
+                {% if c.resolution %}
+                <button type="submit" form="single-{{ c.pk }}" name="resolution" value="" class="btn btn-sm btn-outline-secondary" title="{% trans 'R&eacute;initialiser' %}">{% trans "Annuler" %}</button>
+                {% endif %}
+            </span>
+            {% endif %}
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>{% trans "Affirmation A" %} <small class="text-muted">(<a href="javascript:void(0)" class="doc-read-btn text-muted" data-url="{% url 'document-content' c.claim_a.document.connector_id c.claim_a.document.pk %}">{{ c.claim_a.document.title|truncatechars:40 }}</a>)</small></h6>
+                <blockquote class="blockquote small border-start border-3 border-primary ps-3">
+                    {{ c.claim_a.as_text }}
+                </blockquote>
+                <p class="small text-muted">
+                    <em>"{{ c.claim_a.raw_text|truncatechars:200 }}"</em>
+                </p>
+            </div>
+            <div class="col-md-6">
+                <h6>{% trans "Affirmation B" %} <small class="text-muted">(<a href="javascript:void(0)" class="doc-read-btn text-muted" data-url="{% url 'document-content' c.claim_b.document.connector_id c.claim_b.document.pk %}">{{ c.claim_b.document.title|truncatechars:40 }}</a>)</small></h6>
+                <blockquote class="blockquote small border-start border-3 border-danger ps-3">
+                    {{ c.claim_b.as_text }}
+                </blockquote>
+                <p class="small text-muted">
+                    <em>"{{ c.claim_b.raw_text|truncatechars:200 }}"</em>
+                </p>
+            </div>
+        </div>
+        {% if c.evidence %}
+        <div class="mt-2 p-2 rounded" style="background: var(--ds-grey-800);">
+            <strong class="small">{% trans "Preuve :" %}</strong>
+            <p class="small mb-0">{{ c.evidence|truncatechars:500 }}</p>
+        </div>
+        {% endif %}
+        {% if c.authoritative_claim %}
+        <div class="mt-2 alert alert-info py-1 small">
+            {% trans "Affirmation de r&eacute;f&eacute;rence :" %} <strong>{{ c.authoritative_claim.as_text|truncatechars:200 }}</strong>
+            ({% trans "de" %} {{ c.authoritative_claim.document.title }})
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+{% if can_edit %}
+{% for c in contradictions %}
+<form method="post" action="{% url 'contradiction-resolve' job.pk c.pk %}" id="single-{{ c.pk }}" class="d-none">
+    {% csrf_token %}
+    <input type="hidden" name="type_filter" value="{{ type_filter }}">
+    <input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
+</form>
+{% endfor %}
+{% endif %}
+
+{% if next_page_url %}
+<turbo-frame id="contradictions-page-{{ page_obj.next_page_number }}" loading="lazy" src="{{ next_page_url }}">
+    <div class="text-center py-3">
+        <div class="spinner-border spinner-border-sm text-muted" role="status">
+            <span class="visually-hidden">{% trans "Chargement..." %}</span>
+        </div>
+    </div>
+</turbo-frame>
+{% endif %}
+</turbo-frame>

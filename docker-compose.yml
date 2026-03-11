@@ -1,0 +1,54 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BROKER_BACKEND=redis
+    volumes:
+      - db-data:/app/db.sqlite3
+      - vec-data:/app/vec.sqlite3
+      - media-data:/app/media
+    depends_on:
+      - redis
+
+  celery:
+    build: .
+    command: celery -A docuscore worker -l info --pool=threads --concurrency=4
+    env_file: .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BROKER_BACKEND=redis
+    volumes:
+      - db-data:/app/db.sqlite3
+      - vec-data:/app/vec.sqlite3
+      - media-data:/app/media
+    depends_on:
+      - redis
+
+  celery-beat:
+    build: .
+    command: celery -A docuscore beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file: .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BROKER_BACKEND=redis
+    volumes:
+      - db-data:/app/db.sqlite3
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  db-data:
+  vec-data:
+  media-data:
+  redis-data:

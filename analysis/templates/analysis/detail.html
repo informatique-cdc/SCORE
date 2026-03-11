@@ -1,0 +1,640 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Analyse" %} {{ job.id|truncatechars:12 }} - DocuScore{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block nav_analysis_submenu %}
+<a class="sidebar-subitem active" href="{% url 'analysis-detail' job.pk %}">{% trans "Vue d'ensemble" %}</a>
+<a class="sidebar-subitem" href="{% url 'analysis-audit-overview' job.pk %}">{% trans "Audit RAG" %}</a>
+<a class="sidebar-subitem" href="{% url 'analysis-trace' job.pk %}">{% trans "Trace pipeline" %}</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .kpi-card {
+        flex: 1; min-width: 160px;
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: var(--ds-radius);
+        padding: 16px 20px;
+        display: flex; flex-direction: column; gap: 4px;
+        transition: border-color 0.15s;
+    }
+    .kpi-card:hover { border-color: #6c717e; }
+    .kpi-hover-chart {
+        flex: 1; min-width: 0; opacity: 1; overflow: visible;
+    }
+    .kpi-label {
+        font-size: 12px; font-weight: 500; color: var(--ds-text-muted);
+        display: flex; align-items: center; gap: 6px;
+    }
+    .kpi-label svg { width: 14px; height: 14px; opacity: 0.6; }
+    .kpi-value { font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--ds-grey-100); }
+    .kpi-change { font-size: 11px; display: flex; align-items: center; gap: 3px; }
+    .kpi-change.positive { color: #34d399; }
+    .kpi-change.negative { color: #f87171; }
+    .kpi-change.neutral { color: var(--ds-text-muted); }
+
+    /* ── Issue cards ── */
+    .issue-card {
+        border-radius: var(--ds-radius);
+        padding: 12px 14px;
+        margin-bottom: 8px;
+        border-left: 3px solid;
+    }
+    .issue-card:last-child { margin-bottom: 0; }
+    .issue-card.sev-high {
+        background: rgba(220,53,69,0.08);
+        border-left-color: #dc3545;
+    }
+    .issue-card.sev-medium {
+        background: rgba(255,193,7,0.06);
+        border-left-color: #ffc107;
+    }
+    .issue-card.sev-low {
+        background: rgba(108,113,126,0.08);
+        border-left-color: #6c717e;
+    }
+    .issue-title { font-size: 13px; font-weight: 600; color: var(--ds-grey-100); }
+    .issue-detail { font-size: 11px; color: var(--ds-text-muted); margin-top: 2px; }
+    .issue-action {
+        display: inline-block; margin-top: 8px;
+        font-size: 11px; font-weight: 600;
+        padding: 3px 10px; border-radius: 5px;
+        text-decoration: none;
+        transition: opacity 0.15s;
+    }
+    .issue-action:hover { opacity: 0.85; }
+    .issue-action.sev-high { background: #dc3545; color: #fff; }
+    .issue-action.sev-medium { background: #ffc107; color: #1f2024; }
+    .issue-action.sev-low { background: var(--ds-grey-500); color: var(--ds-grey-100); }
+
+    /* ── DocuScore widget ── */
+    .ds-widget {
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: var(--ds-radius);
+        padding: 18px 20px;
+        margin-bottom: 16px;
+        transition: border-color 0.15s;
+    }
+    .ds-widget:hover { border-color: #6c717e; }
+    .ds-widget-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    .ds-widget-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--ds-grey-100);
+    }
+    .ds-widget-score {
+        font-size: 26px;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .ds-widget-body {
+        display: flex;
+        gap: 20px;
+        align-items: stretch;
+    }
+    .ds-widget-bars {
+        flex: 1;
+        min-width: 0;
+    }
+    .ds-bar-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 5px;
+    }
+    .ds-bar-row:last-child { margin-bottom: 0; }
+    .ds-bar-label {
+        font-size: 11px;
+        color: var(--ds-text-muted);
+        width: 90px;
+        flex-shrink: 0;
+    }
+    .ds-bar-track {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--ds-grey-500);
+        overflow: hidden;
+    }
+    .ds-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.6s ease;
+    }
+    .ds-bar-val {
+        font-size: 11px;
+        width: 28px;
+        text-align: right;
+        flex-shrink: 0;
+        color: var(--ds-grey-100);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+        <h2 class="mb-0">{% trans "R&eacute;sultats d'analyse" %}</h2>
+        <span class="text-muted" style="font-size:13px;">{{ job.get_status_display }} &middot; {{ job.created_at|date:"d M Y, H:i" }}</span>
+    </div>
+    <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="actionsDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:13px;padding:5px 12px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:3px;"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            {% trans "Actions" %}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" style="font-size:13px;">
+            <li><a class="dropdown-item" href="{% url 'analysis-trace' job.pk %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:6px;"><path d="M9 17H7A5 5 0 017 7h2M15 7h2a5 5 0 010 10h-2M8 12h8"/></svg>
+                {% trans "Trace du pipeline" %}</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><h6 class="dropdown-header">{% trans "Exporter" %}</h6></li>
+            <li><a class="dropdown-item" href="{% url 'export-duplicates-csv' job.pk %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:6px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                {% trans "Doublons CSV" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'export-contradictions-csv' job.pk %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:6px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                {% trans "Contradictions CSV" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'export-gaps-csv' job.pk %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:6px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                {% trans "Lacunes CSV" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'export-report-json' job.pk %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:6px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                {% trans "Rapport complet JSON" %}</a></li>
+            <li><a class="dropdown-item" href="{% url 'export-report-pdf' job.pk %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:6px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                {% trans "Rapport complet PDF" %}</a></li>
+            {% if membership.can_edit %}
+            <li><hr class="dropdown-divider"></li>
+            {% if job.status == "queued" or job.status == "failed" or job.status == "cancelled" %}
+            <li>
+                <form method="post" action="{% url 'analysis-retry' job.pk %}" data-turbo-frame="_top">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item text-warning">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:6px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                        {% trans "R&eacute;essayer" %}</button>
+                </form>
+            </li>
+            {% endif %}
+            <li>
+                <form method="post" action="{% url 'analysis-delete' job.pk %}" data-turbo-frame="_top"
+                      data-confirm-title="{% trans "Supprimer l'analyse" %}"
+                      data-confirm-message="{% trans "Supprimer cette analyse et tous ses r&eacute;sultats ? Cette action est irr&eacute;versible." %}"
+                      data-confirm-action="{% trans "Supprimer" %}">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item text-danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:6px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        {% trans "Supprimer" %}</button>
+                </form>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+{% if job.config_overrides %}
+<div class="card mb-3" style="border-color:rgba(13,110,253,0.25);">
+    <div class="card-header d-flex align-items-center gap-2 py-2" style="background:rgba(13,110,253,0.06);cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#configOverridesCollapse">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6ea8fe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        <span style="font-size:12px;font-weight:600;color:var(--ds-grey-100);">{% trans "Configuration personnalis&eacute;e" %}</span>
+        <span style="font-size:10px;color:var(--ds-text-muted);margin-left:auto;">{% trans "cliquer pour d&eacute;plier" %}</span>
+    </div>
+    <div class="collapse" id="configOverridesCollapse">
+        <div class="card-body py-2 px-3" style="font-size:12px;">
+            {% for section_key, section_val in job.config_overrides.items %}
+                {% if section_val.items %}
+                    <div class="mb-1"><strong style="color:var(--ds-grey-100);">{{ section_key }}</strong></div>
+                    {% for k, v in section_val.items %}
+                        <div class="d-flex gap-2 ms-2" style="color:var(--ds-text-muted);">
+                            <span>{{ k }} :</span>
+                            <span style="color:var(--ds-grey-100);font-weight:600;">{{ v }}</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="d-flex gap-2" style="color:var(--ds-text-muted);">
+                        <span>{{ section_key }} :</span>
+                        <span style="color:var(--ds-grey-100);font-weight:600;">{{ section_val }}</span>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% include "analysis/_progress.html" %}
+
+<!-- Result Links -->
+{% include "analysis/_results.html" %}
+
+
+<!-- Visualizations -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <strong>{% trans "Graphe des clusters th&eacute;matiques" %}</strong>
+                <a href="{% url 'analysis-clusters' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Vue compl&egrave;te" %}</a>
+            </div>
+            <div class="card-body p-0 position-relative" style="height:480px;">
+                <div id="cluster-preview" style="width:100%;height:100%;"></div>
+                <div id="cluster-legend" style="position:absolute;bottom:12px;left:12px;background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:8px;padding:8px 12px;font-size:11px;max-height:200px;overflow-y:auto;z-index:10;min-width:120px;display:none;"></div>
+                <div style="position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:2px;z-index:10;">
+                    <button id="cluster-zoom-in" type="button" style="width:32px;height:32px;border:1px solid var(--ds-grey-500);border-radius:8px 8px 0 0;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom avant">+</button>
+                    <button id="cluster-zoom-out" type="button" style="width:32px;height:32px;border:1px solid var(--ds-grey-500);border-radius:0 0 8px 8px;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom arri&egrave;re">&minus;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="h-100">
+            <!-- DocuScore widget -->
+            {% if docuscore.has_analysis %}
+            <div class="ds-widget">
+                <div class="ds-widget-header">
+                    <span class="ds-widget-title">{% trans "Qualit&eacute; de la base" %}</span>
+                </div>
+                <div class="ds-widget-body">
+                    <div class="ds-widget-bars">
+                        {% with b=docuscore.breakdown %}
+                        <div class="ds-bar-row">
+                            <span class="ds-bar-label">{% trans "Unicit&eacute;" %}</span>
+                            <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.uniqueness >= 70 %}success{% elif b.uniqueness >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.uniqueness|default:0 }}%"></div></div>
+                            <span class="ds-bar-val">{{ b.uniqueness|default:"&mdash;" }}</span>
+                        </div>
+                        <div class="ds-bar-row">
+                            <span class="ds-bar-label">{% trans "Coh&eacute;rence" %}</span>
+                            <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.consistency >= 70 %}success{% elif b.consistency >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.consistency|default:0 }}%"></div></div>
+                            <span class="ds-bar-val">{{ b.consistency|default:"&mdash;" }}</span>
+                        </div>
+                        <div class="ds-bar-row">
+                            <span class="ds-bar-label">{% trans "Couverture" %}</span>
+                            <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.coverage >= 70 %}success{% elif b.coverage >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.coverage|default:0 }}%"></div></div>
+                            <span class="ds-bar-val">{{ b.coverage|default:"&mdash;" }}</span>
+                        </div>
+                        <div class="ds-bar-row">
+                            <span class="ds-bar-label">{% trans "Structure" %}</span>
+                            <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.structure >= 70 %}success{% elif b.structure >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.structure|default:0 }}%"></div></div>
+                            <span class="ds-bar-val">{{ b.structure|default:"&mdash;" }}</span>
+                        </div>
+                        <div class="ds-bar-row">
+                            <span class="ds-bar-label">{% trans "Sant&eacute;" %}</span>
+                            <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.health >= 70 %}success{% elif b.health >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.health|default:0 }}%"></div></div>
+                            <span class="ds-bar-val">{{ b.health|default:"&mdash;" }}</span>
+                        </div>
+                        {% if b.retrievability != None %}
+                        <div class="ds-bar-row">
+                            <span class="ds-bar-label">{% trans "Retrievability" %}</span>
+                            <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.retrievability >= 70 %}success{% elif b.retrievability >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.retrievability }}%"></div></div>
+                            <span class="ds-bar-val">{{ b.retrievability }}</span>
+                        </div>
+                        {% endif %}
+                        {% if b.governance != None %}
+                        <div class="ds-bar-row">
+                            <span class="ds-bar-label">{% trans "Gouvernance" %}</span>
+                            <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.governance >= 70 %}success{% elif b.governance >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.governance }}%"></div></div>
+                            <span class="ds-bar-val">{{ b.governance }}</span>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                    <div style="flex:0 0 180px;height:180px;" id="ds-radar-analysis"></div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mb-2"><strong>{% trans "Alertes" %}</strong></div>
+            <div style="max-height:480px;overflow-y:auto;">
+                {% for issue in top_issues %}
+                <div class="issue-card sev-{{ issue.severity }}">
+                    <div class="issue-title">{{ issue.title }}</div>
+                    <div class="issue-detail">{{ issue.detail }}</div>
+                    {% if issue.action_pk %}
+                    <a href="{% url issue.action_url_name issue.action_pk %}" class="issue-action sev-{{ issue.severity }}">{{ issue.action_label }}</a>
+                    {% else %}
+                    <a href="{% url issue.action_url_name %}" class="issue-action sev-{{ issue.severity }}">{{ issue.action_label }}</a>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <svg style="width:32px;height:32px;color:var(--ds-text-muted);margin-bottom:8px;" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p class="text-muted mb-0" style="font-size:12px;">{% trans "Aucune alerte. Votre base est en bonne sant&eacute;." %}</p>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% if has_graph %}
+<!-- Concept graph preview -->
+<div class="row g-3 mt-1">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--ds-text-muted);"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/><path d="M6 7l4 4M14 16l4 1M6 17l4-4M14 8l4-1"/></svg>
+                    <strong>{% trans "Carte des concepts" %}</strong>
+                    <span class="text-muted" style="font-size:11px;" id="concept-preview-stats"></span>
+                </div>
+                <a href="{% url 'analysis-knowledge-map' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Vue compl&egrave;te" %}</a>
+            </div>
+            <div class="card-body py-3 px-4">
+                <p class="text-muted mb-0" style="font-size:12px;" id="concept-preview-msg">{% trans "Chargement&hellip;" %}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// --- DocuScore radar (analysis page) ---
+{% if docuscore.has_analysis %}
+(function() {
+    var el = document.getElementById("ds-radar-analysis");
+    if (!el) return;
+    var chart = echarts.init(el, null, { renderer: "canvas" });
+    var radarData = JSON.parse('{{ breakdown_json|escapejs }}');
+    var labelColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim() || "#f8f8f8";
+    chart.setOption({
+        backgroundColor: "transparent",
+        radar: {
+            indicator: radarData.map(function(d) { return { name: d.axis, max: 100 }; }),
+            shape: "polygon",
+            splitNumber: 4,
+            radius: "70%",
+            axisName: { color: labelColor, fontSize: 9 },
+            splitLine: { lineStyle: { color: "rgba(55,56,58,0.6)" } },
+            splitArea: { show: false },
+            axisLine: { lineStyle: { color: "rgba(55,56,58,0.4)" } },
+        },
+        series: [{
+            type: "radar",
+            data: [{
+                value: radarData.map(function(d) { return d.score; }),
+                areaStyle: { color: "rgba(13,110,253,0.18)" },
+                lineStyle: { color: "#0d6efd", width: 2 },
+                itemStyle: { color: "#0d6efd", borderColor: "#fff", borderWidth: 1 },
+                symbol: "circle",
+                symbolSize: 5,
+            }],
+            animationDuration: 800,
+        }],
+    });
+    new MutationObserver(function() {
+        var c = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim();
+        chart.setOption({ radar: { axisName: { color: c } } });
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+    window.addEventListener("resize", function() { chart.resize(); });
+})();
+{% endif %}
+
+// --- Report overview charts ---
+{% if job.status == "completed" %}
+(function() {
+    const sevColors = {"&Eacute;lev&eacute;e": "#e63e11", "Moyenne": "#ee8100", "Faible": "#038141"};
+    const actionColors = {"Fusionner": "#85bb2f", "Supprimer l'ancien": "#e63e11", "V&eacute;rification manuelle": "#ee8100", "Conserver les deux (li&eacute;s, pas doublons)": "#038141"};
+    const defaultPalette = ["#038141", "#85bb2f", "#fecb02", "#ee8100", "#e63e11"];
+
+    function initCompactPie(containerId, rawData, colorMap) {
+        const data = JSON.parse(rawData || "[]");
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        if (!data.length) { el.innerHTML = '<p class="text-muted text-center" style="padding-top:10px;font-size:10px;">Aucune donn&eacute;e</p>'; return; }
+        const chart = echarts.init(el, null, { renderer: "canvas" });
+        chart.setOption({
+            backgroundColor: "transparent",
+            tooltip: { trigger: "item", appendToBody: true, backgroundColor: "#27282a", borderColor: "#37383a", textStyle: { color: "#f8f8f8", fontSize: 10 } },
+            series: [{
+                type: "pie",
+                radius: ["30%", "70%"],
+                center: ["50%", "50%"],
+                padAngle: 2,
+                itemStyle: { borderRadius: 3 },
+                label: { show: false },
+                data: data.map((d, i) => ({
+                    name: d.name, value: d.value,
+                    itemStyle: { color: (colorMap && colorMap[d.name]) || defaultPalette[i % defaultPalette.length] },
+                })),
+                animationDuration: 600,
+            }],
+        });
+        window.addEventListener("resize", () => chart.resize());
+    }
+
+    function initCompactBar(containerId, rawData, colorMap) {
+        const data = JSON.parse(rawData || "[]");
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        if (!data.length) { el.innerHTML = '<p class="text-muted text-center" style="padding-top:10px;font-size:10px;">Aucune donn&eacute;e</p>'; return; }
+        const chart = echarts.init(el, null, { renderer: "canvas" });
+        chart.setOption({
+            backgroundColor: "transparent",
+            tooltip: { trigger: "item", appendToBody: true, backgroundColor: "#27282a", borderColor: "#37383a", textStyle: { color: "#f8f8f8", fontSize: 10 }, formatter: function(p) { return p.name + ': ' + p.value; } },
+            grid: { top: 20, bottom: 4, left: 4, right: 4, containLabel: true },
+            xAxis: { type: "category", data: data.map(d => d.name), show: false },
+            yAxis: { type: "value", show: false },
+            series: [{
+                type: "bar",
+                barMaxWidth: 20,
+                label: { show: true, position: "top", fontSize: 9, color: "var(--ds-text-muted)", formatter: "{c}" },
+                data: data.map((d, i) => ({
+                    value: d.value,
+                    name: d.name,
+                    itemStyle: { color: (colorMap && colorMap[d.name]) || defaultPalette[i % defaultPalette.length], borderRadius: [3, 3, 0, 0] },
+                })),
+                animationDuration: 600,
+            }],
+        });
+        window.addEventListener("resize", () => chart.resize());
+    }
+
+    initCompactPie("chart-dup-action", '{{ dup_by_action_json|escapejs }}', actionColors);
+    initCompactBar("chart-contra-severity", '{{ contra_by_severity_json|escapejs }}', sevColors);
+    initCompactBar("chart-gap-type", '{{ gap_by_type_json|escapejs }}', null);
+
+})();
+{% endif %}
+
+// AbortController for in-flight fetches — cancel on navigation to avoid broken pipes
+var _ac = new AbortController();
+window.addEventListener("beforeunload", function() { _ac.abort(); });
+
+// Mini cluster graph preview
+fetch("{% url 'api-clusters' job.pk %}", { signal: _ac.signal })
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById("cluster-preview");
+
+        if (!data.nodes.length) {
+            container.innerHTML = '<p class="text-muted text-center mt-5">Aucun cluster \u00e0 afficher</p>';
+            return;
+        }
+
+        const chart = echarts.init(container, null, { renderer: "canvas" });
+        const labelColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim() || "#f8f8f8";
+
+        const colorPalette = ["#a78bfa", "#0d6efd", "#198754", "#ffc107", "#dc3545", "#60a5fa", "#f97316", "#34d399"];
+        const parentColorMap = {};
+        data.nodes.filter(n => n.level === 0).forEach((n, i) => {
+            parentColorMap[n.id] = colorPalette[i % colorPalette.length];
+        });
+        const getColor = (n) => {
+            if (n.level > 0 && n.parent_id) return parentColorMap[n.parent_id] || colorPalette[0];
+            return parentColorMap[n.id] || colorPalette[0];
+        };
+
+        // Build legend
+        const parentNodes = data.nodes.filter(n => n.level === 0);
+        const legendEl = document.getElementById("cluster-legend");
+        let legendHtml = '<div style="font-weight:600;margin-bottom:4px;color:var(--ds-grey-100);font-size:11px;">Clusters</div>';
+        parentNodes.forEach((n, i) => {
+            const color = colorPalette[i % colorPalette.length];
+            const label = n.label.length > 22 ? n.label.slice(0, 19) + "\u2026" : n.label;
+            legendHtml += '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">'
+                + '<span style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;"></span>'
+                + '<span style="color:var(--ds-grey-100);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;" title="' + n.label.replace(/"/g, '&quot;') + '">' + label + '</span>'
+                + '</div>';
+        });
+        legendEl.innerHTML = legendHtml;
+        legendEl.style.display = "block";
+
+        const maxDocs = Math.max(...data.nodes.map(n => n.doc_count), 1);
+
+        const nodes = data.nodes.map(n => ({
+            id: n.id,
+            name: n.label,
+            symbolSize: 12 + Math.sqrt(n.doc_count / maxDocs) * 30,
+            itemStyle: {
+                color: getColor(n),
+                opacity: n.level > 0 ? 0.55 : 0.8,
+                borderColor: "rgba(255,255,255,0.1)",
+                borderWidth: 1,
+            },
+            label: {
+                show: n.level === 0,
+                position: "top",
+                fontSize: 10,
+                color: labelColor,
+                formatter: n.label.length > 25 ? n.label.slice(0, 22) + "..." : n.label,
+            },
+            _raw: n,
+        }));
+
+        // Gap diamond nodes
+        data.gaps.filter(g => g.related_cluster).forEach(gap => {
+            const severityColor = gap.severity === "high" ? "#dc3545" : gap.severity === "medium" ? "#ffc107" : "#198754";
+            nodes.push({
+                id: gap.id,
+                name: gap.label,
+                symbol: "diamond",
+                symbolSize: 12,
+                itemStyle: { color: severityColor },
+                label: { show: false },
+                _raw: { ...gap, _isGap: true },
+            });
+        });
+
+        const links = data.edges.map(e => ({
+            source: e.source,
+            target: e.target,
+            lineStyle: {
+                width: e.type === "hierarchy" ? 1 : Math.min(e.weight, 5),
+                color: "#37383a",
+                type: e.type === "hierarchy" ? "dashed" : "solid",
+                opacity: 0.5,
+            }
+        }));
+
+        data.gaps.filter(g => g.related_cluster).forEach(gap => {
+            links.push({
+                source: gap.related_cluster,
+                target: gap.id,
+                lineStyle: { width: 1, color: "#6c757d", type: "dotted", opacity: 0.3 },
+            });
+        });
+
+        chart.setOption({
+            backgroundColor: "transparent",
+            tooltip: {
+                trigger: "item",
+                confine: true,
+                backgroundColor: "#27282a",
+                borderColor: "#37383a",
+                textStyle: { color: "#f8f8f8", fontSize: 11 },
+                extraCssText: "max-width:280px;white-space:normal;word-break:break-word;",
+                formatter: function(params) {
+                    if (params.dataType === "edge") return null;
+                    const raw = params.data._raw || {};
+                    if (raw._isGap) return '<strong>Lacune : ' + raw.label + '</strong><br>S\u00e9v\u00e9rit\u00e9 : ' + (raw.severity || '');
+                    return '<strong>' + raw.label + '</strong><br>' + raw.doc_count + ' docs<br>' + (raw.summary || '').slice(0, 120);
+                }
+            },
+            series: [{
+                type: "graph",
+                layout: "force",
+                data: nodes,
+                links: links,
+                roam: "move",
+                force: { repulsion: 200, gravity: 0.15, edgeLength: [60, 150] },
+                emphasis: { focus: "adjacency" },
+                animationDuration: 1200,
+            }],
+        });
+
+        // Update label color on theme toggle
+        new MutationObserver(function() {
+            const newColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim();
+            const updatedData = chart.getOption().series[0].data.map(function(n) {
+                if (n.label) n.label.color = newColor;
+                return n;
+            });
+            chart.setOption({ series: [{ data: updatedData }] });
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+
+        // Zoom controls
+        let clusterZoom = 1;
+        document.getElementById("cluster-zoom-in").addEventListener("click", function() {
+            clusterZoom *= 1.3;
+            chart.setOption({ series: [{ zoom: clusterZoom }] });
+        });
+        document.getElementById("cluster-zoom-out").addEventListener("click", function() {
+            clusterZoom *= 0.7;
+            chart.setOption({ series: [{ zoom: clusterZoom }] });
+        });
+
+        window.addEventListener("resize", function() { chart.resize(); });
+    })
+    .catch(function(err) { console.warn("cluster chart:", err); });
+
+// --- Concept graph preview stats ---
+{% if has_graph %}
+fetch("{% url 'api-concept-graph' job.pk %}", { signal: _ac.signal })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+        var statsEl = document.getElementById("concept-preview-stats");
+        var msgEl = document.getElementById("concept-preview-msg");
+        if (data && statsEl) {
+            statsEl.textContent = data.total_nodes + " concepts \u00b7 " + data.total_edges + " liens";
+            if (msgEl) msgEl.textContent = "Le graphe s\u00e9mantique neural relie les concepts extraits de vos documents. Explorez les voisinages par recherche de sujet.";
+        }
+    })
+    .catch(function() {});
+{% endif %}
+
+// Manually init Bootstrap dropdown (fixes first-click not working)
+var _dd = document.getElementById("actionsDropdown");
+if (_dd && typeof bootstrap !== "undefined") new bootstrap.Dropdown(_dd);
+</script>
+{% endblock %}

@@ -1,0 +1,211 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Retrievability — Audit RAG{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block nav_analysis_submenu %}
+<a class="sidebar-subitem" href="{% url 'analysis-detail' job.analysis_job_id %}">Vue d'ensemble</a>
+<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">Audit RAG</a>
+<a class="sidebar-subitem" href="{% url 'analysis-trace' job.analysis_job_id %}">Trace pipeline</a>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2" style="font-size:13px;--bs-breadcrumb-divider:'/';">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyses</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyse {{ analysis_number }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-audit-overview' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Audit RAG</a></li>
+        <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">Retrievability</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Retrievability</h2>
+    <span class="badge {% if result.score >= 80 %}bg-success{% elif result.score >= 60 %}bg-primary{% elif result.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:18px;padding:8px 16px;">
+        {{ result.score|floatformat:0 }}/100
+    </span>
+</div>
+<p class="text-muted mb-4" style="font-size:13px;">
+    Mesure la capacité du moteur de recherche (BM25) à retrouver les bons documents à partir de requêtes générées automatiquement.
+    Un score élevé indique que les documents sont bien indexés et facilement retrouvables.
+</p>
+
+<!-- Sub-scores with explanations -->
+<div class="row g-3 mb-4">
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.mrr >= 80 %}success{% elif metrics.sub_scores.mrr >= 60 %}primary{% elif metrics.sub_scores.mrr >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.mrr|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">MRR</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Rang moyen du premier résultat pertinent. Plus c'est haut, plus le bon document apparaît tôt.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.recall_10 >= 80 %}success{% elif metrics.sub_scores.recall_10 >= 60 %}primary{% elif metrics.sub_scores.recall_10 >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.recall_10|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Recall@10</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Proportion de requêtes pour lesquelles le bon document figure dans les 10 premiers résultats.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.zero_results >= 80 %}success{% elif metrics.sub_scores.zero_results >= 60 %}primary{% elif metrics.sub_scores.zero_results >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.zero_results|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Résultats trouvés</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Proportion de requêtes ayant retourné au moins un résultat. Un score bas révèle des trous dans l'index.</div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card stat-card {% if metrics.sub_scores.diversity >= 80 %}success{% elif metrics.sub_scores.diversity >= 60 %}primary{% elif metrics.sub_scores.diversity >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
+            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.diversity|floatformat:0 }}</div>
+            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Diversité</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Part des documents du corpus apparaissant au moins une fois dans les résultats. Détecte les documents « invisibles ».</div>
+        </div>
+    </div>
+</div>
+
+<!-- Key metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.total_queries }}</div>
+            <div class="text-muted" style="font-size:11px;">Requêtes testées</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Nombre de requêtes générées automatiquement (titres, chemins de section, bigrammes TF-IDF) pour tester la recherche.</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.mrr|floatformat:2 }}</div>
+            <div class="text-muted" style="font-size:11px;">MRR (Mean Reciprocal Rank)</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Moyenne de 1/rang du premier résultat correct. Valeur entre 0 et 1 ; 1.0 = toujours en première position.</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.zero_result_ratio|floatformat:2 }}</div>
+            <div class="text-muted" style="font-size:11px;">Ratio zéro-résultat</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Proportion de requêtes n'ayant retourné aucun résultat. Un ratio élevé signale un vocabulaire mal couvert.</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:20px;font-weight:700;">{{ metrics.diversity|floatformat:2 }}</div>
+            <div class="text-muted" style="font-size:11px;">Diversité</div>
+            <div class="text-muted mt-1" style="font-size:10px;">Fraction des documents apparaissant dans les top-10 résultats. Valeur entre 0 et 1 ; 1.0 = tous les documents sont retrouvables.</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Recall@k</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Pour chaque valeur de k, proportion de requêtes où le bon document apparaît dans les k premiers résultats. La courbe devrait monter rapidement vers 1.0.</p>
+            <div id="chart-recall" style="height:280px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">Distribution des rangs</h6>
+            <p class="text-muted mb-2" style="font-size:11px;">Histogramme des positions auxquelles le document attendu est trouvé. Idéalement, la majorité des résultats se concentre sur les premiers rangs (à gauche).</p>
+            <div id="chart-ranks" style="height:280px;"></div>
+        </div>
+    </div>
+</div>
+
+{% if chart_data.zero_result_queries %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="mb-1" style="font-weight:600;">Requêtes sans résultat</h6>
+        <p class="text-muted mb-3" style="font-size:11px;">Ces requêtes n'ont retourné aucun résultat dans l'index BM25. Cela peut indiquer un vocabulaire absent du corpus, des chunks trop courts, ou un découpage inadapté.</p>
+        <div class="d-flex flex-wrap gap-2">
+            {% for q in chart_data.zero_result_queries %}
+            <span class="badge bg-danger" style="font-size:11px;">{{ q|truncatechars:60 }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if metrics.recall_at_k %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="mb-1" style="font-weight:600;">Recall@k détaillé</h6>
+        <p class="text-muted mb-3" style="font-size:11px;">Recall@k indique la proportion de requêtes pour lesquelles le document attendu se trouve parmi les k premiers résultats retournés. Plus k augmente, plus le recall devrait se rapprocher de 1.0.</p>
+        <table class="table align-middle mb-0" style="font-size:13px;">
+            <thead><tr style="border-bottom:2px solid var(--ds-grey-500);"><th style="font-weight:600;">k</th><th style="font-weight:600;">Recall</th></tr></thead>
+            <tbody>
+            {% for k, v in metrics.recall_at_k.items %}
+            <tr style="border-bottom:1px solid var(--ds-grey-600);">
+                <td><strong>@{{ k }}</strong></td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress" style="height:6px;width:100px;">
+                            <div class="progress-bar recall-bar" data-value="{{ v }}" style="width:{% widthratio v 1 100 %}%"></div>
+                        </div>
+                        <span>{{ v|floatformat:2 }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ chart_data|json_script:"chart-data" }}
+<script>
+(function() {
+    const chartData = JSON.parse(document.getElementById("chart-data").textContent);
+
+    // Recall@k curve
+    if (chartData.recall_curve && chartData.recall_curve.length) {
+        const data = chartData.recall_curve;
+        const container = d3.select("#chart-recall");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 30, left: 45};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+
+        const x = d3.scaleLinear().domain([d3.min(data, d=>d.k), d3.max(data, d=>d.k)]).range([margin.left, w - margin.right]);
+        const y = d3.scaleLinear().domain([0, 1]).range([h - margin.bottom, margin.top]);
+
+        const line = d3.line().x(d => x(d.k)).y(d => y(d.recall)).curve(d3.curveMonotoneX);
+        svg.append("path").datum(data).attr("d", line).attr("fill","none").attr("stroke","#0d6efd").attr("stroke-width",2.5);
+        svg.selectAll("circle").data(data).join("circle")
+            .attr("cx", d => x(d.k)).attr("cy", d => y(d.recall))
+            .attr("r", 4).attr("fill","#0d6efd");
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).ticks(data.length).tickFormat(d3.format("d"))).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%"))).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+
+    // Rank histogram
+    if (chartData.rank_histogram && chartData.rank_histogram.length) {
+        const data = chartData.rank_histogram;
+        const container = d3.select("#chart-ranks");
+        const w = container.node().clientWidth, h = 280;
+        const margin = {top: 10, right: 10, bottom: 30, left: 40};
+        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+        const x = d3.scaleBand().domain(data.map((d,i) => i)).range([margin.left, w - margin.right]).padding(0.1);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([h - margin.bottom, margin.top]);
+
+        svg.selectAll("rect").data(data).join("rect")
+            .attr("x", (d,i) => x(i)).attr("y", d => y(d.count))
+            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.count))
+            .attr("fill", "#198754").attr("rx", 2);
+
+        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).tickFormat(i => data[i] ? Math.round(data[i].bin_start) : "")).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","9px");
+        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+    // Color recall bars: red (0) → green (1) via HSL hue
+    document.querySelectorAll(".recall-bar").forEach(function(el) {
+        const v = parseFloat(el.dataset.value.replace(",", ".")) || 0;
+        const hue = Math.round(Math.pow(v, 0.5) * 120); // 0.42→78 (yellow-green), 0.5→85 (green), 0.6→93
+        el.style.backgroundColor = `hsl(${hue}, 70%, 45%)`;
+    });
+})();
+</script>
+{% endblock %}

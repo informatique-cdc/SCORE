@@ -1,0 +1,620 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Tableau de bord" %} - DocuScore{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── KPI Cards ── */
+    .kpi-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .kpi-card {
+        flex: 1; min-width: 160px;
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: var(--ds-radius);
+        padding: 16px 20px;
+        display: flex; flex-direction: column; gap: 4px;
+        transition: border-color 0.15s;
+    }
+    .kpi-card:hover { border-color: #6c717e; }
+    .kpi-label {
+        font-size: 12px; font-weight: 500; color: var(--ds-text-muted);
+        display: flex; align-items: center; gap: 6px;
+    }
+    .kpi-label svg { width: 14px; height: 14px; opacity: 0.6; }
+    .kpi-value { font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--ds-grey-100); }
+    .kpi-change { font-size: 11px; display: flex; align-items: center; gap: 3px; }
+    .kpi-change.positive { color: #34d399; }
+    .kpi-change.negative { color: #f87171; }
+    .kpi-change.neutral { color: var(--ds-text-muted); }
+
+    /* ── Section headers ── */
+    .section-title {
+        font-size: 16px; font-weight: 700; color: var(--ds-grey-100);
+        margin-bottom: 2px;
+    }
+    .section-subtitle {
+        font-size: 12px; color: var(--ds-text-muted);
+        margin-bottom: 12px;
+    }
+
+    /* ── Quick actions ── */
+    .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    @media (max-width: 768px) { .qa-grid { grid-template-columns: repeat(2, 1fr); } }
+    .qa-item {
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: var(--ds-radius);
+        padding: 16px;
+        text-decoration: none;
+        color: var(--ds-grey-100);
+        transition: all 0.15s;
+    }
+    .qa-item:hover {
+        border-color: #0d6efd;
+        background: rgba(13,110,253,0.06);
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .qa-icon {
+        width: 36px; height: 36px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 10px;
+    }
+    .qa-icon svg { width: 18px; height: 18px; }
+    .qa-icon.blue { background: rgba(13,110,253,0.12); color: #60a5fa; }
+    .qa-icon.green { background: rgba(25,135,84,0.12); color: #34d399; }
+    .qa-icon.purple { background: rgba(139,92,246,0.12); color: #a78bfa; }
+    .qa-icon.amber { background: rgba(255,193,7,0.12); color: #fbbf24; }
+    .qa-name { font-size: 13px; font-weight: 600; }
+    .qa-desc { font-size: 11px; color: var(--ds-text-muted); margin-top: 2px; }
+
+    /* ── Activity feed ── */
+    .feed-item {
+        display: flex; align-items: flex-start; gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--ds-grey-500);
+    }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        margin-top: 5px; flex-shrink: 0;
+    }
+    .feed-dot.completed { background: #34d399; }
+    .feed-dot.running { background: #60a5fa; animation: pulse 1.5s infinite; }
+    .feed-dot.failed { background: #f87171; }
+    .feed-dot.cancelled { background: #fbbf24; }
+    .feed-dot.queued { background: #6c717e; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .feed-title { font-size: 13px; font-weight: 500; color: var(--ds-grey-100); }
+    .feed-detail { font-size: 11px; color: var(--ds-text-muted); }
+    .feed-time { font-size: 10px; color: var(--ds-text-muted); white-space: nowrap; margin-left: auto; flex-shrink: 0; }
+
+    /* ── Issue cards ── */
+    .issue-card {
+        border-radius: var(--ds-radius);
+        padding: 12px 14px;
+        margin-bottom: 8px;
+        border-left: 3px solid;
+    }
+    .issue-card:last-child { margin-bottom: 0; }
+    .issue-card.sev-high {
+        background: rgba(220,53,69,0.08);
+        border-left-color: #dc3545;
+    }
+    .issue-card.sev-medium {
+        background: rgba(255,193,7,0.06);
+        border-left-color: #ffc107;
+    }
+    .issue-card.sev-low {
+        background: rgba(108,113,126,0.08);
+        border-left-color: #6c717e;
+    }
+    .issue-title { font-size: 13px; font-weight: 600; color: var(--ds-grey-100); }
+    .issue-detail { font-size: 11px; color: var(--ds-text-muted); margin-top: 2px; }
+    .issue-action {
+        display: inline-block; margin-top: 8px;
+        font-size: 11px; font-weight: 600;
+        padding: 3px 10px; border-radius: 5px;
+        text-decoration: none;
+        transition: opacity 0.15s;
+    }
+    .issue-action:hover { opacity: 0.85; }
+    .issue-action.sev-high { background: #dc3545; color: #fff; }
+    .issue-action.sev-medium { background: #ffc107; color: #1f2024; }
+    .issue-action.sev-low { background: var(--ds-grey-500); color: var(--ds-grey-100); }
+
+    /* ── DocuScore hero ── */
+    .ds-hero {
+        display: flex; align-items: center; gap: 24px;
+        padding: 20px 24px;
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: var(--ds-radius);
+        cursor: pointer;
+        transition: border-color 0.15s;
+    }
+    .ds-hero:hover { border-color: #6c717e; }
+    .ds-hero-score {
+        display: flex; flex-direction: column; align-items: center;
+        gap: 4px; flex-shrink: 0;
+    }
+    .ds-hero-bars { flex: 0 1 280px; min-width: 0; }
+    .ds-bar-row {
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 5px;
+    }
+    .ds-bar-row:last-child { margin-bottom: 0; }
+    .ds-bar-label { font-size: 11px; color: var(--ds-text-muted); width: 90px; flex-shrink: 0; }
+    .ds-bar-track {
+        flex: 1; height: 6px; border-radius: 3px;
+        background: var(--ds-grey-500);
+        overflow: hidden;
+    }
+    .ds-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .ds-bar-val { font-size: 11px; width: 28px; text-align: right; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">{% trans "Tableau de bord" %}</h2>
+        <span class="text-muted" style="font-size:13px;">{% trans "Vue d'ensemble de votre base de connaissances" %}</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        {% if connector_count == 0 and doc_count == 0 %}
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#onboardingModal" title="Guide de d&eacute;marrage">
+            <svg style="width:14px;height:14px;margin-right:4px;vertical-align:-2px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            {% trans "Guide" %}
+        </button>
+        {% endif %}
+        {% if not current_project and membership and membership.is_admin %}
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+            <svg style="width:14px;height:14px;margin-right:4px;vertical-align:-2px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            {% trans "Créer un projet" %}
+        </button>
+        {% elif membership.can_edit and can_run_analysis %}
+        <form method="post" action="{% url 'analysis-run' %}" data-turbo-frame="_top">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm">
+                <svg style="width:14px;height:14px;margin-right:4px;vertical-align:-2px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                {% trans "Lancer l'analyse" %}
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ═══ KPI ROW ═══ -->
+<div class="kpi-row mb-4">
+    <div class="kpi-card" style="border-left: 3px solid {% if docuscore.grade == 'A' %}#038141{% elif docuscore.grade == 'B' %}#85bb2f{% elif docuscore.grade == 'C' %}#c9a300{% elif docuscore.grade == 'D' %}#ee8100{% else %}#e63e11{% endif %};">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
+            DocuScore
+        </div>
+        <div class="d-flex align-items-baseline gap-2">
+            <span class="kpi-value docuscore-color-{{ docuscore.grade }}">{{ docuscore.score }}</span>
+            <span style="font-size:13px;color:var(--ds-text-muted);">/100</span>
+        </div>
+        <div class="docuscore-badge d-flex" style="gap:2px;">
+            {% for letter in "ABCDE" %}
+            <span class="docuscore-pill docuscore-{{ letter }}{% if docuscore.grade == letter %} active{% endif %}" style="{% if docuscore.grade != letter %}width:20px;height:20px;font-size:10px;{% endif %}">{{ letter }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 3px solid #0d6efd;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Documents
+        </div>
+        <span class="kpi-value">{{ doc_count }}</span>
+        <div class="kpi-change neutral">{% trans "indexés dans le projet" %}</div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 3px solid #ffc107;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            {% trans "Doublons" %}
+        </div>
+        <span class="kpi-value">{{ dup_count }}</span>
+        <div class="kpi-change {% if dup_count > 0 %}negative{% else %}positive{% endif %}">
+            {% if dup_count > 0 %}{% trans "groupes à traiter" %}{% else %}{% trans "aucun doublon" %}{% endif %}
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 3px solid #dc3545;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Contradictions
+        </div>
+        <span class="kpi-value">{{ contra_count }}</span>
+        <div class="kpi-change {% if contra_count > 0 %}negative{% else %}positive{% endif %}">
+            {% if contra_count > 0 %}{% trans "détectées" %}{% else %}{% trans "aucune détectée" %}{% endif %}
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 3px solid #198754;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            {% trans "Lacunes" %}
+        </div>
+        <span class="kpi-value">{{ gap_count }}</span>
+        <div class="kpi-change {% if gap_count > 0 %}negative{% else %}positive{% endif %}">
+            {% if gap_count > 0 %}{% trans "zones à combler" %}{% else %}{% trans "bonne couverture" %}{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ═══ DOCUSCORE DETAIL + ISSUES ═══ -->
+<div class="row g-3 mb-4">
+    <!-- DocuScore breakdown + radar -->
+    <div class="col-lg-7">
+        <div class="section-title">{% trans "Qualité de la base" %}</div>
+        <div class="section-subtitle">{% trans "Détail du DocuScore par dimension." %}</div>
+        <div class="ds-hero" id="docuscore-trigger" data-bs-toggle="offcanvas" data-bs-target="#docuscore-panel" title="Cliquer pour les d&eacute;tails et recommandations">
+            <!-- Breakdown bars -->
+            <div class="ds-hero-bars" style="flex:1;min-width:0;">
+                {% if docuscore.has_analysis %}
+                {% with b=docuscore.breakdown %}
+                <div class="ds-bar-row">
+                    <span class="ds-bar-label">{% trans "Unicité" %}</span>
+                    <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.uniqueness >= 70 %}success{% elif b.uniqueness >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.uniqueness|default:0 }}%"></div></div>
+                    <span class="ds-bar-val">{{ b.uniqueness|default:"&mdash;" }}</span>
+                </div>
+                <div class="ds-bar-row">
+                    <span class="ds-bar-label">{% trans "Cohérence" %}</span>
+                    <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.consistency >= 70 %}success{% elif b.consistency >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.consistency|default:0 }}%"></div></div>
+                    <span class="ds-bar-val">{{ b.consistency|default:"&mdash;" }}</span>
+                </div>
+                <div class="ds-bar-row">
+                    <span class="ds-bar-label">{% trans "Couverture" %}</span>
+                    <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.coverage >= 70 %}success{% elif b.coverage >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.coverage|default:0 }}%"></div></div>
+                    <span class="ds-bar-val">{{ b.coverage|default:"&mdash;" }}</span>
+                </div>
+                <div class="ds-bar-row">
+                    <span class="ds-bar-label">Structure</span>
+                    <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.structure >= 70 %}success{% elif b.structure >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.structure|default:0 }}%"></div></div>
+                    <span class="ds-bar-val">{{ b.structure|default:"&mdash;" }}</span>
+                </div>
+                <div class="ds-bar-row">
+                    <span class="ds-bar-label">{% trans "Santé" %}</span>
+                    <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.health >= 70 %}success{% elif b.health >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.health|default:0 }}%"></div></div>
+                    <span class="ds-bar-val">{{ b.health|default:"&mdash;" }}</span>
+                </div>
+                {% if b.retrievability != None %}
+                <div class="ds-bar-row">
+                    <span class="ds-bar-label">Retrievability</span>
+                    <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.retrievability >= 70 %}success{% elif b.retrievability >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.retrievability }}%"></div></div>
+                    <span class="ds-bar-val">{{ b.retrievability }}</span>
+                </div>
+                {% endif %}
+                {% if b.governance != None %}
+                <div class="ds-bar-row">
+                    <span class="ds-bar-label">{% trans "Gouvernance" %}</span>
+                    <div class="ds-bar-track"><div class="ds-bar-fill bg-{% if b.governance >= 70 %}success{% elif b.governance >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ b.governance }}%"></div></div>
+                    <span class="ds-bar-val">{{ b.governance }}</span>
+                </div>
+                {% endif %}
+                {% endwith %}
+                {% else %}
+                <p class="text-muted mb-0" style="font-size:12px;">
+                    {% if not docuscore.has_docs %}{% trans "Ajoutez des documents et lancez une analyse." %}{% else %}{% trans "Lancez une analyse pour calculer votre score." %}{% endif %}
+                </p>
+                {% endif %}
+            </div>
+            <!-- Right: radar chart -->
+            {% if docuscore.has_analysis %}
+            <div style="flex:1;min-width:180px;height:200px;" id="ds-radar"></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Notifications / Issues -->
+    <div class="col-lg-5">
+        <div class="section-title">{% trans "Alertes" %}</div>
+        <div class="section-subtitle">{% trans "Problèmes prioritaires à résoudre." %}</div>
+        <div>
+                {% for issue in top_issues %}
+                <div class="issue-card sev-{{ issue.severity }}">
+                    <div class="issue-title">{{ issue.title }}</div>
+                    <div class="issue-detail">{{ issue.detail }}</div>
+                    {% if issue.action_pk %}
+                    <a href="{% url issue.action_url_name issue.action_pk %}" class="issue-action sev-{{ issue.severity }}">{{ issue.action_label }}</a>
+                    {% else %}
+                    <a href="{% url issue.action_url_name %}" class="issue-action sev-{{ issue.severity }}">{{ issue.action_label }}</a>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="text-center py-4">
+                    <svg style="width:32px;height:32px;color:var(--ds-text-muted);margin-bottom:8px;" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p class="text-muted mb-0" style="font-size:12px;">{% trans "Aucune alerte. Votre base est en bonne santé." %}</p>
+                </div>
+                {% endfor %}
+        </div>
+
+        {% if latest_analysis and latest_analysis.status == "running" %}
+        <a href="{% url 'analysis-detail' latest_analysis.pk %}" class="card mt-3 text-decoration-none" style="transition:border-color 0.15s;cursor:pointer;">
+            <div class="card-body py-3 px-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="feed-dot running" style="width:10px;height:10px;"></span>
+                    <span class="section-title" style="font-size:13px;margin-bottom:0;">{% trans "Analyse en cours" %}</span>
+                </div>
+                <div class="text-muted" style="font-size:12px;margin-bottom:8px;">{{ latest_analysis.get_current_phase_display }}</div>
+                <div class="progress" style="height:6px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:{{ latest_analysis.progress_pct }}%"></div>
+                </div>
+            </div>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ═══ QUICK ACTIONS + ACTIVITY FEED ═══ -->
+<div class="row g-3 mb-4">
+    <!-- Quick Actions -->
+    <div class="col-lg-7">
+        <div class="section-title">{% trans "Actions rapides" %}</div>
+        <div class="section-subtitle">{% trans "Lancez une action en un clic." %}</div>
+        <div class="qa-grid">
+            {% if not current_project and membership and membership.is_admin %}
+            <button type="button" class="qa-item" style="text-align:left;cursor:pointer;" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+                <div class="qa-icon blue">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                </div>
+                <div class="qa-name">{% trans "Créer un projet" %}</div>
+                <div class="qa-desc">{% trans "Démarrer un nouveau corpus" %}</div>
+            </button>
+            {% else %}
+            <a href="{% url 'analysis-list' %}" class="qa-item">
+                <div class="qa-icon blue">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <div class="qa-name">{% trans "Lancer l'analyse" %}</div>
+                <div class="qa-desc">{% trans "Doublons, contradictions, lacunes" %}</div>
+            </a>
+            {% endif %}
+            <a href="{% url 'connector-create' %}" class="qa-item">
+                <div class="qa-icon green">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                </div>
+                <div class="qa-name">{% trans "Connecteur" %}</div>
+                <div class="qa-desc">{% trans "Ajouter une source de données" %}</div>
+            </a>
+            <a href="{% url 'report-list' %}" class="qa-item">
+                <div class="qa-icon purple">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div class="qa-name">{% trans "Rapports" %}</div>
+                <div class="qa-desc">{% trans "Consulter ou générer" %}</div>
+            </a>
+            <a href="{% url 'chat-home' %}" class="qa-item">
+                <div class="qa-icon amber">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </div>
+                <div class="qa-name">{% trans "Assistant IA" %}</div>
+                <div class="qa-desc">{% trans "Interroger votre base" %}</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="col-lg-5">
+        <div class="d-flex justify-content-between align-items-baseline">
+            <div>
+                <div class="section-title">{% trans "Activité récente" %}</div>
+                <div class="section-subtitle">{% trans "Ingérations et analyses du projet." %}</div>
+            </div>
+        </div>
+        <div class="card" style="max-height:280px;overflow-y:auto;">
+            <div class="card-body py-1 px-3">
+                {% for event in activity_feed %}
+                <div class="feed-item">
+                    <span class="feed-dot {{ event.status }}"></span>
+                    <div style="min-width:0;flex:1;">
+                        <div class="feed-title">{{ event.title }}</div>
+                        {% if event.detail %}<div class="feed-detail">{{ event.detail }}</div>{% endif %}
+                    </div>
+                    <span class="feed-time">{{ event.date|timesince }} </span>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3" style="font-size:12px;">{% trans "Aucune activité pour le moment" %}</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ BOTTOM ROW: stats summary ═══ -->
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="qa-icon blue" style="width:42px;height:42px;">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:22px;font-weight:800;color:var(--ds-grey-100);">{{ connector_count }}</div>
+                    <div class="text-muted" style="font-size:12px;">{% trans "Connecteurs actifs" %}</div>
+                </div>
+                <a href="{% url 'connector-list' %}" class="btn btn-sm btn-outline-secondary ms-auto">{% trans "Gérer" %}</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="qa-icon purple" style="width:42px;height:42px;">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:22px;font-weight:800;color:var(--ds-grey-100);">{{ cluster_count }}</div>
+                    <div class="text-muted" style="font-size:12px;">{% trans "Clusters thématiques" %}</div>
+                </div>
+                {% if latest_analysis %}
+                <a href="{% url 'analysis-detail' latest_analysis.pk %}" class="btn btn-sm btn-outline-secondary ms-auto">{% trans "Voir" %}</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="qa-icon green" style="width:42px;height:42px;">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div>
+                    <div style="font-size:22px;font-weight:800;color:var(--ds-grey-100);">{{ report_count }}</div>
+                    <div class="text-muted" style="font-size:12px;">{% trans "Rapports générés" %}</div>
+                </div>
+                <a href="{% url 'report-list' %}" class="btn btn-sm btn-outline-secondary ms-auto">{% trans "Voir" %}</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DocuScore Detail Offcanvas -->
+{% include "dashboard/_docuscore_offcanvas.html" %}
+
+{% if connector_count == 0 and doc_count == 0 %}
+<!-- Onboarding Modal -->
+<div class="modal fade" id="onboardingModal" tabindex="-1" aria-labelledby="onboardingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:540px;">
+        <div class="modal-content" style="background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:16px;box-shadow:0 24px 48px rgba(0,0,0,0.25);">
+            <div class="modal-body" style="padding:36px 36px 32px;">
+                <!-- Hero icon -->
+                <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#0d6efd 0%,#6610f2 100%);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+                </div>
+
+                <h5 id="onboardingModalLabel" style="text-align:center;font-weight:700;font-size:20px;margin-bottom:6px;color:var(--ds-grey-100);">{% trans "Bienvenue sur DocuScore" %}</h5>
+                <p style="text-align:center;font-size:13px;color:var(--ds-text-muted);margin-bottom:28px;line-height:1.5;">
+                    {% trans "Votre tableau de bord est vide pour le moment. Suivez ces étapes pour analyser la qualité de votre base documentaire." %}
+                </p>
+
+                <!-- Steps -->
+                <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:28px;">
+                    <div style="display:flex;align-items:flex-start;gap:14px;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(13,110,253,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span style="font-weight:800;font-size:14px;color:#60a5fa;">1</span>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:14px;color:var(--ds-grey-100);">{% trans "Connectez vos sources" %}</div>
+                            <div style="font-size:12px;color:var(--ds-text-muted);margin-top:2px;">{% trans "Ajoutez un connecteur (SharePoint, dossier local, API…) pour importer vos documents." %}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:14px;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(25,135,84,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span style="font-weight:800;font-size:14px;color:#34d399;">2</span>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:14px;color:var(--ds-grey-100);">{% trans "Indexez vos documents" %}</div>
+                            <div style="font-size:12px;color:var(--ds-text-muted);margin-top:2px;">{% trans "Lancez une ingération pour que DocuScore analyse le contenu de vos fichiers." %}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:14px;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span style="font-weight:800;font-size:14px;color:#a78bfa;">3</span>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:14px;color:var(--ds-grey-100);">{% trans "Lancez l'analyse" %}</div>
+                            <div style="font-size:12px;color:var(--ds-text-muted);margin-top:2px;">{% trans "Détectez automatiquement les doublons, contradictions et lacunes de couverture." %}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:14px;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,193,7,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span style="font-weight:800;font-size:14px;color:#fbbf24;">4</span>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:14px;color:var(--ds-grey-100);">{% trans "Explorez les résultats" %}</div>
+                            <div style="font-size:12px;color:var(--ds-text-muted);margin-top:2px;">{% trans "Consultez votre DocuScore, générez des rapports et interrogez votre base via l'assistant IA." %}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div style="display:flex;gap:10px;">
+                    <button type="button" class="btn btn-outline-secondary" id="onboardingDismissBtn" data-bs-dismiss="modal" style="flex:1;border-radius:10px;padding:10px;font-weight:600;font-size:14px;">{% trans "J'ai compris" %}</button>
+                    <a href="{% url 'connector-create' %}" class="btn btn-primary" style="flex:1;border-radius:10px;padding:10px;font-weight:600;font-size:14px;text-align:center;">
+                        <svg style="width:14px;height:14px;margin-right:4px;vertical-align:-2px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        {% trans "Ajouter un connecteur" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+{% if docuscore.has_analysis %}
+(function() {
+    var el = document.getElementById("ds-radar");
+    if (!el) return;
+    var chart = echarts.init(el, null, { renderer: "canvas" });
+    var radarData = JSON.parse('{{ breakdown_json|escapejs }}');
+    chart.setOption({
+        backgroundColor: "transparent",
+        radar: {
+            indicator: radarData.map(function(d) { return { name: d.axis, max: 100 }; }),
+            shape: "polygon",
+            splitNumber: 4,
+            radius: "70%",
+            axisName: { color: "#f8f8f8", fontSize: 9 },
+            splitLine: { lineStyle: { color: "rgba(55,56,58,0.6)" } },
+            splitArea: { show: false },
+            axisLine: { lineStyle: { color: "rgba(55,56,58,0.4)" } },
+        },
+        series: [{
+            type: "radar",
+            data: [{
+                value: radarData.map(function(d) { return d.score; }),
+                areaStyle: { color: "rgba(13,110,253,0.18)" },
+                lineStyle: { color: "#0d6efd", width: 2 },
+                itemStyle: { color: "#0d6efd", borderColor: "#fff", borderWidth: 1 },
+                symbol: "circle",
+                symbolSize: 6,
+            }],
+            animationDuration: 800,
+        }],
+    });
+    window.addEventListener("resize", function() { chart.resize(); });
+})();
+{% endif %}
+
+{% if connector_count == 0 and doc_count == 0 %}
+// Onboarding modal
+(function() {
+    var modal = document.getElementById('onboardingModal');
+    if (!modal) return;
+    var key = 'ds-onboarding-{{ current_project.id }}';
+    // Auto-open only if not previously dismissed via "J'ai compris"
+    var dismissed = false;
+    try { dismissed = !!localStorage.getItem(key); } catch(e) {}
+    if (!dismissed) {
+        new bootstrap.Modal(modal).show();
+    }
+    // Confetti + permanent dismiss only on "J'ai compris"
+    var dismissBtn = document.getElementById('onboardingDismissBtn');
+    if (dismissBtn) {
+        var script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js';
+        document.head.appendChild(script);
+        dismissBtn.addEventListener('click', function() {
+            try { localStorage.setItem(key, '1'); } catch(e) {}
+            if (typeof confetti !== 'function') return;
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            setTimeout(function() { confetti({ particleCount: 80, spread: 100, origin: { y: 0.5, x: 0.3 } }); }, 200);
+            setTimeout(function() { confetti({ particleCount: 80, spread: 100, origin: { y: 0.5, x: 0.7 } }); }, 400);
+        });
+    }
+})();
+{% endif %}
+</script>
+{% endblock %}

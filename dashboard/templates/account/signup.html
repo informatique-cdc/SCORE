@@ -1,0 +1,47 @@
+{% extends "account/base_auth.html" %}
+{% load i18n %}
+{% block title %}{% trans "Inscription" %} - DocuScore{% endblock %}
+{% block subtitle %}{% trans "Créer un compte" %}{% endblock %}
+
+{% block content %}
+{% if form.errors %}
+<div class="alert alert-danger">
+    {% for field in form %}
+        {% for error in field.errors %}
+        <div>{{ error }}</div>
+        {% endfor %}
+    {% endfor %}
+    {% for error in form.non_field_errors %}
+    <div>{{ error }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'account_signup' %}">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="id_username" class="form-label">{% trans "Nom d'utilisateur" %}</label>
+        <input type="text" name="username" id="id_username" class="form-control" value="{{ form.username.value|default:'' }}" autofocus required>
+    </div>
+    <div class="mb-3">
+        <label for="id_email" class="form-label">{% trans "Email" %}</label>
+        <input type="email" name="email" id="id_email" class="form-control" value="{{ form.email.value|default:'' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="id_password1" class="form-label">{% trans "Mot de passe" %}</label>
+        <input type="password" name="password1" id="id_password1" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="id_password2" class="form-label">{% trans "Confirmer le mot de passe" %}</label>
+        <input type="password" name="password2" id="id_password2" class="form-control" required>
+    </div>
+    {% if redirect_field_value %}
+    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+    {% endif %}
+    <button type="submit" class="btn btn-danger w-100">{% trans "Créer mon compte" %}</button>
+</form>
+
+<div class="auth-footer">
+    {% trans "Déjà un compte ?" %} <a href="{% url 'account_login' %}">{% trans "Se connecter" %}</a>
+</div>
+{% endblock %}

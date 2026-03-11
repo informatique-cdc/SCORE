@@ -1,0 +1,1056 @@
+{% load i18n %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>{% trans "Rapport DocuScore" %} &mdash; {{ project.name }}</title>
+<style>
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #2d2d2d;
+    background: #fff;
+}
+
+/* ── Page setup ── */
+@page {
+    size: A4;
+    margin: 20mm 18mm 28mm 18mm;
+    @frame footer_frame {
+        -pdf-frame-content: page-footer;
+        left: 18mm;
+        right: 18mm;
+        bottom: 8mm;
+        height: 12mm;
+    }
+}
+
+.page-break { page-break-before: always; }
+
+/* ── Typography ── */
+h1 { font-size: 28px; font-weight: 300; color: #1B365D; margin-bottom: 8px; }
+h2 { font-size: 22px; font-weight: 300; color: #1B365D; margin-bottom: 16px; }
+h3 { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #1B365D; }
+p  { margin-bottom: 8px; color: #2d2d2d; }
+
+/* ── Section header with number ── */
+.section-header { margin-bottom: 24px; border-bottom: 3px solid #00A99D; padding-bottom: 10px; }
+.section-number {
+    font-size: 42px; font-weight: 200; color: #00A99D;
+    line-height: 1;
+}
+.section-number.magenta { color: #A8518A; }
+.section-subtitle { font-size: 13px; color: #00A99D; font-weight: 400; margin-top: 2px; }
+
+/* ── Cover ── */
+.cover {
+    background: #00A99D;
+    padding: 60px 40px 40px 40px;
+    margin: -20mm -18mm 0 -18mm;
+    min-height: 260mm;
+}
+.cover h1 {
+    font-size: 44px; font-weight: 300; color: #fff;
+    line-height: 1.15; margin-bottom: 16px;
+}
+.cover-project { font-size: 18px; font-weight: 400; color: #fff; margin-bottom: 8px; }
+.cover-date { font-size: 13px; color: #fff; margin-bottom: 40px; }
+.cover-grade-badge {
+    width: 80px; height: 80px; line-height: 80px; border-radius: 50%;
+    font-size: 38px; font-weight: 700; text-align: center; color: #fff;
+    border: 3px solid rgba(255,255,255,0.4);
+    display: inline-block;
+}
+.cover-grade-badge.grade-A { background: rgba(255,255,255,0.25); }
+.cover-grade-badge.grade-B { background: rgba(255,255,255,0.20); }
+.cover-grade-badge.grade-C { background: rgba(255,255,255,0.15); }
+.cover-grade-badge.grade-D { background: rgba(255,255,255,0.10); }
+.cover-grade-badge.grade-E { background: rgba(255,255,255,0.05); }
+.cover-score { font-size: 22px; font-weight: 700; color: #fff; display: inline-block; vertical-align: middle; margin-left: 16px; }
+.cover-score span { font-size: 14px; font-weight: 400; }
+.cover-summary { font-size: 12px; color: #fff; max-width: 320px; line-height: 1.6; margin-top: 20px; }
+.cover-accent-bar { height: 8px; background: #A8518A; margin: 0 -40px -40px -40px; position: absolute; bottom: 0; left: 0; right: 0; }
+
+/* ── Tables ── */
+table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 10px; }
+th, td { padding: 7px 10px; text-align: left; }
+th {
+    background: #1B365D; color: #fff; font-weight: 600;
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px; border: none;
+}
+td { border-bottom: 1px solid #eef0f2; color: #2d2d2d; }
+
+/* ── Grade badge ── */
+.grade-badge {
+    display: inline-block; width: 56px; height: 56px; line-height: 56px;
+    border-radius: 50%; font-size: 26px; font-weight: 800;
+    text-align: center; color: #fff;
+}
+.grade-A { background: #00A99D; }
+.grade-B { background: #4db8a4; }
+.grade-C { background: #E8A838; }
+.grade-D { background: #E07B3C; }
+.grade-E { background: #E3001B; }
+
+/* ── Badges ── */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 9px; font-weight: 600; white-space: nowrap; }
+.badge-connector  { background: #e6f7f6; color: #00A99D; }
+.badge-action     { color: #fff; }
+.badge-merge      { background: #00A99D; }
+.badge-delete_older { background: #E3001B; }
+.badge-review     { background: #E8A838; color: #fff; }
+.badge-keep       { background: #6c757d; }
+.badge-sev-high   { background: #E3001B; color: #fff; }
+.badge-sev-medium { background: #E8A838; color: #fff; }
+.badge-sev-low    { background: #6c757d; color: #fff; }
+.badge-classification { background: #e6f7f6; color: #1B365D; }
+.badge-gap-type   { background: #f3e4ee; color: #A8518A; }
+
+/* ── Cards ── */
+.card {
+    border: none; border-left: 3px solid #00A99D;
+    background: #f8f9fa; border-radius: 0 6px 6px 0;
+    padding: 14px 16px; margin-bottom: 12px;
+}
+.card-header { font-weight: 700; font-size: 12px; margin-bottom: 8px; color: #1B365D; }
+
+/* ── Bracket boxes (simplified without pseudo-elements) ── */
+.bracket-box { border: 1px solid #e0e0e0; border-top: 3px solid #00A99D; padding: 16px 18px; margin-bottom: 14px; }
+
+/* ── Utilities ── */
+.text-muted   { color: #6c757d; }
+.text-teal    { color: #00A99D; }
+.text-navy    { color: #1B365D; }
+.text-magenta { color: #A8518A; }
+.text-small   { font-size: 9px; }
+.text-center  { text-align: center; }
+.mb-4  { margin-bottom: 14px; }
+.mb-8  { margin-bottom: 8px; }
+.mt-4  { margin-top: 14px; }
+.fw-bold { font-weight: 700; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+
+.source-label { font-size: 9px; color: #6c757d; }
+.source-label .badge-connector { margin-right: 2px; }
+
+/* ── Duplicate group ── */
+.dup-group {
+    border: none; border-left: 3px solid #1B365D;
+    background: #f8f9fa; border-radius: 0 6px 6px 0;
+    padding: 12px 14px; margin-bottom: 12px; page-break-inside: avoid;
+}
+
+/* ── Contradiction block ── */
+.contra-block {
+    border-left: 4px solid; padding: 10px 14px; margin-bottom: 10px;
+    page-break-inside: avoid; background: #f8f9fa; border-radius: 0 6px 6px 0;
+}
+.contra-block.sev-high   { border-left-color: #E3001B; }
+.contra-block.sev-medium { border-left-color: #E8A838; }
+.contra-block.sev-low    { border-left-color: #6c757d; }
+
+/* ── Recommendations ── */
+.reco-bullet { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #00A99D; margin-right: 8px; }
+
+/* ── Audit score circle ── */
+.audit-score {
+    display: inline-block; width: 52px; height: 52px; line-height: 52px;
+    border-radius: 50%; text-align: center; font-size: 20px;
+    font-weight: 800; color: #fff; margin-bottom: 8px;
+}
+
+/* ── Section divider (chapter page) ── */
+.section-divider { padding-top: 80px; }
+.section-divider .divider-number { font-size: 72px; font-weight: 200; color: #A8518A; line-height: 1; margin-bottom: 8px; }
+.section-divider .divider-title  { font-size: 30px; font-weight: 300; color: #1B365D; line-height: 1.2; }
+.section-divider .divider-bar    { width: 60px; height: 4px; background: #00A99D; margin: 16px 0; }
+
+/* ── Bar / chart helpers ── */
+.bar-track { background: #eef0f2; height: 10px; border-radius: 5px; }
+.bar-fill { height: 10px; border-radius: 5px; }
+.bar-fill-green  { background: #00A99D; }
+.bar-fill-yellow { background: #E8A838; }
+.bar-fill-red    { background: #E3001B; }
+
+/* ── Metric boxes ── */
+.metric-box {
+    text-align: center;
+    background: #f8f9fa; border-radius: 6px; padding: 12px 8px;
+    border-top: 3px solid #00A99D;
+}
+.metric-box.accent-magenta { border-top-color: #A8518A; }
+.metric-box.accent-red { border-top-color: #E3001B; }
+.metric-box.accent-amber { border-top-color: #E8A838; }
+.metric-value { font-size: 28px; font-weight: 300; color: #1B365D; line-height: 1.1; }
+.metric-label { font-size: 9px; color: #6c757d; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* ── Layout tables (no borders) ── */
+.layout-table { border-collapse: collapse; margin-bottom: 0; }
+.layout-table td { border: none; padding: 0; vertical-align: top; }
+
+/* ── Legend ── */
+.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+{# ── Footer (referenced by @frame) ── #}
+<div id="page-footer" style="font-size: 8px; color: #6c757d; border-top: 1px solid #eef0f2; padding-top: 4px;">
+    <table class="layout-table" width="100%">
+    <tr>
+        <td style="text-align: left;"><pdf:pagenumber /> &mdash; DocuScore</td>
+        <td style="text-align: right; color: #adb5bd;">{{ project.name|truncatechars:40 }}</td>
+    </tr>
+    </table>
+</div>
+
+{# ════════════════════════════════════════════════ COVER ════════════════════════════════════════════════ #}
+<div class="cover">
+    <h1>{% trans "Rapport" %}<br>DocuScore</h1>
+    <p class="cover-project">{{ project.name }}</p>
+    <p class="cover-date">{% trans "G&eacute;n&eacute;r&eacute; le" %} {% now "d F Y" %}</p>
+
+    {% if docuscore.has_analysis %}
+    <div style="margin-bottom: 20px;">
+        <div class="cover-grade-badge grade-{{ docuscore.grade }}">{{ docuscore.grade }}</div>
+        <span class="cover-score">{{ docuscore.score }} <span>/ 100</span></span>
+    </div>
+    {% endif %}
+
+    {% if docuscore_detail.summary %}
+    <p class="cover-summary">{{ docuscore_detail.summary }}</p>
+    {% endif %}
+
+    <div style="height: 8px; background: #A8518A; margin-top: 40px;"></div>
+</div>
+
+
+{# ════════════════════════════════════════════ SOMMAIRE ═══════════════════════════════════════ #}
+<div class="page-break"></div>
+<div style="padding-top: 40px;">
+    <h2 style="font-size: 28px; color: #00A99D; font-weight: 300; margin-bottom: 40px;">sommaire</h2>
+    <table class="layout-table" width="100%">
+        <tr>
+            <td width="50" style="font-size: 28px; font-weight: 200; color: #00A99D; padding-bottom: 18px;">01</td>
+            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "Sources de donn&eacute;es" %}</td>
+        </tr>
+        <tr>
+            <td width="50" style="font-size: 28px; font-weight: 200; color: #00A99D; padding-bottom: 18px;">02</td>
+            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "DocuScore &mdash; Qualit&eacute; de la base" %}</td>
+        </tr>
+        <tr>
+            <td width="50" style="font-size: 28px; font-weight: 200; color: #A8518A; padding-bottom: 18px;">03</td>
+            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "Doublons d&eacute;tect&eacute;s" %}</td>
+        </tr>
+        <tr>
+            <td width="50" style="font-size: 28px; font-weight: 200; color: #A8518A; padding-bottom: 18px;">04</td>
+            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "Contradictions" %}</td>
+        </tr>
+        <tr>
+            <td width="50" style="font-size: 28px; font-weight: 200; color: #00A99D; padding-bottom: 18px;">05</td>
+            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "Lacunes" %}</td>
+        </tr>
+        <tr>
+            <td width="50" style="font-size: 28px; font-weight: 200; color: #A8518A; padding-bottom: 18px;">06</td>
+            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "Risques d'hallucination" %}</td>
+        </tr>
+        {% if linked_audit %}
+        <tr>
+            <td width="50" style="font-size: 28px; font-weight: 200; color: #00A99D; padding-bottom: 18px;">07</td>
+            <td style="font-size: 14px; color: #1B365D; padding-top: 8px; padding-bottom: 18px;">{% trans "Audit d&eacute;taill&eacute;" %}</td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
+
+
+{# ════════════════════════════════════════════ SOURCES DE DONNEES ═══════════════════════════════════════ #}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number">01</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Sources de donn&eacute;es" %}</h2>
+            <div class="section-subtitle">{% trans "Connecteurs et synchronisation" %}</div>
+        </td>
+    </tr></table>
+</div>
+
+{% if connectors %}
+<table>
+    <thead>
+        <tr><th>{% trans "Nom" %}</th><th>{% trans "Type" %}</th><th>{% trans "Statut" %}</th><th>{% trans "Dernier sync" %}</th></tr>
+    </thead>
+    <tbody>
+    {% for c in connectors %}
+        <tr>
+            <td style="font-weight:600; color: #1B365D;">{{ c.name }}</td>
+            <td>{{ c.get_connector_type_display }}</td>
+            <td>{% if c.enabled %}<span style="color:#00A99D; font-weight: 600;">{% trans "Actif" %}</span>{% else %}<span style="color:#6c757d;">{% trans "D&eacute;sactiv&eacute;" %}</span>{% endif %}</td>
+            <td>{% if c.last_sync_at %}{{ c.last_sync_at|date:"d/m/Y H:i" }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="bracket-box">
+    <p class="text-muted">{% trans "Aucun connecteur configur&eacute;." %}</p>
+</div>
+{% endif %}
+
+
+{# ════════════════════════════════════════════════ DOCUSCORE ════════════════════════════════════════════ #}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number">02</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "DocuScore &mdash; Qualit&eacute; de la base" %}</h2>
+            <div class="section-subtitle">{% trans "&Eacute;valuation globale du r&eacute;f&eacute;rentiel documentaire" %}</div>
+        </td>
+    </tr></table>
+</div>
+
+{% if docuscore.has_analysis %}
+
+{# ── Score donut (replaced with badge) + key metrics ── #}
+<table class="layout-table" width="100%" style="margin-bottom: 20px;">
+<tr>
+    <td width="140" style="text-align: center; padding-right: 20px;">
+        {# Score circle #}
+        <div style="display: inline-block; width: 100px; height: 100px; line-height: 100px; border-radius: 50%; text-align: center; font-size: 32px; font-weight: 700; color: #fff; background: {% if docuscore.score >= 80 %}#00A99D{% elif docuscore.score >= 60 %}#4db8a4{% elif docuscore.score >= 40 %}#E8A838{% elif docuscore.score >= 20 %}#E07B3C{% else %}#E3001B{% endif %};">
+            {{ docuscore.score }}
+        </div>
+        <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">/ 100 &mdash; {% trans "Note" %} {{ docuscore.grade }}</div>
+    </td>
+    <td>
+        {# Key metrics #}
+        <table class="layout-table" width="100%">
+        <tr>
+            <td width="25%" style="padding: 0 4px;">
+                <div class="metric-box">
+                    <div class="metric-value">{{ findings.dup_total }}</div>
+                    <div class="metric-label">{% trans "Doublons" %}</div>
+                </div>
+            </td>
+            <td width="25%" style="padding: 0 4px;">
+                <div class="metric-box accent-red">
+                    <div class="metric-value">{{ findings.contra_total }}</div>
+                    <div class="metric-label">{% trans "Contradictions" %}</div>
+                </div>
+            </td>
+            <td width="25%" style="padding: 0 4px;">
+                <div class="metric-box accent-magenta">
+                    <div class="metric-value">{{ findings.gap_total }}</div>
+                    <div class="metric-label">{% trans "Lacunes" %}</div>
+                </div>
+            </td>
+            <td width="25%" style="padding: 0 4px;">
+                <div class="metric-box" style="border-top-color: #6f42c1;">
+                    <div class="metric-value">{{ findings.hallu_total }}</div>
+                    <div class="metric-label">{% trans "Hallucinations" %}</div>
+                </div>
+            </td>
+        </tr>
+        </table>
+
+        {% if docuscore_detail.summary %}
+        <p style="font-size: 11px; color: #2d2d2d; line-height: 1.6; margin-top: 12px;">{{ docuscore_detail.summary }}</p>
+        {% endif %}
+    </td>
+</tr>
+</table>
+
+{# ── Dimension bars ── #}
+{% if dimensions %}
+<h3 style="color: #00A99D; margin-bottom: 12px;">{% trans "D&eacute;tail par dimension" %}</h3>
+<table class="layout-table" width="100%" style="margin-bottom: 16px;">
+{% for dim in dimensions %}
+    <tr>
+        <td width="120" style="font-size: 10px; color: #1B365D; font-weight: 500; padding: 3px 8px 3px 0;">{{ dim.name }}</td>
+        <td style="padding: 3px 0;">
+            <div class="bar-track">
+                <div class="bar-fill {% if dim.score >= 70 %}bar-fill-green{% elif dim.score >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}" style="width: {{ dim.score|default:0 }}%;"></div>
+            </div>
+        </td>
+        <td width="34" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{% if dim.score != None %}{{ dim.score }}{% else %}&mdash;{% endif %}</td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{# ── Recommendations ── #}
+{% if top_recommendations %}
+<h3 style="color: #00A99D; margin-bottom: 10px;">{% trans "Recommandations prioritaires" %}</h3>
+{% for reco in top_recommendations %}
+<p style="margin-bottom: 6px;">
+    <span class="reco-bullet"></span>{{ reco.text }}
+</p>
+{% endfor %}
+{% endif %}
+
+{# ── Dimension detail cards ── #}
+{% if dimensions %}
+<div class="mt-4">
+{% for dim in dimensions %}
+    {% if dim.description or dim.details %}
+    <div class="card">
+        <div class="card-header">{{ dim.name }} &mdash; {% if dim.score != None %}{{ dim.score }}/100{% else %}&mdash;{% endif %}</div>
+        {% if dim.description %}<p>{{ dim.description }}</p>{% endif %}
+        {% if dim.details %}<p class="text-muted text-small">{{ dim.details }}</p>{% endif %}
+        {% if dim.recommendations %}
+        <div class="mt-4">
+            {% for r in dim.recommendations %}
+            <p style="margin-bottom: 4px;"><span class="reco-bullet"></span>{{ r }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+{% endfor %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="bracket-box">
+    <p class="text-muted">{% trans "Aucune analyse termin&eacute;e &mdash; le DocuScore n'est pas encore disponible." %}</p>
+</div>
+{% endif %}
+
+
+{# ════════════════════════════════════════════════ DOUBLONS ═════════════════════════════════════════════ #}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number magenta">03</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Doublons d&eacute;tect&eacute;s" %}</h2>
+            <div class="section-subtitle">{{ dup_count }} {% trans "doublon(s) identifi&eacute;(s)" %}</div>
+        </td>
+    </tr></table>
+</div>
+
+{% if dup_groups %}
+
+{# ── Distribution by action ── #}
+{% if findings.dup_total > 0 %}
+<h3 style="margin-bottom: 10px;">{% trans "R&eacute;partition par action recommand&eacute;e" %}</h3>
+<table class="layout-table" width="100%" style="margin-bottom: 16px;">
+{% for action, count in findings.dup_actions.items %}
+    <tr>
+        <td width="100" style="font-size: 10px; color: #1B365D; font-weight: 600; padding: 4px 8px 4px 0;">{{ action }}</td>
+        <td style="padding: 4px 0;">
+            <div style="background: #eef0f2; height: 16px; border-radius: 3px;">
+                <div style="width: {% widthratio count findings.dup_total 100 %}%; height: 16px; border-radius: 3px; background: {% if action == 'merge' %}#00A99D{% elif action == 'delete_older' %}#E3001B{% elif action == 'review' %}#E8A838{% else %}#6c757d{% endif %};"></div>
+            </div>
+        </td>
+        <td width="30" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 4px 0 4px 8px;">{{ count }}</td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{% for group in dup_groups %}
+<div class="dup-group">
+    <div style="margin-bottom: 8px;">
+        <span class="badge badge-action badge-{{ group.recommended_action }}">{{ group.get_recommended_action_display }}</span>
+        {% if group.rationale %}<span class="text-muted text-small" style="margin-left: 8px;">{{ group.rationale|truncatechars:120 }}</span>{% endif %}
+    </div>
+    <table>
+        <thead>
+            <tr><th>{% trans "Document A" %}</th><th>{% trans "Source A" %}</th><th>{% trans "Document B" %}</th><th>{% trans "Source B" %}</th><th>{% trans "Score" %}</th><th>{% trans "V&eacute;rification" %}</th></tr>
+        </thead>
+        <tbody>
+        {% for pair in group.pdf_pairs %}
+            <tr>
+                <td class="truncate" title="{{ pair.doc_a.title }}">{{ pair.doc_a.title|truncatechars:50 }}</td>
+                <td><span class="badge badge-connector">{{ pair.doc_a.connector.get_connector_type_display }}</span> {{ pair.doc_a.connector.name|truncatechars:20 }}</td>
+                <td class="truncate" title="{{ pair.doc_b.title }}">{{ pair.doc_b.title|truncatechars:50 }}</td>
+                <td><span class="badge badge-connector">{{ pair.doc_b.connector.get_connector_type_display }}</span> {{ pair.doc_b.connector.name|truncatechars:20 }}</td>
+                <td style="font-weight:700; color: #1B365D;">{{ pair.combined_score|floatformat:2 }}</td>
+                <td>{{ pair.verification_result|default:"&mdash;" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% else %}
+<div class="bracket-box">
+    <p class="text-muted">{% trans "Aucun doublon d&eacute;tect&eacute;." %}</p>
+</div>
+{% endif %}
+
+
+{# ═══════════════════════════════════════════ CONTRADICTIONS ════════════════════════════════════════════ #}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number magenta">04</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Contradictions" %}</h2>
+            <div class="section-subtitle">{{ contradictions|length }} {% trans "contradiction(s) identifi&eacute;e(s)" %}</div>
+        </td>
+    </tr></table>
+</div>
+
+{% if contradictions %}
+
+{# ── Severity distribution ── #}
+{% if findings.contra_total > 0 %}
+<h3 style="margin-bottom: 10px;">{% trans "R&eacute;partition par s&eacute;v&eacute;rit&eacute;" %}</h3>
+<table class="layout-table" width="100%" style="margin-bottom: 4px;">
+<tr>
+    <td style="background: #eef0f2; height: 22px; border-radius: 4px; padding: 0;">
+        <table class="layout-table" width="100%" style="height: 22px;">
+        <tr>
+            {% if findings.contra_sev.high %}<td width="{% widthratio findings.contra_sev.high findings.contra_total 100 %}%" style="background: #E3001B; height: 22px;"></td>{% endif %}
+            {% if findings.contra_sev.medium %}<td width="{% widthratio findings.contra_sev.medium findings.contra_total 100 %}%" style="background: #E8A838; height: 22px;"></td>{% endif %}
+            {% if findings.contra_sev.low %}<td width="{% widthratio findings.contra_sev.low findings.contra_total 100 %}%" style="background: #6c757d; height: 22px;"></td>{% endif %}
+        </tr>
+        </table>
+    </td>
+</tr>
+</table>
+<p style="font-size: 9px; margin-bottom: 16px;">
+    {% if findings.contra_sev.high %}<span class="legend-dot" style="background:#E3001B;"></span>{% trans "&Eacute;lev&eacute;e" %}: {{ findings.contra_sev.high }}&nbsp;&nbsp;{% endif %}
+    {% if findings.contra_sev.medium %}<span class="legend-dot" style="background:#E8A838;"></span>{% trans "Moyenne" %}: {{ findings.contra_sev.medium }}&nbsp;&nbsp;{% endif %}
+    {% if findings.contra_sev.low %}<span class="legend-dot" style="background:#6c757d;"></span>{% trans "Faible" %}: {{ findings.contra_sev.low }}{% endif %}
+</p>
+{% endif %}
+
+{% if contradictions_high %}
+<h3><span class="badge badge-sev-high">{% trans "S&eacute;v&eacute;rit&eacute; &eacute;lev&eacute;e" %}</span> <span class="text-small text-navy" style="margin-left: 4px;">({{ contradictions_high|length }})</span></h3>
+{% for c in contradictions_high %}
+<div class="contra-block sev-high">
+    <table class="layout-table" width="100%" style="margin-bottom: 4px;">
+    <tr>
+        <td><span class="badge badge-classification">{{ c.get_classification_display }}</span></td>
+        <td style="text-align: right;"><span class="text-small text-muted">{% trans "Confiance :" %} {{ c.confidence|floatformat:2 }}</span></td>
+    </tr>
+    </table>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{% trans "Affirmation A :" %}</strong> {{ c.claim_a.as_text|truncatechars:200 }}<br>
+        <span class="source-label"><span class="badge badge-connector">{{ c.claim_a.document.connector.get_connector_type_display }}</span> {{ c.claim_a.document.connector.name }} &mdash; <em>{{ c.claim_a.document.title|truncatechars:60 }}</em></span>
+    </div>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{% trans "Affirmation B :" %}</strong> {{ c.claim_b.as_text|truncatechars:200 }}<br>
+        <span class="source-label"><span class="badge badge-connector">{{ c.claim_b.document.connector.get_connector_type_display }}</span> {{ c.claim_b.document.connector.name }} &mdash; <em>{{ c.claim_b.document.title|truncatechars:60 }}</em></span>
+    </div>
+    {% if c.evidence %}<p class="text-small text-muted">{{ c.evidence|truncatechars:300 }}</p>{% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if contradictions_medium %}
+<h3 style="margin-top: 14px;"><span class="badge badge-sev-medium">{% trans "S&eacute;v&eacute;rit&eacute; moyenne" %}</span> <span class="text-small text-navy" style="margin-left: 4px;">({{ contradictions_medium|length }})</span></h3>
+{% for c in contradictions_medium %}
+<div class="contra-block sev-medium">
+    <table class="layout-table" width="100%" style="margin-bottom: 4px;">
+    <tr>
+        <td><span class="badge badge-classification">{{ c.get_classification_display }}</span></td>
+        <td style="text-align: right;"><span class="text-small text-muted">{% trans "Confiance :" %} {{ c.confidence|floatformat:2 }}</span></td>
+    </tr>
+    </table>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{% trans "Affirmation A :" %}</strong> {{ c.claim_a.as_text|truncatechars:200 }}<br>
+        <span class="source-label"><span class="badge badge-connector">{{ c.claim_a.document.connector.get_connector_type_display }}</span> {{ c.claim_a.document.connector.name }} &mdash; <em>{{ c.claim_a.document.title|truncatechars:60 }}</em></span>
+    </div>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{% trans "Affirmation B :" %}</strong> {{ c.claim_b.as_text|truncatechars:200 }}<br>
+        <span class="source-label"><span class="badge badge-connector">{{ c.claim_b.document.connector.get_connector_type_display }}</span> {{ c.claim_b.document.connector.name }} &mdash; <em>{{ c.claim_b.document.title|truncatechars:60 }}</em></span>
+    </div>
+    {% if c.evidence %}<p class="text-small text-muted">{{ c.evidence|truncatechars:300 }}</p>{% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if contradictions_low %}
+<h3 style="margin-top: 14px;"><span class="badge badge-sev-low">{% trans "S&eacute;v&eacute;rit&eacute; faible" %}</span> <span class="text-small text-navy" style="margin-left: 4px;">({{ contradictions_low|length }})</span></h3>
+{% for c in contradictions_low %}
+<div class="contra-block sev-low">
+    <table class="layout-table" width="100%" style="margin-bottom: 4px;">
+    <tr>
+        <td><span class="badge badge-classification">{{ c.get_classification_display }}</span></td>
+        <td style="text-align: right;"><span class="text-small text-muted">{% trans "Confiance :" %} {{ c.confidence|floatformat:2 }}</span></td>
+    </tr>
+    </table>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{% trans "Affirmation A :" %}</strong> {{ c.claim_a.as_text|truncatechars:200 }}<br>
+        <span class="source-label"><span class="badge badge-connector">{{ c.claim_a.document.connector.get_connector_type_display }}</span> {{ c.claim_a.document.connector.name }} &mdash; <em>{{ c.claim_a.document.title|truncatechars:60 }}</em></span>
+    </div>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{% trans "Affirmation B :" %}</strong> {{ c.claim_b.as_text|truncatechars:200 }}<br>
+        <span class="source-label"><span class="badge badge-connector">{{ c.claim_b.document.connector.get_connector_type_display }}</span> {{ c.claim_b.document.connector.name }} &mdash; <em>{{ c.claim_b.document.title|truncatechars:60 }}</em></span>
+    </div>
+    {% if c.evidence %}<p class="text-small text-muted">{{ c.evidence|truncatechars:300 }}</p>{% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% else %}
+<div class="bracket-box">
+    <p class="text-muted">{% trans "Aucune contradiction d&eacute;tect&eacute;e." %}</p>
+</div>
+{% endif %}
+
+
+{# ═════════════════════════════════════════════════ LACUNES ═════════════════════════════════════════════ #}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number">05</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Lacunes" %}</h2>
+            <div class="section-subtitle">{{ gaps|length }} {% trans "lacune(s) identifi&eacute;e(s)" %}</div>
+        </td>
+    </tr></table>
+</div>
+
+{% if gaps %}
+
+{# ── Gap severity + type distribution ── #}
+{% if findings.gap_total > 0 %}
+<table class="layout-table" width="100%" style="margin-bottom: 18px;">
+<tr>
+    {# Severity stacked bar #}
+    <td width="48%" style="padding-right: 12px;">
+        <h3 style="margin-bottom: 10px;">{% trans "R&eacute;partition par s&eacute;v&eacute;rit&eacute;" %}</h3>
+        <table class="layout-table" width="100%" style="margin-bottom: 4px;">
+        <tr>
+            {% if findings.gap_sev.high %}<td width="{% widthratio findings.gap_sev.high findings.gap_total 100 %}%" style="background: #E3001B; height: 22px;"></td>{% endif %}
+            {% if findings.gap_sev.medium %}<td width="{% widthratio findings.gap_sev.medium findings.gap_total 100 %}%" style="background: #E8A838; height: 22px;"></td>{% endif %}
+            {% if findings.gap_sev.low %}<td width="{% widthratio findings.gap_sev.low findings.gap_total 100 %}%" style="background: #6c757d; height: 22px;"></td>{% endif %}
+        </tr>
+        </table>
+        <p style="font-size: 9px;">
+            {% if findings.gap_sev.high %}<span class="legend-dot" style="background:#E3001B;"></span>{% trans "&Eacute;lev&eacute;e" %}: {{ findings.gap_sev.high }}&nbsp;&nbsp;{% endif %}
+            {% if findings.gap_sev.medium %}<span class="legend-dot" style="background:#E8A838;"></span>{% trans "Moyenne" %}: {{ findings.gap_sev.medium }}&nbsp;&nbsp;{% endif %}
+            {% if findings.gap_sev.low %}<span class="legend-dot" style="background:#6c757d;"></span>{% trans "Faible" %}: {{ findings.gap_sev.low }}{% endif %}
+        </p>
+    </td>
+    {# Type bars #}
+    <td width="52%">
+        <h3 style="margin-bottom: 10px;">{% trans "Par type de lacune" %}</h3>
+        <table class="layout-table" width="100%">
+        {% for gtype, gcount in findings.gap_types.items %}
+            <tr>
+                <td width="100" style="font-size: 10px; color: #1B365D; font-weight: 600; padding: 3px 8px 3px 0;">{{ gtype }}</td>
+                <td style="padding: 3px 0;">
+                    <div style="background: #eef0f2; height: 16px; border-radius: 3px;">
+                        <div style="width: {% widthratio gcount findings.gap_total 100 %}%; height: 16px; border-radius: 3px; background: #A8518A;"></div>
+                    </div>
+                </td>
+                <td width="30" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{{ gcount }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+    </td>
+</tr>
+</table>
+{% endif %}
+
+<table>
+    <thead>
+        <tr><th>{% trans "Type" %}</th><th>{% trans "S&eacute;v&eacute;rit&eacute;" %}</th><th>{% trans "Titre" %}</th><th>{% trans "Description" %}</th><th>{% trans "Couverture" %}</th></tr>
+    </thead>
+    <tbody>
+    {% for g in gaps %}
+        <tr>
+            <td><span class="badge badge-gap-type">{{ g.get_gap_type_display }}</span></td>
+            <td><span class="badge badge-sev-{{ g.severity }}">{{ g.get_severity_display }}</span></td>
+            <td style="font-weight:600; color: #1B365D;">{{ g.title|truncatechars:60 }}</td>
+            <td>{{ g.description|truncatechars:150 }}</td>
+            <td style="text-align:center;font-weight:700; color: #1B365D;">{% if g.coverage_score != None %}{{ g.coverage_score|floatformat:2 }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="bracket-box">
+    <p class="text-muted">{% trans "Aucune lacune d&eacute;tect&eacute;e." %}</p>
+</div>
+{% endif %}
+
+
+{# ══════════════════════════════════════ HALLUCINATION RISKS ═══════════════════════════════════════════ #}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number magenta">06</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Risques d'hallucination" %}</h2>
+            <div class="section-subtitle">{{ hallucinations|length }} {% trans "risque(s) identifi&eacute;(s)" %}</div>
+        </td>
+    </tr></table>
+</div>
+
+{% if hallucinations %}
+
+{# ── Severity + type distribution ── #}
+{% if findings.hallu_total > 0 %}
+<table class="layout-table" width="100%" style="margin-bottom: 18px;">
+<tr>
+    {# Severity stacked bar #}
+    <td width="48%" style="padding-right: 12px;">
+        <h3 style="margin-bottom: 10px;">{% trans "R&eacute;partition par s&eacute;v&eacute;rit&eacute;" %}</h3>
+        <table class="layout-table" width="100%" style="margin-bottom: 4px;">
+        <tr>
+            {% if findings.hallu_sev.high %}<td width="{% widthratio findings.hallu_sev.high findings.hallu_total 100 %}%" style="background: #E3001B; height: 22px;"></td>{% endif %}
+            {% if findings.hallu_sev.medium %}<td width="{% widthratio findings.hallu_sev.medium findings.hallu_total 100 %}%" style="background: #E8A838; height: 22px;"></td>{% endif %}
+            {% if findings.hallu_sev.low %}<td width="{% widthratio findings.hallu_sev.low findings.hallu_total 100 %}%" style="background: #6c757d; height: 22px;"></td>{% endif %}
+        </tr>
+        </table>
+        <p style="font-size: 9px;">
+            {% if findings.hallu_sev.high %}<span class="legend-dot" style="background:#E3001B;"></span>{% trans "&Eacute;lev&eacute;e" %}: {{ findings.hallu_sev.high }}&nbsp;&nbsp;{% endif %}
+            {% if findings.hallu_sev.medium %}<span class="legend-dot" style="background:#E8A838;"></span>{% trans "Moyenne" %}: {{ findings.hallu_sev.medium }}&nbsp;&nbsp;{% endif %}
+            {% if findings.hallu_sev.low %}<span class="legend-dot" style="background:#6c757d;"></span>{% trans "Faible" %}: {{ findings.hallu_sev.low }}{% endif %}
+        </p>
+    </td>
+    {# Type bars #}
+    <td width="52%">
+        <h3 style="margin-bottom: 10px;">{% trans "Par type de risque" %}</h3>
+        <table class="layout-table" width="100%">
+        {% for htype, hcount in findings.hallu_types.items %}
+            <tr>
+                <td width="130" style="font-size: 10px; color: #1B365D; font-weight: 600; padding: 3px 8px 3px 0;">{{ htype }}</td>
+                <td style="padding: 3px 0;">
+                    <div style="background: #eef0f2; height: 16px; border-radius: 3px;">
+                        <div style="width: {% widthratio hcount findings.hallu_total 100 %}%; height: 16px; border-radius: 3px; background: #6f42c1;"></div>
+                    </div>
+                </td>
+                <td width="30" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{{ hcount }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+    </td>
+</tr>
+</table>
+{% endif %}
+
+{% if hallucinations_high %}
+<h3><span class="badge badge-sev-high">{% trans "S&eacute;v&eacute;rit&eacute; &eacute;lev&eacute;e" %}</span> <span class="text-small text-navy" style="margin-left: 4px;">({{ hallucinations_high|length }})</span></h3>
+{% for h in hallucinations_high %}
+<div class="contra-block sev-high">
+    <table class="layout-table" width="100%" style="margin-bottom: 4px;">
+    <tr>
+        <td><span class="badge badge-classification">{{ h.get_risk_type_display }}</span></td>
+        <td style="text-align: right;"><span class="text-small text-muted">{% trans "Score :" %} {{ h.risk_score|floatformat:2 }}</span></td>
+    </tr>
+    </table>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{{ h.title }}</strong><br>
+        <span style="font-size: 10px; color: #2d2d2d;">{{ h.description|truncatechars:300 }}</span>
+    </div>
+    {% if h.term %}<p class="text-small"><strong>{% trans "Terme :" %}</strong> <code>{{ h.term }}</code></p>{% endif %}
+    {% if h.expansions %}
+    <p class="text-small text-muted">{% trans "D&eacute;finitions :" %}
+        {% for exp in h.expansions %}{{ exp.expansion }}{% if not forloop.last %}, {% endif %}{% endfor %}
+    </p>
+    {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if hallucinations_medium %}
+<h3 style="margin-top: 14px;"><span class="badge badge-sev-medium">{% trans "S&eacute;v&eacute;rit&eacute; moyenne" %}</span> <span class="text-small text-navy" style="margin-left: 4px;">({{ hallucinations_medium|length }})</span></h3>
+{% for h in hallucinations_medium %}
+<div class="contra-block sev-medium">
+    <table class="layout-table" width="100%" style="margin-bottom: 4px;">
+    <tr>
+        <td><span class="badge badge-classification">{{ h.get_risk_type_display }}</span></td>
+        <td style="text-align: right;"><span class="text-small text-muted">{% trans "Score :" %} {{ h.risk_score|floatformat:2 }}</span></td>
+    </tr>
+    </table>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{{ h.title }}</strong><br>
+        <span style="font-size: 10px; color: #2d2d2d;">{{ h.description|truncatechars:300 }}</span>
+    </div>
+    {% if h.term %}<p class="text-small"><strong>{% trans "Terme :" %}</strong> <code>{{ h.term }}</code></p>{% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if hallucinations_low %}
+<h3 style="margin-top: 14px;"><span class="badge badge-sev-low">{% trans "S&eacute;v&eacute;rit&eacute; faible" %}</span> <span class="text-small text-navy" style="margin-left: 4px;">({{ hallucinations_low|length }})</span></h3>
+{% for h in hallucinations_low %}
+<div class="contra-block sev-low">
+    <table class="layout-table" width="100%" style="margin-bottom: 4px;">
+    <tr>
+        <td><span class="badge badge-classification">{{ h.get_risk_type_display }}</span></td>
+        <td style="text-align: right;"><span class="text-small text-muted">{% trans "Score :" %} {{ h.risk_score|floatformat:2 }}</span></td>
+    </tr>
+    </table>
+    <div class="mb-4">
+        <strong style="color: #1B365D;">{{ h.title }}</strong><br>
+        <span style="font-size: 10px; color: #2d2d2d;">{{ h.description|truncatechars:250 }}</span>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% else %}
+<div class="bracket-box">
+    <p class="text-muted">{% trans "Aucun risque d'hallucination d&eacute;tect&eacute;." %}</p>
+</div>
+{% endif %}
+
+
+{# ═══════════════════════════════════════════ AUDIT AXES ════════════════════════════════════════════════ #}
+{% if linked_audit %}
+
+{# ── Audit section divider ── #}
+<div class="page-break"></div>
+<div class="section-divider">
+    <div class="divider-number">07</div>
+    <div class="divider-title">{% trans "Audit d&eacute;taill&eacute;" %}</div>
+    <div class="divider-bar"></div>
+    <p style="font-size: 13px; color: #6c757d; max-width: 400px;">{% trans "Analyse approfondie par axe de qualit&eacute; du r&eacute;f&eacute;rentiel documentaire." %}</p>
+</div>
+
+{% with hygiene=audit_axes.hygiene %}
+{% if hygiene %}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number">07</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Hygi&egrave;ne du corpus" %}</h2>
+            <div class="section-subtitle">{% trans "Audit" %}</div>
+        </td>
+    </tr></table>
+</div>
+<table class="layout-table" width="100%">
+<tr>
+    <td width="80" style="text-align: center; padding-right: 16px;">
+        <div class="audit-score {% if hygiene.score >= 70 %}bar-fill-green{% elif hygiene.score >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}">{{ hygiene.score|floatformat:0 }}</div>
+        <div class="text-small text-muted">/ 100</div>
+    </td>
+    <td>
+        {% if hygiene.metrics.sub_scores %}
+        <table class="layout-table" width="100%">
+        {% for key, val in hygiene.metrics.sub_scores.items %}
+            <tr>
+                <td width="120" style="font-size: 10px; color: #1B365D; font-weight: 500; padding: 3px 8px 3px 0;">{{ key }}</td>
+                <td style="padding: 3px 0;">
+                    <div class="bar-track">
+                        <div class="bar-fill {% if val >= 70 %}bar-fill-green{% elif val >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}" style="width: {{ val }}%;"></div>
+                    </div>
+                </td>
+                <td width="34" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{{ val|floatformat:0 }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+    </td>
+</tr>
+</table>
+{% endif %}
+{% endwith %}
+
+{% with structure=audit_axes.structure %}
+{% if structure %}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number">07</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Structure RAG" %}</h2>
+            <div class="section-subtitle">{% trans "Audit" %}</div>
+        </td>
+    </tr></table>
+</div>
+<table class="layout-table" width="100%">
+<tr>
+    <td width="80" style="text-align: center; padding-right: 16px;">
+        <div class="audit-score {% if structure.score >= 70 %}bar-fill-green{% elif structure.score >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}">{{ structure.score|floatformat:0 }}</div>
+        <div class="text-small text-muted">/ 100</div>
+    </td>
+    <td>
+        {% if structure.metrics.sub_scores %}
+        <table class="layout-table" width="100%">
+        {% for key, val in structure.metrics.sub_scores.items %}
+            <tr>
+                <td width="120" style="font-size: 10px; color: #1B365D; font-weight: 500; padding: 3px 8px 3px 0;">{{ key }}</td>
+                <td style="padding: 3px 0;">
+                    <div class="bar-track">
+                        <div class="bar-fill {% if val >= 70 %}bar-fill-green{% elif val >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}" style="width: {{ val }}%;"></div>
+                    </div>
+                </td>
+                <td width="34" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{{ val|floatformat:0 }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+    </td>
+</tr>
+</table>
+{% endif %}
+{% endwith %}
+
+{% with coverage=audit_axes.coverage %}
+{% if coverage %}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number magenta">07</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Couverture s&eacute;mantique" %}</h2>
+            <div class="section-subtitle">{% trans "Audit" %}</div>
+        </td>
+    </tr></table>
+</div>
+<table class="layout-table" width="100%">
+<tr>
+    <td width="80" style="text-align: center; padding-right: 16px;">
+        <div class="audit-score {% if coverage.score >= 70 %}bar-fill-green{% elif coverage.score >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}">{{ coverage.score|floatformat:0 }}</div>
+        <div class="text-small text-muted">/ 100</div>
+    </td>
+    <td>
+        {% if coverage.metrics.sub_scores %}
+        <table class="layout-table" width="100%">
+        {% for key, val in coverage.metrics.sub_scores.items %}
+            <tr>
+                <td width="120" style="font-size: 10px; color: #1B365D; font-weight: 500; padding: 3px 8px 3px 0;">{{ key }}</td>
+                <td style="padding: 3px 0;">
+                    <div class="bar-track">
+                        <div class="bar-fill {% if val >= 70 %}bar-fill-green{% elif val >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}" style="width: {{ val }}%;"></div>
+                    </div>
+                </td>
+                <td width="34" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{{ val|floatformat:0 }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+    </td>
+</tr>
+</table>
+{% endif %}
+{% endwith %}
+
+{% with coherence=audit_axes.coherence %}
+{% if coherence %}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number magenta">07</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Coh&eacute;rence interne" %}</h2>
+            <div class="section-subtitle">{% trans "Audit" %}</div>
+        </td>
+    </tr></table>
+</div>
+<table class="layout-table" width="100%">
+<tr>
+    <td width="80" style="text-align: center; padding-right: 16px;">
+        <div class="audit-score {% if coherence.score >= 70 %}bar-fill-green{% elif coherence.score >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}">{{ coherence.score|floatformat:0 }}</div>
+        <div class="text-small text-muted">/ 100</div>
+    </td>
+    <td>
+        {% if coherence.metrics.sub_scores %}
+        <table class="layout-table" width="100%">
+        {% for key, val in coherence.metrics.sub_scores.items %}
+            <tr>
+                <td width="120" style="font-size: 10px; color: #1B365D; font-weight: 500; padding: 3px 8px 3px 0;">{{ key }}</td>
+                <td style="padding: 3px 0;">
+                    <div class="bar-track">
+                        <div class="bar-fill {% if val >= 70 %}bar-fill-green{% elif val >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}" style="width: {{ val }}%;"></div>
+                    </div>
+                </td>
+                <td width="34" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{{ val|floatformat:0 }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+    </td>
+</tr>
+</table>
+{% endif %}
+{% endwith %}
+
+{% with retrievability=audit_axes.retrievability %}
+{% if retrievability %}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number">07</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Retrievability" %}</h2>
+            <div class="section-subtitle">{% trans "Audit" %}</div>
+        </td>
+    </tr></table>
+</div>
+<table class="layout-table" width="100%">
+<tr>
+    <td width="80" style="text-align: center; padding-right: 16px;">
+        <div class="audit-score {% if retrievability.score >= 70 %}bar-fill-green{% elif retrievability.score >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}">{{ retrievability.score|floatformat:0 }}</div>
+        <div class="text-small text-muted">/ 100</div>
+    </td>
+    <td>
+        {% if retrievability.metrics.sub_scores %}
+        <table class="layout-table" width="100%">
+        {% for key, val in retrievability.metrics.sub_scores.items %}
+            <tr>
+                <td width="120" style="font-size: 10px; color: #1B365D; font-weight: 500; padding: 3px 8px 3px 0;">{{ key }}</td>
+                <td style="padding: 3px 0;">
+                    <div class="bar-track">
+                        <div class="bar-fill {% if val >= 70 %}bar-fill-green{% elif val >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}" style="width: {{ val }}%;"></div>
+                    </div>
+                </td>
+                <td width="34" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{{ val|floatformat:0 }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+    </td>
+</tr>
+</table>
+{% endif %}
+{% endwith %}
+
+{% with governance=audit_axes.governance %}
+{% if governance %}
+<div class="page-break"></div>
+<div class="section-header">
+    <table class="layout-table"><tr>
+        <td width="60"><span class="section-number">07</span></td>
+        <td style="padding-top: 8px;">
+            <h2>{% trans "Gouvernance &amp; metadata" %}</h2>
+            <div class="section-subtitle">{% trans "Audit" %}</div>
+        </td>
+    </tr></table>
+</div>
+<table class="layout-table" width="100%">
+<tr>
+    <td width="80" style="text-align: center; padding-right: 16px;">
+        <div class="audit-score {% if governance.score >= 70 %}bar-fill-green{% elif governance.score >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}">{{ governance.score|floatformat:0 }}</div>
+        <div class="text-small text-muted">/ 100</div>
+    </td>
+    <td>
+        {% if governance.metrics.sub_scores %}
+        <table class="layout-table" width="100%">
+        {% for key, val in governance.metrics.sub_scores.items %}
+            <tr>
+                <td width="120" style="font-size: 10px; color: #1B365D; font-weight: 500; padding: 3px 8px 3px 0;">{{ key }}</td>
+                <td style="padding: 3px 0;">
+                    <div class="bar-track">
+                        <div class="bar-fill {% if val >= 70 %}bar-fill-green{% elif val >= 40 %}bar-fill-yellow{% else %}bar-fill-red{% endif %}" style="width: {{ val }}%;"></div>
+                    </div>
+                </td>
+                <td width="34" style="font-size: 10px; text-align: right; font-weight: 700; color: #1B365D; padding: 3px 0 3px 8px;">{{ val|floatformat:0 }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+    </td>
+</tr>
+</table>
+{% endif %}
+{% endwith %}
+
+{% endif %}{# linked_audit #}
+
+</body>
+</html>

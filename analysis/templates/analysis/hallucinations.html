@@ -1,0 +1,206 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Risques d'hallucination" %} - DocuScore{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">{% trans "Risques d'hallucination RAG" %}</h2>
+        <span class="text-muted" style="font-size:13px;">{{ page_obj.paginator.count }} {% trans "risque(s) d&eacute;tect&eacute;(s)" %}</span>
+    </div>
+    <div>
+        <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Retour" %}</a>
+    </div>
+</div>
+
+<div class="mb-3 d-flex flex-wrap gap-2">
+    <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Filtre par type' %}">
+        <a href="{% url 'analysis-hallucinations' job.pk %}{% if resolution_filter %}?resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-secondary {% if not type_filter %}active{% endif %}">{% trans "Tous" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?type=undefined_acronym{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-danger {% if type_filter == 'undefined_acronym' %}active{% endif %}">{% trans "Acronymes non d&eacute;finis" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?type=ambiguous_acronym{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-warning {% if type_filter == 'ambiguous_acronym' %}active{% endif %}">{% trans "Acronymes ambigus" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?type=conflicting_acronym{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-danger {% if type_filter == 'conflicting_acronym' %}active{% endif %}">{% trans "Acronymes contradictoires" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?type=jargon_no_context{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-info {% if type_filter == 'jargon_no_context' %}active{% endif %}">{% trans "Jargon sans contexte" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?type=hedging_language{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-secondary {% if type_filter == 'hedging_language' %}active{% endif %}">{% trans "Langage incertain" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?type=implicit_knowledge{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-secondary {% if type_filter == 'implicit_knowledge' %}active{% endif %}">{% trans "Connaissances implicites" %}</a>
+    </div>
+
+    <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Filtre par statut' %}">
+        <a href="{% url 'analysis-hallucinations' job.pk %}{% if type_filter %}?type={{ type_filter }}{% endif %}" class="btn btn-outline-secondary {% if not resolution_filter %}active{% endif %}">{% trans "Tous" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?resolution=unresolved{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-secondary {% if resolution_filter == 'unresolved' %}active{% endif %}">{% trans "Non trait&eacute;" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?resolution=resolved{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-success {% if resolution_filter == 'resolved' %}active{% endif %}">{% trans "Trait&eacute;" %}</a>
+        <a href="{% url 'analysis-hallucinations' job.pk %}?resolution=kept{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-info {% if resolution_filter == 'kept' %}active{% endif %}">{% trans "Conserv&eacute;" %}</a>
+    </div>
+</div>
+
+{% if can_edit and reports %}
+<div class="mb-2">
+    <label class="form-check form-check-inline">
+        <input type="checkbox" class="form-check-input" id="select-all">
+        <span class="form-check-label small">{% trans "Tout s&eacute;lectionner" %}</span>
+    </label>
+</div>
+{% endif %}
+
+{# Batch form #}
+<form method="post" action="{% url 'hallucination-batch-resolve' job.pk %}" id="batch-form">
+{% csrf_token %}
+<input type="hidden" name="type_filter" value="{{ type_filter }}">
+<input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
+</form>
+
+{% for report in reports %}
+<div class="report-card report-card-accent-{% if report.risk_type == 'conflicting_acronym' %}danger{% elif report.risk_type == 'undefined_acronym' %}danger{% elif report.risk_type == 'ambiguous_acronym' %}warning{% elif report.risk_type == 'jargon_no_context' %}info{% else %}secondary{% endif %} hallu-item {% if report.resolution == 'resolved' %}resolved{% endif %}">
+    <div class="report-card-header">
+        <div class="report-card-pills">
+            {% if can_edit %}
+            <input type="checkbox" class="form-check-input hallu-checkbox" form="batch-form" name="selected" value="{{ report.pk }}">
+            {% endif %}
+            <span class="report-pill report-pill-{% if report.risk_type == 'conflicting_acronym' or report.risk_type == 'undefined_acronym' %}danger{% elif report.risk_type == 'ambiguous_acronym' %}warning{% elif report.risk_type == 'jargon_no_context' %}info{% else %}secondary{% endif %}">
+                {{ report.get_risk_type_display }}
+            </span>
+            <span class="report-pill report-pill-{{ report.severity }}">{{ report.get_severity_display }}</span>
+            {% if report.resolution == 'resolved' %}
+                <span class="report-pill report-pill-success">{% trans "Trait&eacute;" %}</span>
+            {% elif report.resolution == 'kept' %}
+                <span class="report-pill report-pill-info">{% trans "Conserv&eacute;" %}</span>
+            {% endif %}
+        </div>
+        {% if can_edit %}
+        <div class="report-card-actions">
+            {% if report.resolution != 'resolved' %}
+            <button type="submit" form="single-{{ report.pk }}" name="resolution" value="resolved" class="btn btn-outline-success" title="{% trans 'Marquer comme trait&eacute;' %}">{% trans "Trait&eacute;" %}</button>
+            {% endif %}
+            {% if report.resolution != 'kept' %}
+            <button type="submit" form="single-{{ report.pk }}" name="resolution" value="kept" class="btn btn-outline-info" title="{% trans 'Conserver tel quel' %}">{% trans "Conserver" %}</button>
+            {% endif %}
+            {% if report.resolution %}
+            <button type="submit" form="single-{{ report.pk }}" name="resolution" value="" class="btn btn-outline-secondary" title="{% trans 'R&eacute;initialiser' %}">{% trans "Annuler" %}</button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <h6 class="report-card-title">{{ report.title }}</h6>
+    <p class="report-card-desc">{{ report.description }}</p>
+
+    {% if report.term %}
+    <div class="mb-1">
+        <span class="badge bg-dark bg-opacity-10 text-dark" style="font-family: monospace; font-size: 12px;">{{ report.term }}</span>
+    </div>
+    {% endif %}
+
+    {% if report.expansions %}
+    <details class="mt-1">
+        <summary class="small fw-semibold">{% trans "D&eacute;finitions trouv&eacute;es" %} ({{ report.expansions|length }})</summary>
+        <ul class="small mb-0 mt-1">
+            {% for exp in report.expansions %}
+            <li>
+                <strong>{{ exp.expansion }}</strong>
+                {% if exp.doc_titles %}
+                <span class="text-muted">
+                    &mdash; {% for dt in exp.doc_titles %}{{ dt }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+
+    {% if report.evidence.examples %}
+    <details class="mt-1">
+        <summary class="small fw-semibold">{% trans "Exemples de contexte" %} ({{ report.evidence.examples|length }})</summary>
+        <ul class="small mb-0 mt-1 text-muted" style="font-size: 11px;">
+            {% for ex in report.evidence.examples %}
+            <li style="margin-bottom: 4px;"><em>{{ ex|truncatechars:200 }}</em></li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+
+    <div class="report-card-meta">
+        <span>
+            <svg viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            {% trans "Score de risque :" %} <strong>{{ report.risk_score|floatformat:2 }}</strong>
+        </span>
+        {% if report.doc_count > 0 %}
+        <span>
+            <svg viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1" stroke="currentColor" stroke-width="1"/><path d="M4 0v4M8 0v4" stroke="currentColor" stroke-width="1"/></svg>
+            {{ report.doc_count }} {% trans "document(s)" %}
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-success">{% trans "Aucun risque d'hallucination d&eacute;tect&eacute;." %}</div>
+{% endfor %}
+
+{# Individual per-card forms #}
+{% if can_edit %}
+{% for report in reports %}
+<form method="post" action="{% url 'hallucination-resolve' job.pk report.pk %}" id="single-{{ report.pk }}" class="d-none">
+    {% csrf_token %}
+    <input type="hidden" name="type_filter" value="{{ type_filter }}">
+    <input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
+</form>
+{% endfor %}
+{% endif %}
+
+{# Infinite scroll #}
+{% if next_page_url %}
+<turbo-frame id="hallu-page-{{ page_obj.next_page_number }}" loading="lazy" src="{{ next_page_url }}">
+    <div class="text-center py-3">
+        <div class="spinner-border spinner-border-sm text-muted" role="status">
+            <span class="visually-hidden">{% trans "Chargement..." %}</span>
+        </div>
+    </div>
+</turbo-frame>
+{% endif %}
+
+{% if can_edit %}
+{# Sticky batch action bar #}
+<div id="batch-bar" class="position-fixed bottom-0 start-50 translate-middle-x mb-3 px-4 py-2 rounded-pill shadow d-none d-flex align-items-center gap-3" style="background: var(--bs-body-bg, #fff); border: 1px solid var(--bs-border-color, #dee2e6); z-index: 1050;">
+    <span id="batch-count" class="fw-semibold small"></span>
+    <button form="batch-form" type="submit" name="resolution" value="resolved" class="btn btn-sm btn-success">{% trans "Trait&eacute;" %}</button>
+    <button form="batch-form" type="submit" name="resolution" value="kept" class="btn btn-sm btn-info">{% trans "Conserver" %}</button>
+    <button form="batch-form" type="submit" name="resolution" value="" class="btn btn-sm btn-outline-secondary">{% trans "R&eacute;initialiser" %}</button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const selectAll = document.getElementById('select-all');
+    const batchBar = document.getElementById('batch-bar');
+    const batchCount = document.getElementById('batch-count');
+    if (!selectAll || !batchBar) return;
+
+    function getCheckboxes() {
+        return document.querySelectorAll('.hallu-checkbox');
+    }
+
+    function updateBar() {
+        const checked = document.querySelectorAll('.hallu-checkbox:checked').length;
+        if (checked > 0) {
+            batchBar.classList.remove('d-none');
+            batchCount.textContent = checked + ' s\u00e9lectionn\u00e9' + (checked > 1 ? 's' : '');
+        } else {
+            batchBar.classList.add('d-none');
+        }
+        const all = getCheckboxes();
+        selectAll.checked = all.length > 0 && checked === all.length;
+        selectAll.indeterminate = checked > 0 && checked < all.length;
+    }
+
+    selectAll.addEventListener('change', function() {
+        getCheckboxes().forEach(cb => { cb.checked = selectAll.checked; });
+        updateBar();
+    });
+
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('hallu-checkbox')) updateBar();
+    });
+})();
+</script>
+{% endblock %}

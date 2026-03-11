@@ -1,0 +1,112 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'fr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DocuScore{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <script>
+    (function(){
+        try {
+            var s = localStorage.getItem('ds-theme');
+            var t = (s === 'light' || s === 'dark') ? s
+                  : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-bs-theme', t);
+        } catch(e) {
+            document.documentElement.setAttribute('data-bs-theme',
+                window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        }
+    })();
+    </script>
+    <style>
+        /* ── Light tokens ── */
+        [data-bs-theme="light"] {
+            --ds-grey-800: #f5f6fa;
+            --ds-grey-700: #ffffff;
+            --ds-grey-500: #e2e4e9;
+            --ds-grey-100: #1d1e21;
+            --ds-text-muted: #6c717e;
+            --ds-shadow: rgba(0,0,0,0.06);
+            --ds-link: #0d6efd;
+            --ds-link-hover: #0a58ca;
+        }
+        /* ── Dark tokens ── */
+        [data-bs-theme="dark"] {
+            --ds-grey-800: #1f2024;
+            --ds-grey-700: #27282a;
+            --ds-grey-500: #37383a;
+            --ds-grey-100: #f8f8f8;
+            --ds-text-muted: #6c717e;
+            --ds-shadow: rgba(19,20,21,0.5);
+            --ds-link: #6ea8fe;
+            --ds-link-hover: #9ec5fe;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--ds-grey-800);
+            color: var(--ds-grey-100);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-card {
+            background: var(--ds-grey-700);
+            border: 1px solid var(--ds-grey-500);
+            border-radius: 12px;
+            box-shadow: 0 4px 24px var(--ds-shadow);
+            width: 100%;
+            max-width: 420px;
+            padding: 2.5rem 2rem;
+        }
+        .auth-logo {
+            font-weight: 700;
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 0.25rem;
+            color: var(--ds-grey-100);
+        }
+        .auth-subtitle {
+            text-align: center;
+            color: var(--ds-text-muted);
+            font-size: 14px;
+            margin-bottom: 2rem;
+        }
+        .form-control, .form-select {
+            background: var(--ds-grey-800);
+            border-color: var(--ds-grey-500);
+            color: var(--ds-grey-100);
+        }
+        .form-control:focus, .form-select:focus {
+            background: var(--ds-grey-800);
+            border-color: #dc3545;
+            color: var(--ds-grey-100);
+            box-shadow: 0 0 0 0.2rem rgba(220,53,69,0.25);
+        }
+        .form-label { color: var(--ds-grey-100); font-size: 14px; font-weight: 500; }
+        .auth-link { color: #dc3545; font-size: 13px; }
+        .auth-link:hover { color: #a71d2a; }
+        .auth-footer { text-align: center; margin-top: 1.5rem; font-size: 13px; color: var(--ds-text-muted); }
+        .auth-footer a { color: #dc3545; text-decoration: none; }
+        .auth-footer a:hover { color: #a71d2a; }
+        .alert { font-size: 13px; }
+        [data-bs-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="auth-logo">DocuScore</div>
+        <div class="auth-subtitle">{% block subtitle %}{% trans "Analyse documentaire d'entreprise" %}{% endblock %}</div>
+
+        {% block content %}{% endblock %}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% include "dashboard/includes/toasts.html" %}
+</body>
+</html>

@@ -1,0 +1,335 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Ajouter un connecteur - DocuScore" %}{% endblock %}
+{% block nav_connectors %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cf-wrap {
+        display: flex;
+        justify-content: center;
+        padding: 24px 0;
+    }
+    .cf-card {
+        width: 100%;
+        max-width: 520px;
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 14px;
+        padding: 36px 36px 28px;
+        position: relative;
+    }
+
+    /* Close button */
+    .cf-close {
+        position: absolute;
+        top: 16px; right: 16px;
+        background: none; border: none;
+        color: var(--ds-text-muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: color 0.15s;
+        line-height: 1;
+    }
+    .cf-close:hover { color: var(--ds-grey-100); }
+    .cf-close svg { width: 20px; height: 20px; }
+
+    /* Icon header */
+    .cf-icons {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+    .cf-icon-box {
+        width: 56px; height: 56px;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .cf-icon-box svg { width: 28px; height: 28px; }
+    .cf-icon-box.sharepoint { background: rgba(13,110,253,0.12); color: #60a5fa; }
+    .cf-icon-box.confluence { background: rgba(13,202,240,0.12); color: #22d3ee; }
+    .cf-icon-box.generic { background: rgba(108,113,126,0.12); color: #9ca3af; }
+    .cf-icon-box.docuscore { background: rgba(13,110,253,0.12); color: #0d6efd; }
+    .cf-arrow { color: var(--ds-text-muted); }
+    .cf-arrow svg { width: 20px; height: 20px; }
+
+    /* Title / subtitle */
+    .cf-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--ds-grey-100);
+        text-align: center;
+        margin-bottom: 6px;
+    }
+    .cf-subtitle {
+        font-size: 13px;
+        color: var(--ds-text-muted);
+        text-align: center;
+        margin-bottom: 28px;
+        line-height: 1.5;
+    }
+
+    /* Form fields */
+    .cf-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ds-grey-100);
+        margin-bottom: 6px;
+        display: block;
+    }
+    .cf-input {
+        width: 100%;
+        background: var(--ds-grey-800);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 10px;
+        color: var(--ds-grey-100);
+        font-size: 13px;
+        padding: 10px 14px;
+        transition: border-color 0.15s;
+    }
+    .cf-input:focus {
+        outline: none;
+        border-color: #0d6efd;
+    }
+    .cf-input::placeholder { color: var(--ds-text-muted); }
+    .cf-hint {
+        font-size: 11px;
+        color: var(--ds-text-muted);
+        margin-top: 4px;
+    }
+    .cf-group {
+        margin-bottom: 18px;
+    }
+
+    /* Select */
+    .cf-select {
+        width: 100%;
+        background: var(--ds-grey-800);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 10px;
+        color: var(--ds-grey-100);
+        font-size: 13px;
+        padding: 10px 14px;
+        transition: border-color 0.15s;
+        appearance: auto;
+    }
+    .cf-select:focus {
+        outline: none;
+        border-color: #0d6efd;
+    }
+
+    /* Submit button */
+    .cf-submit {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: #0d6efd;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 6px;
+    }
+    .cf-submit:hover { background: #0b5ed7; }
+    .cf-submit svg { width: 16px; height: 16px; }
+
+    /* Divider */
+    .cf-divider {
+        border: none;
+        border-top: 1px solid var(--ds-grey-500);
+        margin: 24px 0 16px;
+    }
+
+    /* Footer */
+    .cf-footer {
+        font-size: 12px;
+        color: var(--ds-text-muted);
+        text-align: center;
+        line-height: 1.6;
+    }
+    .cf-footer-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #0d6efd;
+        text-decoration: none;
+        margin-top: 8px;
+    }
+    .cf-footer-link:hover { text-decoration: underline; }
+    .cf-footer-link svg { width: 14px; height: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cf-wrap">
+    <div class="cf-card">
+        <!-- Close -->
+        <a href="{% url 'connector-list' %}" class="cf-close">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </a>
+
+        <!-- Icons: connector type ⇄ DocuScore -->
+        <div class="cf-icons">
+            <div class="cf-icon-box" id="cf-type-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            </div>
+            <div class="cf-arrow">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16l-4-4m0 0l4-4m-4 4h18"/><path d="M17 8l4 4m0 0l-4 4m4-4H3" opacity="0"/></svg>
+            </div>
+            <div class="cf-icon-box docuscore">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div class="cf-title" id="cf-title">{% trans "Connecter SharePoint &agrave; DocuScore" %}</div>
+        <div class="cf-subtitle">{% trans "Configurez les param&egrave;tres de connexion pour indexer automatiquement vos documents dans DocuScore." %}</div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Name -->
+            <div class="cf-group">
+                <label for="name" class="cf-label">{% trans "Nom du connecteur" %}</label>
+                <input type="text" name="name" id="name" class="cf-input" placeholder="{% trans "Ex. Documents RH" %}" required>
+            </div>
+
+            <!-- Type selector -->
+            <div class="cf-group">
+                <label for="connector_type" class="cf-label">{% trans "Type de source" %}</label>
+                <select name="connector_type" id="connector_type" class="cf-select">
+                    {% for val, label in connector_types %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- SharePoint config -->
+            <div id="config-sharepoint" class="connector-config">
+                <div class="cf-group">
+                    <label class="cf-label">{% trans "URL du site" %}</label>
+                    <input type="text" name="config_site_url" class="cf-input" placeholder="your-site.sharepoint.com">
+                </div>
+                <div class="cf-group">
+                    <label class="cf-label">{% trans "ID du lecteur (optionnel)" %}</label>
+                    <input type="text" name="config_drive_id" class="cf-input">
+                </div>
+                <div class="cf-group">
+                    <label class="cf-label">{% trans "Chemin du dossier" %}</label>
+                    <input type="text" name="config_folder_path" class="cf-input" value="/" placeholder="/">
+                </div>
+            </div>
+
+            <!-- Confluence config -->
+            <div id="config-confluence" class="connector-config" style="display:none">
+                <div class="cf-group">
+                    <label class="cf-label">{% trans "URL Confluence" %}</label>
+                    <input type="url" name="config_url" class="cf-input" placeholder="https://your-org.atlassian.net">
+                </div>
+                <div class="cf-group">
+                    <label class="cf-label">{% trans "Cl&eacute; d'espace" %}</label>
+                    <input type="text" name="config_space_key" class="cf-input">
+                </div>
+            </div>
+
+            <!-- Generic config -->
+            <div id="config-generic" class="connector-config" style="display:none">
+                <div class="cf-group">
+                    <label class="cf-label">{% trans "Type de source" %}</label>
+                    <select name="config_source_type" class="cf-select">
+                        <option value="filesystem">{% trans "Syst&egrave;me de fichiers local" %}</option>
+                        <option value="http">{% trans "URL HTTP/HTTPS" %}</option>
+                    </select>
+                </div>
+                <div class="cf-group">
+                    <label class="cf-label">{% trans "Chemin de base / URL" %}</label>
+                    <input type="text" name="config_base_path" class="cf-input" placeholder="/path/to/docs ou https://...">
+                </div>
+            </div>
+
+            <!-- Credential -->
+            <div class="cf-group">
+                <label for="credential_ref" class="cf-label">{% trans "R&eacute;f&eacute;rence d'authentification" %}</label>
+                <input type="text" name="credential_ref" id="credential_ref" class="cf-input" placeholder="{% trans "ex. SHAREPOINT_CLIENT_SECRET" %}">
+                <div class="cf-hint">{% trans "Nom de la variable d'environnement contenant la cl&eacute; API ou le secret." %}</div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="cf-submit">
+                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                {% trans "Connecter" %}
+            </button>
+        </form>
+
+        <hr class="cf-divider">
+
+        <div class="cf-footer">
+            {% trans "En cr&eacute;ant ce connecteur, vous autorisez DocuScore &agrave; acc&eacute;der et indexer les documents de la source configur&eacute;e. Vous pouvez le d&eacute;sactiver &agrave; tout moment depuis la page Connecteurs." %}
+            <br>
+            <a href="{% url 'connector-list' %}" class="cf-footer-link">
+                {% trans "Retour aux connecteurs" %}
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var icons = {
+        sharepoint: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
+        confluence: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+        generic: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    };
+    var classes = {
+        sharepoint: 'sharepoint',
+        confluence: 'confluence',
+        generic: 'generic'
+    };
+    var titles = {
+        sharepoint: 'Connecter SharePoint \u00e0 DocuScore',
+        confluence: 'Connecter Confluence \u00e0 DocuScore',
+        generic: 'Connecter une source \u00e0 DocuScore'
+    };
+
+    var select = document.getElementById('connector_type');
+    var iconBox = document.getElementById('cf-type-icon');
+    var titleEl = document.getElementById('cf-title');
+
+    function update(type) {
+        /* Icon */
+        iconBox.className = 'cf-icon-box ' + (classes[type] || 'generic');
+        iconBox.innerHTML = icons[type] || icons.generic;
+        /* Title */
+        titleEl.textContent = titles[type] || titles.generic;
+        /* Config panels */
+        document.querySelectorAll('.connector-config').forEach(function(el) { el.style.display = 'none'; });
+        var target = document.getElementById('config-' + type);
+        if (target) target.style.display = 'block';
+    }
+
+    select.addEventListener('change', function() { update(this.value); });
+
+    /* Init from query param or default */
+    var params = new URLSearchParams(window.location.search);
+    var initial = params.get('type');
+    if (initial && icons[initial]) {
+        select.value = initial;
+    }
+    update(select.value);
+})();
+</script>
+{% endblock %}

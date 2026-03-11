@@ -1,0 +1,69 @@
+{% load i18n %}
+<turbo-frame id="analysis-jobs">
+<div data-controller="auto-refresh"
+     data-auto-refresh-url-value="{% url 'analysis-jobs-partial' %}"
+     data-auto-refresh-frame-value="analysis-jobs"
+     data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+<table class="table table-hover mb-0">
+    <thead>
+        <tr><th>{% trans "ID" %}</th><th>{% trans "DocuScore" %}</th><th>{% trans "Statut" %}</th><th>{% trans "Phase" %}</th><th>{% trans "Progression" %}</th><th>{% trans "Audit RAG" %}</th><th>{% trans "Date" %}</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for job in jobs %}
+        <tr>
+            <td><code>{{ job.id|truncatechars:12 }}</code></td>
+            <td>
+                {% if job.docuscore %}
+                <div class="d-flex align-items-center gap-2">
+                    <span class="docuscore-inline">
+                        {% for letter in "ABCDE" %}
+                        <span class="ds-letter ds-{{ letter }}{% if job.docuscore.grade == letter %} active{% endif %}">{{ letter }}</span>
+                        {% endfor %}
+                    </span>
+                    <small style="font-weight:600;color:var(--ds-text-muted);">{{ job.docuscore.score }}</small>
+                </div>
+                {% else %}
+                <span class="text-muted" style="font-size:12px;">&mdash;</span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="badge bg-{% if job.status == 'completed' %}success{% elif job.status == 'running' %}primary{% elif job.status == 'failed' %}danger{% elif job.status == 'cancelled' %}warning{% else %}secondary{% endif %}">
+                    {{ job.get_status_display }}
+                </span>
+            </td>
+            <td><small>{{ job.get_current_phase_display }}</small></td>
+            <td>
+                <div class="progress" style="width: 100px;">
+                    <div class="progress-bar" style="width: {{ job.progress_pct }}%">{{ job.progress_pct }}%</div>
+                </div>
+            </td>
+            <td>
+                {% if job.linked_audit and job.linked_audit.overall_grade %}
+                <span class="docuscore-pill active docuscore-{{ job.linked_audit.overall_grade }}" style="width:24px;height:24px;font-size:12px;">{{ job.linked_audit.overall_grade }}</span>
+                <small>{{ job.linked_audit.overall_score|floatformat:0 }}</small>
+                {% elif job.linked_audit %}
+                <span class="text-muted">{% trans "En cours" %}</span>
+                {% else %}
+                <span class="text-muted">&mdash;</span>
+                {% endif %}
+            </td>
+            <td>
+                <small>{{ job.created_at|date:"d M Y, H:i" }}</small>
+            </td>
+            <td>
+                <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary" data-turbo-frame="_top">{% trans "Voir" %}</a>
+                {% if job.status == "queued" or job.status == "failed" or job.status == "cancelled" %}
+                <form method="post" action="{% url 'analysis-retry' job.pk %}" class="d-inline" data-turbo-frame="_top">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-warning">{% trans "R&eacute;essayer" %}</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">{% trans "Aucune analyse pour le moment. Lancez votre premi&egrave;re analyse pour obtenir un score." %}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+</turbo-frame>

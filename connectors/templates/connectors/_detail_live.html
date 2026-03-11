@@ -1,0 +1,223 @@
+{% load i18n %}
+<turbo-frame id="connector-live">
+<div data-controller="auto-refresh"
+     data-auto-refresh-url-value="{% url 'connector-detail-live-partial' connector.pk %}"
+     data-auto-refresh-frame-value="connector-live"
+     data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+
+<!-- ═══ KPI ROW ═══ -->
+<div class="kpi-row mb-4">
+    <div class="kpi-card" style="border-left: 3px solid #0d6efd;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {% trans "Documents" %}
+        </div>
+        <span class="kpi-value">{{ doc_total }}</span>
+        <div class="kpi-change neutral">{% trans "total index&eacute;s" %}</div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 3px solid #198754;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            {% trans "Pr&ecirc;ts" %}
+        </div>
+        <span class="kpi-value">{{ doc_ready }}</span>
+        <div class="kpi-change positive">{% trans "disponibles pour l'analyse" %}</div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 3px solid #6c717e;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {% trans "En attente" %}
+        </div>
+        <span class="kpi-value">{{ doc_pending }}</span>
+        <div class="kpi-change neutral">{% trans "en cours de traitement" %}</div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 3px solid {% if doc_error > 0 %}#dc3545{% else %}#198754{% endif %};">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            {% trans "Erreurs" %}
+        </div>
+        <span class="kpi-value">{{ doc_error }}</span>
+        <div class="kpi-change {% if doc_error > 0 %}negative{% else %}positive{% endif %}">
+            {% if doc_error > 0 %}{% trans "documents en &eacute;chec" %}{% else %}{% trans "aucune erreur" %}{% endif %}
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-left: 3px solid #a78bfa;">
+        <div class="kpi-label">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+            {% trans "Mots" %}
+        </div>
+        <span class="kpi-value">{{ total_words|floatformat:0 }}</span>
+        <div class="kpi-change neutral">{% trans "dans" %} {{ total_chunks|floatformat:0 }} {% trans "fragments" %}</div>
+    </div>
+</div>
+
+<!-- ═══ SNAPSHOT + NOTIFICATIONS + ACTIVITY ═══ -->
+<div class="row g-3 mb-4">
+    <!-- Snapshot -->
+    <div class="col-lg-7">
+        <div class="section-header">
+            <div class="section-title">{% trans "Aper&ccedil;u du connecteur" %}</div>
+        </div>
+        <div class="section-subtitle">{% trans "Informations et statistiques d&eacute;taill&eacute;es." %}</div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header" style="font-size:13px;font-weight:600;">{% trans "Informations" %}</div>
+                    <div class="card-body" style="font-size:13px;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">{% trans "Type" %}</span>
+                            <span class="badge bg-{% if connector.connector_type == 'sharepoint' %}primary{% elif connector.connector_type == 'confluence' %}info{% else %}secondary{% endif %}">{{ connector.get_connector_type_display }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">{% trans "Statut" %}</span>
+                            <span class="badge bg-{% if connector.enabled %}success{% else %}danger{% endif %}">{% if connector.enabled %}{% trans "Actif" %}{% else %}{% trans "D&eacute;sactiv&eacute;" %}{% endif %}</span>
+                        </div>
+                        {% if connector.schedule_cron %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">{% trans "Planification" %}</span>
+                            <code style="font-size:11px;">{{ connector.schedule_cron }}</code>
+                        </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">{% trans "Derni&egrave;re synchro" %}</span>
+                            <span>{{ connector.last_sync_at|date:"d M Y, H:i"|default:"Jamais" }}</span>
+                        </div>
+                        {% if connector.last_sync_status %}
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">{% trans "R&eacute;sultat" %}</span>
+                            <span class="badge bg-{% if connector.last_sync_status == 'success' %}success{% else %}danger{% endif %}">{{ connector.last_sync_status }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header" style="font-size:13px;font-weight:600;">{% trans "Statistiques" %}</div>
+                    <div class="card-body p-0">
+                        <div class="snap-grid">
+                            <div class="snap-cell">
+                                <div class="snap-label">{% trans "Documents" %}</div>
+                                <div class="snap-value">{{ doc_total }}</div>
+                            </div>
+                            <div class="snap-cell">
+                                <div class="snap-label">{% trans "Fragments" %}</div>
+                                <div class="snap-value">{{ total_chunks|floatformat:0 }}</div>
+                            </div>
+                            <div class="snap-cell">
+                                <div class="snap-label">{% trans "Total mots" %}</div>
+                                <div class="snap-value">{{ total_words|floatformat:0 }}</div>
+                            </div>
+                            <div class="snap-cell">
+                                <div class="snap-label">{% trans "Pr&ecirc;ts" %}</div>
+                                <div class="snap-value" style="color:#34d399;">{{ doc_ready }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications + Activity Feed -->
+    <div class="col-lg-5">
+        <div class="section-header">
+            <div class="section-title">{% trans "Notifications" %}</div>
+        </div>
+        <div class="section-subtitle">{% trans "&Eacute;tat du connecteur et alertes." %}</div>
+        <div class="mb-3">
+                {% if doc_error > 0 %}
+                <div class="notif-card priority">
+                    <span class="notif-badge priority">{% trans "Priorit&eacute;" %}</span>
+                    <div class="notif-title">{{ doc_error }} {% trans "document(s) en erreur" %}</div>
+                    <div class="notif-detail">{% trans "Certains documents n'ont pas pu &ecirc;tre trait&eacute;s. V&eacute;rifiez les formats et les permissions." %}</div>
+                    <div class="mt-2">
+                        <a href="#documents-table" class="btn btn-sm btn-outline-danger" style="font-size:11px;">{% trans "Voir les documents" %}</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if doc_pending > 0 %}
+                <div class="notif-card attention">
+                    <span class="notif-badge attention">{% trans "Attention" %}</span>
+                    <div class="notif-title">{{ doc_pending }} {% trans "document(s) en attente" %}</div>
+                    <div class="notif-detail">{% trans "Des documents sont en cours de traitement ou en file d'attente." %}</div>
+                </div>
+                {% endif %}
+
+                {% if connector.last_sync_status == 'failed' %}
+                <div class="notif-card priority">
+                    <span class="notif-badge priority">{% trans "Priorit&eacute;" %}</span>
+                    <div class="notif-title">{% trans "Derni&egrave;re synchronisation &eacute;chou&eacute;e" %}</div>
+                    <div class="notif-detail">{% trans "V&eacute;rifiez la configuration du connecteur et les identifiants d'acc&egrave;s." %}</div>
+                    {% if membership.can_edit %}
+                    <div class="mt-2">
+                        <form method="post" action="{% url 'connector-sync' connector.pk %}" class="d-inline" data-turbo-frame="_top">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-success" style="font-size:11px;">{% trans "R&eacute;essayer" %}</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if not connector.last_sync_at %}
+                <div class="notif-card info">
+                    <div class="notif-title">{% trans "Jamais synchronis&eacute;" %}</div>
+                    <div class="notif-detail">{% trans "Ce connecteur n'a jamais &eacute;t&eacute; synchronis&eacute;. Lancez une premi&egrave;re synchronisation pour importer vos documents." %}</div>
+                    {% if membership.can_edit %}
+                    <div class="mt-2">
+                        <form method="post" action="{% url 'connector-sync' connector.pk %}" class="d-inline" data-turbo-frame="_top">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success" style="font-size:11px;">{% trans "Synchroniser maintenant" %}</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if doc_error == 0 and doc_pending == 0 and connector.last_sync_status != 'failed' and connector.last_sync_at %}
+                <div class="notif-card ok">
+                    <div class="notif-title">{% trans "Tout est en ordre" %}</div>
+                    <div class="notif-detail">{{ doc_ready }} {% trans "document(s) pr&ecirc;t(s), aucune erreur d&eacute;tect&eacute;e. Derni&egrave;re synchro :" %} {{ connector.last_sync_at|timesince }}.</div>
+                </div>
+                {% endif %}
+        </div>
+
+        <div class="section-header">
+            <div class="section-title">{% trans "Historique d'ing&eacute;ration" %}</div>
+        </div>
+        <div class="section-subtitle">{% trans "Derni&egrave;res synchronisations." %}</div>
+        <div class="card" style="max-height:300px;overflow-y:auto;">
+            <div class="card-body py-1 px-3">
+                {% for job in jobs %}
+                <div class="feed-item">
+                    <span class="feed-dot {{ job.status }}"></span>
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:13px;font-weight:500;color:var(--ds-grey-100);">
+                            {{ job.get_status_display }}
+                            <span class="text-muted" style="font-size:11px;">&mdash; {{ job.processed_documents }}/{{ job.total_documents }} docs</span>
+                        </div>
+                        <div style="font-size:11px;color:var(--ds-text-muted);">
+                            {% if job.new_documents %}+{{ job.new_documents }} {% trans "nouveaux" %}{% endif %}
+                            {% if job.updated_documents %}&middot; {{ job.updated_documents }} {% trans "maj" %}{% endif %}
+                            {% if job.deleted_documents %}&middot; {{ job.deleted_documents }} {% trans "suppr" %}{% endif %}
+                            {% if job.error_count %}&middot; <span style="color:#f87171;">{{ job.error_count }} {% trans "erreur(s)" %}</span>{% endif %}
+                        </div>
+                    </div>
+                    <span style="font-size:10px;color:var(--ds-text-muted);white-space:nowrap;margin-left:auto;">{{ job.created_at|timesince }}</span>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3" style="font-size:12px;">{% trans "Aucune synchronisation pour le moment" %}</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+</turbo-frame>

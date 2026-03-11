@@ -1,0 +1,2105 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: DocuScore 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-10 15:03+0000\n"
+"PO-Revision-Date: 2026-02-10 15:03+0000\n"
+"Last-Translator: DocuScore Team\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "En attente"
+msgstr ""
+
+msgid "En cours"
+msgstr ""
+
+msgid "Terminé"
+msgstr ""
+
+msgid "Échoué"
+msgstr ""
+
+msgid "Détection des doublons"
+msgstr ""
+
+msgid "Extraction des affirmations"
+msgstr ""
+
+msgid "Graphe sémantique"
+msgstr ""
+
+msgid "Détection des contradictions"
+msgstr ""
+
+msgid "Clustering thématique"
+msgstr ""
+
+msgid "Détection des lacunes"
+msgstr ""
+
+msgid "Index arborescent"
+msgstr ""
+
+msgid "Audit : Hygiène"
+msgstr ""
+
+msgid "Audit : Structure"
+msgstr ""
+
+msgid "Audit : Couverture"
+msgstr ""
+
+msgid "Audit : Cohérence"
+msgstr ""
+
+msgid "Audit : Retrievability"
+msgstr ""
+
+msgid "Audit : Gouvernance"
+msgstr ""
+
+msgid "Fusionner"
+msgstr ""
+
+msgid "Supprimer l'ancien"
+msgstr ""
+
+msgid "Vérification manuelle"
+msgstr ""
+
+msgid "Conserver les deux (liés, pas doublons)"
+msgstr ""
+
+msgid "Contradiction"
+msgstr ""
+
+msgid "Obsolète"
+msgstr ""
+
+msgid "Implication"
+msgstr ""
+
+msgid "Sans rapport"
+msgstr ""
+
+msgid "Élevée"
+msgstr ""
+
+msgid "Moyenne"
+msgstr ""
+
+msgid "Faible"
+msgstr ""
+
+msgid "Sujet manquant"
+msgstr ""
+
+msgid "Faible couverture"
+msgstr ""
+
+msgid "Zone obsolète"
+msgstr ""
+
+msgid "Sujet orphelin"
+msgstr ""
+
+msgid "Pont fragile"
+msgstr ""
+
+msgid "Îlot conceptuel"
+msgstr ""
+
+msgid "Hygiène du corpus"
+msgstr ""
+
+msgid "Structure RAG"
+msgstr ""
+
+msgid "Couverture sémantique"
+msgstr ""
+
+msgid "Cohérence interne"
+msgstr ""
+
+msgid "Retrievability"
+msgstr ""
+
+msgid "Gouvernance & metadata"
+msgstr ""
+
+msgid "Catégorie"
+msgstr ""
+
+msgid "Cluster"
+msgstr ""
+
+msgid "Sous-cluster"
+msgstr ""
+
+msgid "Document"
+msgstr ""
+
+msgid "Section"
+msgstr ""
+
+msgid "Ignoré"
+msgstr ""
+
+msgid "ID"
+msgstr ""
+
+msgid "DocuScore"
+msgstr ""
+
+msgid "Statut"
+msgstr ""
+
+msgid "Phase"
+msgstr ""
+
+msgid "Progression"
+msgstr ""
+
+msgid "Audit RAG"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Voir"
+msgstr ""
+
+msgid "R&eacute;essayer"
+msgstr ""
+
+msgid ""
+"Aucune analyse pour le moment. Lancez votre premi&egrave;re analyse pour "
+"obtenir un score."
+msgstr ""
+
+msgid "Phase :"
+msgstr ""
+
+msgid "Temps restant :"
+msgstr ""
+
+msgid "Analyse en attente"
+msgstr ""
+
+msgid "Analyse en cours"
+msgstr ""
+
+msgid "Analyse du corpus"
+msgstr ""
+
+msgid "Audit qualit&eacute;"
+msgstr ""
+
+msgid "Retour &agrave; l'historique"
+msgstr ""
+
+msgid "Arr&ecirc;ter l'analyse"
+msgstr ""
+
+msgid "Arr&ecirc;ter cette analyse en cours ?"
+msgstr ""
+
+msgid "Arr&ecirc;ter"
+msgstr ""
+
+msgid "Supprimer l'analyse"
+msgstr ""
+
+msgid ""
+"Supprimer cette analyse et tous ses r&eacute;sultats ? Cette action est "
+"irr&eacute;versible."
+msgstr ""
+
+msgid "Supprimer"
+msgstr ""
+
+msgid "Documents"
+msgstr ""
+
+msgid "index&eacute;s dans le projet"
+msgstr ""
+
+msgid "Doublons"
+msgstr ""
+
+msgid "Contradictions"
+msgstr ""
+
+msgid "Lacunes"
+msgstr ""
+
+msgid "Analyse"
+msgstr ""
+
+msgid "Vue d'ensemble"
+msgstr ""
+
+msgid "Trace pipeline"
+msgstr ""
+
+msgid "Analyses"
+msgstr ""
+
+msgid "Score global RAG"
+msgstr ""
+
+msgid ""
+"Score pond&eacute;r&eacute; des 6 axes de qualit&eacute; RAG de votre base "
+"documentaire."
+msgstr ""
+
+msgid "Scores par axe"
+msgstr ""
+
+msgid ""
+"Comparaison des scores actuels avec l'objectif de 70/100 sur chaque axe."
+msgstr ""
+
+msgid "Scores actuels"
+msgstr ""
+
+msgid "Objectif (70)"
+msgstr ""
+
+msgid "D&eacute;tails"
+msgstr ""
+
+msgid "Sous-scores"
+msgstr ""
+
+msgid "Valeur"
+msgstr ""
+
+msgid "Niveau"
+msgstr ""
+
+msgid "Aucun r&eacute;sultat"
+msgstr ""
+
+msgid "Projection 2D par topic"
+msgstr ""
+
+msgid "Vue compl&egrave;te"
+msgstr ""
+
+msgid "L'audit RAG est en cours de traitement&hellip;"
+msgstr ""
+
+msgid "Aucun audit RAG n'est disponible pour cette analyse."
+msgstr ""
+
+msgid "Clusters th&eacute;matiques"
+msgstr ""
+
+msgid "Graphe des clusters th&eacute;matiques"
+msgstr ""
+
+msgid "Retour"
+msgstr ""
+
+msgid "D&eacute;tails des clusters"
+msgstr ""
+
+msgid "Libell&eacute;"
+msgstr ""
+
+msgid "Finalit&eacute;"
+msgstr ""
+
+msgid "Concepts cl&eacute;s"
+msgstr ""
+
+msgid "Docs"
+msgstr ""
+
+msgid "Fragments"
+msgstr ""
+
+msgid "R&eacute;sum&eacute;"
+msgstr ""
+
+msgid "Rapport des contradictions"
+msgstr ""
+
+msgid "Contradictions et informations obsol&egrave;tes"
+msgstr ""
+
+msgid "Exporter CSV"
+msgstr ""
+
+msgid "Tous"
+msgstr ""
+
+msgid "Obsol&egrave;tes"
+msgstr ""
+
+msgid "Confiance :"
+msgstr ""
+
+msgid "Affirmation A"
+msgstr ""
+
+msgid "Affirmation B"
+msgstr ""
+
+msgid "Preuve :"
+msgstr ""
+
+msgid "Affirmation de r&eacute;f&eacute;rence :"
+msgstr ""
+
+msgid "de"
+msgstr ""
+
+msgid "Aucune contradiction ni information obsol&egrave;te trouv&eacute;e."
+msgstr ""
+
+msgid "R&eacute;sultats d'analyse"
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "Trace du pipeline"
+msgstr ""
+
+msgid "Exporter"
+msgstr ""
+
+msgid "Doublons CSV"
+msgstr ""
+
+msgid "Contradictions CSV"
+msgstr ""
+
+msgid "Rapport complet JSON"
+msgstr ""
+
+msgid "Rapport complet PDF"
+msgstr ""
+
+msgid "Configuration personnalis&eacute;e"
+msgstr ""
+
+msgid "cliquer pour d&eacute;plier"
+msgstr ""
+
+msgid "Qualit&eacute; de la base"
+msgstr ""
+
+msgid "Unicit&eacute;"
+msgstr ""
+
+msgid "Coh&eacute;rence"
+msgstr ""
+
+msgid "Couverture"
+msgstr ""
+
+msgid "Structure"
+msgstr ""
+
+msgid "Sant&eacute;"
+msgstr ""
+
+msgid "Gouvernance"
+msgstr ""
+
+msgid "Alertes"
+msgstr ""
+
+msgid "Aucune alerte. Votre base est en bonne sant&eacute;."
+msgstr ""
+
+msgid "Carte des concepts"
+msgstr ""
+
+msgid "Chargement&hellip;"
+msgstr ""
+
+msgid "Rapport des doublons"
+msgstr ""
+
+msgid "Groupes de doublons"
+msgstr ""
+
+msgid "Retour &agrave; l'analyse"
+msgstr ""
+
+msgid "&Agrave; v&eacute;rifier"
+msgstr ""
+
+msgid "Conserver les deux"
+msgstr ""
+
+msgid "Groupe"
+msgstr ""
+
+msgid "paire(s)"
+msgstr ""
+
+msgid "Document A"
+msgstr ""
+
+msgid "Document B"
+msgstr ""
+
+msgid "S&eacute;mantique"
+msgstr ""
+
+msgid "Lexical"
+msgstr ""
+
+msgid "M&eacute;tadonn&eacute;es"
+msgstr ""
+
+msgid "Combin&eacute;"
+msgstr ""
+
+msgid "V&eacute;rification"
+msgstr ""
+
+msgid "Source"
+msgstr ""
+
+msgid "Aucun groupe de doublons trouv&eacute; dans cette analyse."
+msgstr ""
+
+msgid "Lacunes de couverture"
+msgstr ""
+
+msgid "Lacunes de couverture et sujets manquants"
+msgstr ""
+
+msgid "Sujets manquants"
+msgstr ""
+
+msgid "Zones obsol&egrave;tes"
+msgstr ""
+
+msgid "Sujets orphelins"
+msgstr ""
+
+msgid "Couverture :"
+msgstr ""
+
+msgid "Cluster associ&eacute; :"
+msgstr ""
+
+msgid "Questions sans r&eacute;ponse :"
+msgstr ""
+
+msgid "Manquant :"
+msgstr ""
+
+msgid "Aucune lacune de couverture significative d&eacute;tect&eacute;e."
+msgstr ""
+
+msgid ""
+"Le graphe s&eacute;mantique n'a pas &eacute;t&eacute; construit pour cette "
+"analyse."
+msgstr ""
+
+msgid "Rechercher un concept ou un sujet&hellip;"
+msgstr ""
+
+msgid "Rechercher"
+msgstr ""
+
+msgid "R&eacute;initialiser"
+msgstr ""
+
+msgid "L&eacute;gende"
+msgstr ""
+
+msgid "Faible degr&eacute;"
+msgstr ""
+
+msgid "Haut degr&eacute;"
+msgstr ""
+
+msgid "Concept recherch&eacute;"
+msgstr ""
+
+msgid "Historique des analyses"
+msgstr ""
+
+msgid ""
+"Chaque ligne est un snapshot de votre base de connaissances. Comparez les "
+"scores entre versions pour mesurer vos progr&egrave;s au fil du temps et "
+"identifier les r&eacute;gressions."
+msgstr ""
+
+msgid "Lancer une analyse"
+msgstr ""
+
+msgid "Synchronisez vos connecteurs pour lancer une nouvelle analyse."
+msgstr ""
+
+msgid "Une analyse est d&eacute;j&agrave; en cours."
+msgstr ""
+
+msgid "Ajoutez des documents pour lancer une analyse."
+msgstr ""
+
+msgid "Configuration de l'analyse"
+msgstr ""
+
+msgid "Choisissez comment configurer cette analyse."
+msgstr ""
+
+msgid "Configuration par d&eacute;faut"
+msgstr ""
+
+msgid "Utiliser les param&egrave;tres optimis&eacute;s de config.yaml"
+msgstr ""
+
+msgid "Configuration manuelle"
+msgstr ""
+
+msgid "Ajuster les seuils, poids et algorithmes"
+msgstr ""
+
+msgid "Annuler"
+msgstr ""
+
+msgid "Lancer"
+msgstr ""
+
+msgid "Poids s&eacute;mantique"
+msgstr ""
+
+msgid "Poids lexical"
+msgstr ""
+
+msgid "Poids m&eacute;tadonn&eacute;es"
+msgstr ""
+
+msgid "Seuil s&eacute;mantique"
+msgstr ""
+
+msgid "Seuil combin&eacute;"
+msgstr ""
+
+msgid "Seuil cross-encoder"
+msgstr ""
+
+msgid "Seuil v&eacute;rification LLM"
+msgstr ""
+
+msgid "Seuil LSH"
+msgstr ""
+
+msgid "Taille batch LLM"
+msgstr ""
+
+msgid "MinHash num_perm"
+msgstr ""
+
+msgid "Seuil de confiance"
+msgstr ""
+
+msgid "Seuil de similarit&eacute;"
+msgstr ""
+
+msgid "Max voisins"
+msgstr ""
+
+msgid "Claims par chunk"
+msgstr ""
+
+msgid "Seuil obsolescence (jours)"
+msgstr ""
+
+msgid "Clustering"
+msgstr ""
+
+msgid "Algorithme"
+msgstr ""
+
+msgid "Taille min cluster"
+msgstr ""
+
+msgid "Min samples"
+msgstr ""
+
+msgid "KMeans k"
+msgstr ""
+
+msgid "(vide = auto)"
+msgstr ""
+
+msgid "Subcluster min membres"
+msgstr ""
+
+msgid "Questions par cluster"
+msgstr ""
+
+msgid "Taille max cluster orphelin"
+msgstr ""
+
+msgid "G&eacute;n&eacute;ral"
+msgstr ""
+
+msgid "Batch API"
+msgstr ""
+
+msgid "Lancer l'analyse"
+msgstr ""
+
+msgid "Aucune trace disponible pour cette analyse."
+msgstr ""
+
+msgid "Tokens totaux"
+msgstr ""
+
+msgid "Appels LLM"
+msgstr ""
+
+msgid "Appels Embedding"
+msgstr ""
+
+msgid "Dur&eacute;e totale"
+msgstr ""
+
+msgid "Dur&eacute;e par phase"
+msgstr ""
+
+msgid "Distribution des tokens"
+msgstr ""
+
+msgid "Phases du pipeline"
+msgstr ""
+
+msgid "Dur&eacute;e"
+msgstr ""
+
+msgid "Tokens prompt"
+msgstr ""
+
+msgid "Tokens completion"
+msgstr ""
+
+msgid "Tokens total"
+msgstr ""
+
+msgid "Appels embed"
+msgstr ""
+
+msgid "Appels search"
+msgstr ""
+
+msgid "Items entr&eacute;e"
+msgstr ""
+
+msgid "Items sortie"
+msgstr ""
+
+msgid "Journal des &eacute;v&eacute;nements"
+msgstr ""
+
+msgid "Filtrer par type :"
+msgstr ""
+
+msgid "Horodatage"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Tokens"
+msgstr ""
+
+msgid "Items"
+msgstr ""
+
+msgid "Mod&egrave;le"
+msgstr ""
+
+msgid "Arbre taxonomique des documents"
+msgstr ""
+
+#, python-format
+msgid "%(count)s contradiction(s) critique(s)"
+msgstr ""
+
+msgid "Des affirmations contradictoires de haute sévérité ont été détectées."
+msgstr ""
+
+msgid "Voir les contradictions"
+msgstr ""
+
+#, python-format
+msgid "%(count)s groupe(s) de doublons à traiter"
+msgstr ""
+
+msgid ""
+"Des documents redondants alourdissent votre base et peuvent fausser les "
+"résultats RAG."
+msgstr ""
+
+msgid "Voir les doublons"
+msgstr ""
+
+#, python-format
+msgid "%(count)s lacune(s) de couverture critique(s)"
+msgstr ""
+
+msgid "Des sujets importants ne sont pas couverts par votre documentation."
+msgstr ""
+
+msgid "Voir les lacunes"
+msgstr ""
+
+#, python-format
+msgid "%(count)s document(s) en erreur"
+msgstr ""
+
+msgid "Certains documents n'ont pas pu être ingérés correctement."
+msgstr ""
+
+msgid "Gérer les connecteurs"
+msgstr ""
+
+msgid "Annulé par l’utilisateur."
+msgstr ""
+
+msgid "Unicité"
+msgstr ""
+
+msgid "Cohérence"
+msgstr ""
+
+msgid "Santé"
+msgstr ""
+
+msgid "Utilisateur"
+msgstr ""
+
+msgid "Assistant"
+msgstr ""
+
+msgid "Assistant — DocuScore"
+msgstr ""
+
+msgid "Historique"
+msgstr ""
+
+msgid "Nouveau chat"
+msgstr ""
+
+msgid "Rechercher..."
+msgstr ""
+
+msgid "Fermer"
+msgstr ""
+
+msgid "Sans titre"
+msgstr ""
+
+msgid "Aucune conversation"
+msgstr ""
+
+msgid "Assistant documentaire"
+msgstr ""
+
+msgid "Posez des questions sur vos documents."
+msgstr ""
+
+msgid "Aucun document dans ce projet"
+msgstr ""
+
+msgid "Ajoutez des documents via un connecteur pour interroger l'assistant."
+msgstr ""
+
+msgid "Ajouter un connecteur"
+msgstr ""
+
+msgid "Posez votre question à Archi+"
+msgstr ""
+
+msgid "Outils"
+msgstr ""
+
+msgid "Prompt système"
+msgstr ""
+
+msgid "AGENTS :"
+msgstr ""
+
+msgid "Aucun outil actif"
+msgstr ""
+
+msgid "Options"
+msgstr ""
+
+msgid "Configurer les outils"
+msgstr ""
+
+msgid "Supprimer la conversation"
+msgstr ""
+
+msgid "Télécharger"
+msgstr ""
+
+msgid "Ouvrir la source"
+msgstr ""
+
+msgid "Page précédente"
+msgstr ""
+
+msgid "Page suivante"
+msgstr ""
+
+msgid "Chargement du document..."
+msgstr ""
+
+msgid "Zoom arrière"
+msgstr ""
+
+msgid "Zoom avant"
+msgstr ""
+
+msgid "Prompt système de l'assistant"
+msgstr ""
+
+msgid "Personnalisez les instructions données à l'assistant. La variable"
+msgstr ""
+
+msgid ""
+"sera remplacée par les passages de documents trouvés — elle est obligatoire "
+"et ne peut pas être supprimée."
+msgstr ""
+
+msgid "Variables :"
+msgstr ""
+
+#, python-brace-format
+msgid "Insérer {context}"
+msgstr ""
+
+msgid "Entrez votre prompt système personnalisé..."
+msgstr ""
+
+msgid "caractères"
+msgstr ""
+
+#, python-brace-format
+msgid "{context} présent"
+msgstr ""
+
+msgid "Rétablir par défaut"
+msgstr ""
+
+msgid "Enregistrer"
+msgstr ""
+
+msgid "Impossible de charger la conversation."
+msgstr ""
+
+msgid "sources"
+msgstr ""
+
+msgid "source"
+msgstr ""
+
+msgid "Erreur de connexion. Veuillez réessayer."
+msgstr ""
+
+msgid "Retirer"
+msgstr ""
+
+msgid "Textuel"
+msgstr ""
+
+msgid "Codage"
+msgstr ""
+
+msgid "Raisonnement"
+msgstr ""
+
+msgid "Supprimer cette conversation ?"
+msgstr ""
+
+msgid "Chargement..."
+msgstr ""
+
+msgid "Échec du chargement"
+msgstr ""
+
+msgid "mots"
+msgstr ""
+
+msgid "fragments"
+msgstr ""
+
+msgid "Erreur"
+msgstr ""
+
+#, python-brace-format
+msgid "{context} manquant"
+msgstr ""
+
+msgid "Enregistrement..."
+msgstr ""
+
+msgid "Prompt système enregistré"
+msgstr ""
+
+msgid "Erreur de connexion"
+msgstr ""
+
+msgid "Aucun projet sélectionné."
+msgstr ""
+
+msgid "JSON invalide."
+msgstr ""
+
+msgid "Le message est vide."
+msgstr ""
+
+msgid "Une erreur est survenue lors du traitement de votre question."
+msgstr ""
+
+msgid "Je n'ai pas pu générer de réponse. Veuillez reformuler votre question."
+msgstr ""
+
+#, python-brace-format
+msgid "La variable {context} est obligatoire dans le prompt système."
+msgstr ""
+
+msgid "SharePoint"
+msgstr ""
+
+msgid "Confluence"
+msgstr ""
+
+msgid "Générique (Fichier/HTTP)"
+msgstr ""
+
+msgid "Connecteurs"
+msgstr ""
+
+msgid "Sources de donn&eacute;es de votre projet"
+msgstr ""
+
+msgid "Nouveau connecteur"
+msgstr ""
+
+msgid "Filtrer par nom ou type"
+msgstr ""
+
+msgid "Nom"
+msgstr ""
+
+msgid "Derni&egrave;re synchro"
+msgstr ""
+
+msgid "Succ&egrave;s"
+msgstr ""
+
+msgid "Jamais"
+msgstr ""
+
+msgid "document(s)"
+msgstr ""
+
+msgid "Actif"
+msgstr ""
+
+msgid "D&eacute;sactiv&eacute;"
+msgstr ""
+
+msgid "Synchroniser"
+msgstr ""
+
+msgid "Supprimer le connecteur"
+msgstr ""
+
+msgid "et tous ses documents ?"
+msgstr ""
+
+msgid "Aucun connecteur configur&eacute; pour ce projet."
+msgstr ""
+
+msgid ""
+"Connectez une source de donn&eacute;es pour indexer vos documents dans le "
+"projet."
+msgstr ""
+
+msgid "Biblioth&egrave;ques SharePoint Online"
+msgstr ""
+
+msgid "Espaces Confluence Cloud"
+msgstr ""
+
+msgid "Fichiers locaux ou URL"
+msgstr ""
+
+msgid "Connecter SharePoint &agrave; DocuScore"
+msgstr ""
+
+msgid ""
+"Configurez les param&egrave;tres de connexion pour indexer automatiquement "
+"vos documents dans DocuScore."
+msgstr ""
+
+msgid "Nom du connecteur"
+msgstr ""
+
+msgid "Ex. Documents RH"
+msgstr ""
+
+msgid "Type de source"
+msgstr ""
+
+msgid "URL du site"
+msgstr ""
+
+msgid "ID du lecteur (optionnel)"
+msgstr ""
+
+msgid "Chemin du dossier"
+msgstr ""
+
+msgid "URL Confluence"
+msgstr ""
+
+msgid "Cl&eacute; d'espace"
+msgstr ""
+
+msgid "Syst&egrave;me de fichiers local"
+msgstr ""
+
+msgid "URL HTTP/HTTPS"
+msgstr ""
+
+msgid "Chemin de base / URL"
+msgstr ""
+
+msgid "R&eacute;f&eacute;rence d'authentification"
+msgstr ""
+
+msgid "ex. SHAREPOINT_CLIENT_SECRET"
+msgstr ""
+
+msgid ""
+"Nom de la variable d'environnement contenant la cl&eacute; API ou le secret."
+msgstr ""
+
+msgid "Connecter"
+msgstr ""
+
+msgid ""
+"En cr&eacute;ant ce connecteur, vous autorisez DocuScore &agrave; "
+"acc&eacute;der et indexer les documents de la source configur&eacute;e. Vous "
+"pouvez le d&eacute;sactiver &agrave; tout moment depuis la page Connecteurs."
+msgstr ""
+
+msgid "T&acirc;ches d'ingestion"
+msgstr ""
+
+msgid "Nouveaux"
+msgstr ""
+
+msgid "Mis &agrave; jour"
+msgstr ""
+
+msgid "Supprim&eacute;s"
+msgstr ""
+
+msgid "Erreurs"
+msgstr ""
+
+msgid "Aucune t&acirc;che pour le moment"
+msgstr ""
+
+msgid "Ajouter un connecteur - DocuScore"
+msgstr ""
+
+msgid "Retour aux connecteurs"
+msgstr ""
+
+msgid "et tous ses documents ? Cette action est irr&eacute;versible."
+msgstr ""
+
+msgid "total index&eacute;s"
+msgstr ""
+
+msgid "Pr&ecirc;ts"
+msgstr ""
+
+msgid "disponibles pour l'analyse"
+msgstr ""
+
+msgid "en cours de traitement"
+msgstr ""
+
+msgid "documents en &eacute;chec"
+msgstr ""
+
+msgid "aucune erreur"
+msgstr ""
+
+msgid "Mots"
+msgstr ""
+
+msgid "dans"
+msgstr ""
+
+msgid "Aper&ccedil;u du connecteur"
+msgstr ""
+
+msgid "Informations et statistiques d&eacute;taill&eacute;es."
+msgstr ""
+
+msgid "Informations"
+msgstr ""
+
+msgid "Planification"
+msgstr ""
+
+msgid "R&eacute;sultat"
+msgstr ""
+
+msgid "Statistiques"
+msgstr ""
+
+msgid "Total mots"
+msgstr ""
+
+msgid "Notifications"
+msgstr ""
+
+msgid "&Eacute;tat du connecteur et alertes."
+msgstr ""
+
+msgid "Priorit&eacute;"
+msgstr ""
+
+msgid "document(s) en erreur"
+msgstr ""
+
+msgid ""
+"Certains documents n'ont pas pu &ecirc;tre trait&eacute;s. V&eacute;rifiez "
+"les formats et les permissions."
+msgstr ""
+
+msgid "Voir les documents"
+msgstr ""
+
+msgid "Attention"
+msgstr ""
+
+msgid "document(s) en attente"
+msgstr ""
+
+msgid "Des documents sont en cours de traitement ou en file d'attente."
+msgstr ""
+
+msgid "Derni&egrave;re synchronisation &eacute;chou&eacute;e"
+msgstr ""
+
+msgid ""
+"V&eacute;rifiez la configuration du connecteur et les identifiants "
+"d'acc&egrave;s."
+msgstr ""
+
+msgid "Jamais synchronis&eacute;"
+msgstr ""
+
+msgid ""
+"Ce connecteur n'a jamais &eacute;t&eacute; synchronis&eacute;. Lancez une "
+"premi&egrave;re synchronisation pour importer vos documents."
+msgstr ""
+
+msgid "Synchroniser maintenant"
+msgstr ""
+
+msgid "Tout est en ordre"
+msgstr ""
+
+msgid ""
+"document(s) pr&ecirc;t(s), aucune erreur d&eacute;tect&eacute;e. "
+"Derni&egrave;re synchro :"
+msgstr ""
+
+msgid "Historique d'ing&eacute;ration"
+msgstr ""
+
+msgid "Derni&egrave;res synchronisations."
+msgstr ""
+
+msgid "nouveaux"
+msgstr ""
+
+msgid "maj"
+msgstr ""
+
+msgid "suppr"
+msgstr ""
+
+msgid "erreur(s)"
+msgstr ""
+
+msgid "Aucune synchronisation pour le moment"
+msgstr ""
+
+msgid "Page"
+msgstr ""
+
+msgid "Liste des documents index&eacute;s dans ce connecteur."
+msgstr ""
+
+msgid "Titre"
+msgstr ""
+
+msgid "Chemin"
+msgstr ""
+
+msgid "Modifi&eacute;"
+msgstr ""
+
+msgid "Lire"
+msgstr ""
+
+msgid "Aucun document index&eacute; pour le moment."
+msgstr ""
+
+msgid "T&eacute;l&eacute;charger"
+msgstr ""
+
+msgid "Page pr&eacute;c&eacute;dente"
+msgstr ""
+
+msgid "Chargement du document&hellip;"
+msgstr ""
+
+msgid "Zoom arri&egrave;re"
+msgstr ""
+
+msgid "Connecteurs - DocuScore"
+msgstr ""
+
+msgid "Aucun contenu disponible."
+msgstr ""
+
+msgid "Analyse documentaire d'entreprise"
+msgstr ""
+
+msgid "Gestion des emails"
+msgstr ""
+
+msgid "Gérer vos adresses email"
+msgstr ""
+
+msgid "Principal"
+msgstr ""
+
+msgid "Vérifié"
+msgstr ""
+
+msgid "Non vérifié"
+msgstr ""
+
+msgid "Ajouter une adresse email"
+msgstr ""
+
+msgid "Ajouter"
+msgstr ""
+
+msgid "Retour au tableau de bord"
+msgstr ""
+
+msgid "Connexion"
+msgstr ""
+
+msgid "Connectez-vous à votre compte"
+msgstr ""
+
+msgid "Identifiants invalides. Veuillez réessayer."
+msgstr ""
+
+msgid "Nom d'utilisateur ou email"
+msgstr ""
+
+msgid "Mot de passe"
+msgstr ""
+
+msgid "Mot de passe oublié ?"
+msgstr ""
+
+msgid "Créer un compte"
+msgstr ""
+
+msgid "Déconnexion"
+msgstr ""
+
+msgid "Êtes-vous sûr de vouloir vous déconnecter ?"
+msgstr ""
+
+msgid "Se déconnecter"
+msgstr ""
+
+msgid "Retour à la connexion"
+msgstr ""
+
+msgid "Réinitialisation du mot de passe"
+msgstr ""
+
+msgid "Mot de passe oublié"
+msgstr ""
+
+msgid ""
+"Entrez votre adresse email. Vous recevrez un lien pour réinitialiser votre "
+"mot de passe."
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Envoyer le lien"
+msgstr ""
+
+msgid "Email envoyé"
+msgstr ""
+
+msgid ""
+"Si un compte existe avec cette adresse email, vous recevrez un lien de "
+"réinitialisation sous quelques minutes."
+msgstr ""
+
+msgid "Vérifiez également votre dossier spam."
+msgstr ""
+
+msgid "Nouveau mot de passe"
+msgstr ""
+
+msgid "Définir un nouveau mot de passe"
+msgstr ""
+
+msgid "Ce lien de réinitialisation est invalide ou a expiré."
+msgstr ""
+
+msgid "Demander un nouveau lien"
+msgstr ""
+
+msgid "Confirmer le mot de passe"
+msgstr ""
+
+msgid "Changer le mot de passe"
+msgstr ""
+
+msgid "Mot de passe modifié"
+msgstr ""
+
+msgid "Votre mot de passe a été modifié avec succès."
+msgstr ""
+
+msgid "Se connecter"
+msgstr ""
+
+msgid "Inscription"
+msgstr ""
+
+msgid "Nom d'utilisateur"
+msgstr ""
+
+msgid "Créer mon compte"
+msgstr ""
+
+msgid "Déjà un compte ?"
+msgstr ""
+
+msgid "Vérification email"
+msgstr ""
+
+msgid "Vérifiez votre email"
+msgstr ""
+
+msgid "Un email de vérification a été envoyé à votre adresse."
+msgstr ""
+
+msgid "Cliquez sur le lien dans l'email pour activer votre compte."
+msgstr ""
+
+msgid "Cliquer pour les détails et recommandations"
+msgstr ""
+
+msgid "Qualité de la base de connaissances"
+msgstr ""
+
+msgid "Ajoutez des documents et lancez une analyse pour obtenir votre score."
+msgstr ""
+
+msgid "Lancez une analyse pour calculer votre score complet."
+msgstr ""
+
+msgid "Détails DocuScore"
+msgstr ""
+
+msgid "Chargement des détails du score..."
+msgstr ""
+
+msgid "Échec du chargement des détails du score."
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Recommandations principales"
+msgstr ""
+
+msgid "Comment améliorer :"
+msgstr ""
+
+msgid "D&eacute;tails DocuScore"
+msgstr ""
+
+msgid "Chargement des d&eacute;tails du score..."
+msgstr ""
+
+msgid "&Eacute;chec du chargement des d&eacute;tails du score."
+msgstr ""
+
+msgid "Comment am&eacute;liorer :"
+msgstr ""
+
+msgid "Dernière analyse"
+msgstr ""
+
+msgid "Voir les résultats"
+msgstr ""
+
+msgid ""
+"Aucune analyse effectuée. Configurez des connecteurs et ingérez des "
+"documents d'abord."
+msgstr ""
+
+msgid "Tâches d'ingestion récentes"
+msgstr ""
+
+msgid "Connecteur"
+msgstr ""
+
+msgid "Aucune tâche d'ingestion pour le moment"
+msgstr ""
+
+msgid "Changer le thème"
+msgstr ""
+
+msgid "Projets"
+msgstr ""
+
+msgid "Nouveau projet"
+msgstr ""
+
+msgid "Navigation"
+msgstr ""
+
+msgid "Tableau de bord"
+msgstr ""
+
+msgid "Mise en route"
+msgstr ""
+
+msgid "Feedback"
+msgstr ""
+
+msgid "Paramètres"
+msgstr ""
+
+msgid "Changer d'espace"
+msgstr ""
+
+msgid "Créez un espace dédié pour analyser un corpus documentaire."
+msgstr ""
+
+msgid "Nom du projet"
+msgstr ""
+
+msgid "ex. Audit Q4 2025"
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "optionnel"
+msgstr ""
+
+msgid "Décrivez brièvement l'objectif de ce projet…"
+msgstr ""
+
+msgid "Créer le projet"
+msgstr ""
+
+msgid "Sélectionnez l'espace de travail sur lequel vous souhaitez travailler."
+msgstr ""
+
+msgid "Aucun espace disponible."
+msgstr ""
+
+msgid "Créer un nouvel espace"
+msgstr ""
+
+msgid "Nouvel espace de travail"
+msgstr ""
+
+msgid ""
+"Un espace regroupe vos projets, utilisateurs et données de manière isolée."
+msgstr ""
+
+msgid "Nom de l'espace"
+msgstr ""
+
+msgid "ex. Mon entreprise"
+msgstr ""
+
+msgid "Créer l'espace"
+msgstr ""
+
+msgid "Comment pouvons-nous vous aider ?"
+msgstr ""
+
+msgid "Partagez une idée ou suggestion"
+msgstr ""
+
+msgid "Signaler un problème"
+msgstr ""
+
+msgid "Quelque chose ne fonctionne pas"
+msgstr ""
+
+msgid "Zone concernée"
+msgstr ""
+
+msgid "Sélectionnez la fonctionnalité concernée."
+msgstr ""
+
+msgid "Utilisateurs"
+msgstr ""
+
+msgid "Autre"
+msgstr ""
+
+msgid "Détails"
+msgstr ""
+
+msgid "Décrivez votre retour en détail."
+msgstr ""
+
+msgid "Sujet"
+msgstr ""
+
+msgid "Résumé en une phrase"
+msgstr ""
+
+msgid "Décrivez en détail…"
+msgstr ""
+
+msgid "Envoyer"
+msgstr ""
+
+msgid "Problème"
+msgstr ""
+
+msgid "Envoi…"
+msgstr ""
+
+msgid "Erreur lors de l\\'envoi. Veuillez réessayer."
+msgstr ""
+
+msgid "Vue d'ensemble de votre base de connaissances"
+msgstr ""
+
+msgid "Guide"
+msgstr ""
+
+msgid "Créer un projet"
+msgstr ""
+
+msgid "indexés dans le projet"
+msgstr ""
+
+msgid "groupes à traiter"
+msgstr ""
+
+msgid "aucun doublon"
+msgstr ""
+
+msgid "détectées"
+msgstr ""
+
+msgid "aucune détectée"
+msgstr ""
+
+msgid "zones à combler"
+msgstr ""
+
+msgid "bonne couverture"
+msgstr ""
+
+msgid "Qualité de la base"
+msgstr ""
+
+msgid "Détail du DocuScore par dimension."
+msgstr ""
+
+msgid "Ajoutez des documents et lancez une analyse."
+msgstr ""
+
+msgid "Lancez une analyse pour calculer votre score."
+msgstr ""
+
+msgid "Problèmes prioritaires à résoudre."
+msgstr ""
+
+msgid "Aucune alerte. Votre base est en bonne santé."
+msgstr ""
+
+msgid "Actions rapides"
+msgstr ""
+
+msgid "Lancez une action en un clic."
+msgstr ""
+
+msgid "Démarrer un nouveau corpus"
+msgstr ""
+
+msgid "Doublons, contradictions, lacunes"
+msgstr ""
+
+msgid "Ajouter une source de données"
+msgstr ""
+
+msgid "Rapports"
+msgstr ""
+
+msgid "Consulter ou générer"
+msgstr ""
+
+msgid "Assistant IA"
+msgstr ""
+
+msgid "Interroger votre base"
+msgstr ""
+
+msgid "Activité récente"
+msgstr ""
+
+msgid "Ingérations et analyses du projet."
+msgstr ""
+
+msgid "Aucune activité pour le moment"
+msgstr ""
+
+msgid "Connecteurs actifs"
+msgstr ""
+
+msgid "Gérer"
+msgstr ""
+
+msgid "Clusters thématiques"
+msgstr ""
+
+msgid "Rapports générés"
+msgstr ""
+
+msgid "Bienvenue sur DocuScore"
+msgstr ""
+
+msgid ""
+"Votre tableau de bord est vide pour le moment. Suivez ces étapes pour "
+"analyser la qualité de votre base documentaire."
+msgstr ""
+
+msgid "Connectez vos sources"
+msgstr ""
+
+msgid ""
+"Ajoutez un connecteur (SharePoint, dossier local, API…) pour importer vos "
+"documents."
+msgstr ""
+
+msgid "Indexez vos documents"
+msgstr ""
+
+msgid ""
+"Lancez une ingération pour que DocuScore analyse le contenu de vos fichiers."
+msgstr ""
+
+msgid "Lancez l'analyse"
+msgstr ""
+
+msgid ""
+"Détectez automatiquement les doublons, contradictions et lacunes de "
+"couverture."
+msgstr ""
+
+msgid "Explorez les résultats"
+msgstr ""
+
+msgid ""
+"Consultez votre DocuScore, générez des rapports et interrogez votre base via "
+"l'assistant IA."
+msgstr ""
+
+msgid "J'ai compris"
+msgstr ""
+
+msgid "Succès"
+msgstr ""
+
+msgid "Information"
+msgstr ""
+
+#, python-format
+msgid "Ingestion : %(name)s"
+msgstr ""
+
+msgid "Ingestion"
+msgstr ""
+
+#, python-format
+msgid "%(processed)s/%(total)s documents"
+msgstr ""
+
+#, python-format
+msgid "Analyse %(status)s"
+msgstr ""
+
+msgid "Aucun connecteur configuré"
+msgstr ""
+
+msgid "Configurez un connecteur pour importer vos documents."
+msgstr ""
+
+msgid "Aucun document indexé"
+msgstr ""
+
+msgid ""
+"Lancez une ingération depuis vos connecteurs pour indexer vos documents."
+msgstr ""
+
+msgid "Voir les connecteurs"
+msgstr ""
+
+msgid "Aucune analyse effectuée"
+msgstr ""
+
+#, python-format
+msgid ""
+"Vous avez %(count)s document(s) indexé(s). Lancez une analyse pour détecter "
+"les problèmes."
+msgstr ""
+
+msgid "Lancer l’analyse"
+msgstr ""
+
+msgid ""
+"Des affirmations contradictoires de haute sévérité ont été détectées dans "
+"votre base."
+msgstr ""
+
+msgid "Aucun espace sélectionné"
+msgstr ""
+
+msgid "Ingéré"
+msgstr ""
+
+msgid "Vectorisation"
+msgstr ""
+
+msgid "Prêt"
+msgstr ""
+
+msgid "Supprimé"
+msgstr ""
+
+msgid "Rapport de doublons"
+msgstr ""
+
+msgid "Rapport de contradictions"
+msgstr ""
+
+msgid "Rapport de lacunes"
+msgstr ""
+
+msgid "Rapport d'analyse complet"
+msgstr ""
+
+msgid "HTML"
+msgstr ""
+
+msgid "CSV"
+msgstr ""
+
+msgid "JSON"
+msgstr ""
+
+msgid "Rapports - DocuScore"
+msgstr ""
+
+msgid "Exporter depuis une analyse"
+msgstr ""
+
+msgid "Analysis"
+msgstr ""
+
+msgid "JSON complet"
+msgstr ""
+
+msgid "Aucune analyse terminée disponible pour l'export."
+msgstr ""
+
+msgid "Rapport DocuScore"
+msgstr ""
+
+msgid "G&eacute;n&eacute;r&eacute; le"
+msgstr ""
+
+msgid "Sources de donn&eacute;es"
+msgstr ""
+
+msgid "Dernier sync"
+msgstr ""
+
+msgid "Aucun connecteur configur&eacute;."
+msgstr ""
+
+msgid "DocuScore &mdash; Qualit&eacute; de la base"
+msgstr ""
+
+msgid "Recommandations prioritaires"
+msgstr ""
+
+msgid ""
+"Aucune analyse termin&eacute;e &mdash; le DocuScore n'est pas encore "
+"disponible."
+msgstr ""
+
+msgid "Doublons d&eacute;tect&eacute;s"
+msgstr ""
+
+msgid "Source A"
+msgstr ""
+
+msgid "Source B"
+msgstr ""
+
+msgid "Score"
+msgstr ""
+
+msgid "Aucun doublon d&eacute;tect&eacute;."
+msgstr ""
+
+msgid "S&eacute;v&eacute;rit&eacute; &eacute;lev&eacute;e"
+msgstr ""
+
+msgid "Affirmation A :"
+msgstr ""
+
+msgid "Affirmation B :"
+msgstr ""
+
+msgid "S&eacute;v&eacute;rit&eacute; moyenne"
+msgstr ""
+
+msgid "S&eacute;v&eacute;rit&eacute; faible"
+msgstr ""
+
+msgid "Aucune contradiction d&eacute;tect&eacute;e."
+msgstr ""
+
+msgid "S&eacute;v&eacute;rit&eacute;"
+msgstr ""
+
+msgid "Aucune lacune d&eacute;tect&eacute;e."
+msgstr ""
+
+msgid "Audit &mdash; Hygi&egrave;ne du corpus"
+msgstr ""
+
+msgid "Audit &mdash; Structure RAG"
+msgstr ""
+
+msgid "Audit &mdash; Couverture s&eacute;mantique"
+msgstr ""
+
+msgid "Audit &mdash; Coh&eacute;rence interne"
+msgstr ""
+
+msgid "Audit &mdash; Retrievability"
+msgstr ""
+
+msgid "Audit &mdash; Gouvernance &amp; metadata"
+msgstr ""
+
+msgid "Administrateur"
+msgstr ""
+
+msgid "Éditeur"
+msgstr ""
+
+msgid "Lecteur"
+msgstr ""
+
+msgid "Créer"
+msgstr ""
+
+msgid "Sélectionner un projet"
+msgstr ""
+
+msgid "Aucun projet dans cet espace. Créez-en un pour commencer."
+msgstr ""
+
+msgid "Sélection de l'espace"
+msgstr ""
+
+msgid "Sélectionner un espace de travail"
+msgstr ""
+
+msgid "Vous n'êtes membre d'aucun espace de travail."
+msgstr ""
+
+msgid "Créer un espace de travail"
+msgstr ""
+
+msgid "Gérez votre profil et les paramètres de votre espace."
+msgstr ""
+
+msgid "Profil"
+msgstr ""
+
+msgid "Espace"
+msgstr ""
+
+msgid "Membres"
+msgstr ""
+
+msgid "Projet"
+msgstr ""
+
+msgid "Prénom"
+msgstr ""
+
+msgid "Langue"
+msgstr ""
+
+msgid "Thème"
+msgstr ""
+
+msgid "Système"
+msgstr ""
+
+msgid "Clair"
+msgstr ""
+
+msgid "Sombre"
+msgstr ""
+
+msgid "Sauvegarder"
+msgstr ""
+
+msgid "Inviter un utilisateur"
+msgstr ""
+
+msgid "Rôle"
+msgstr ""
+
+msgid "Inviter"
+msgstr ""
+
+msgid "Dernière connexion"
+msgstr ""
+
+msgid "Aucun membre"
+msgstr ""
+
+msgid "Membres du projet"
+msgstr ""
+
+msgid "Ajouté le"
+msgstr ""
+
+msgid "Zone dangereuse"
+msgstr ""
+
+msgid ""
+"La suppression du projet est irréversible. Tous les documents, analyses et "
+"données associées seront définitivement supprimés."
+msgstr ""
+
+msgid "Supprimer ce projet"
+msgstr ""
+
+msgid "Créer un espace"
+msgstr ""
+
+msgid "Retour à la sélection"
+msgstr ""
+
+msgid "Veuillez saisir un nom pour l'espace."
+msgstr ""
+
+msgid "Un espace avec ce nom existe déjà."
+msgstr ""
+
+#, python-format
+msgid "Espace « %(name)s » créé avec succès."
+msgstr ""
+
+msgid "Profil mis à jour."
+msgstr ""
+
+msgid "Espace mis à jour."
+msgstr ""
+
+msgid "Projet mis à jour."
+msgstr ""
+
+msgid "Veuillez saisir une adresse email."
+msgstr ""
+
+#, python-format
+msgid "%(email)s est déjà membre de cet espace."
+msgstr ""
+
+#, python-format
+msgid "%(email)s a été invité avec le rôle %(role)s."
+msgstr ""
+
+msgid "Rôle invalide."
+msgstr ""
+
+msgid "Impossible de retirer le dernier administrateur."
+msgstr ""
+
+#, python-format
+msgid "Rôle de %(name)s mis à jour."
+msgstr ""
+
+msgid "Vous ne pouvez pas vous retirer vous-même."
+msgstr ""
+
+#, python-format
+msgid "%(name)s a été retiré de l'espace."
+msgstr ""
+
+msgid "Projet supprimé."
+msgstr ""

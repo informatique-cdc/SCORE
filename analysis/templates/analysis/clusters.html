@@ -1,0 +1,257 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Clusters th&eacute;matiques" %} - DocuScore{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{% trans "Graphe des clusters th&eacute;matiques" %}</h2>
+    <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Retour" %}</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0 position-relative" style="min-height: 700px;">
+        <div id="cluster-graph" style="width:100%;height:700px;"></div>
+
+        <!-- Legend overlay -->
+        <div id="cluster-legend" style="position:absolute;bottom:16px;left:16px;background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:8px;padding:10px 14px;font-size:12px;max-height:280px;overflow-y:auto;z-index:10;min-width:140px;display:none;">
+        </div>
+
+        <!-- Zoom controls -->
+        <div style="position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:2px;z-index:10;">
+            <button id="zoom-in" type="button" style="width:36px;height:36px;border:1px solid var(--ds-grey-500);border-radius:8px 8px 0 0;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom avant">+</button>
+            <button id="zoom-out" type="button" style="width:36px;height:36px;border:1px solid var(--ds-grey-500);border-radius:0 0 8px 8px;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom arri&egrave;re">&minus;</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cluster details table -->
+<div class="card mt-4">
+    <div class="card-header"><strong>{% trans "D&eacute;tails des clusters" %}</strong></div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr><th>{% trans "Libell&eacute;" %}</th><th>{% trans "Finalit&eacute;" %}</th><th>{% trans "Concepts cl&eacute;s" %}</th><th>{% trans "Docs" %}</th><th>{% trans "Fragments" %}</th><th>{% trans "R&eacute;sum&eacute;" %}</th></tr>
+            </thead>
+            <tbody>
+                {% for c in clusters %}
+                <tr{% if c.level > 0 %} class="table-secondary"{% endif %}>
+                    <td>{% if c.level > 0 %}<span class="ms-3 text-muted">&darr;</span> {% endif %}<strong>{{ c.label }}</strong></td>
+                    <td class="small">{{ c.content_purpose }}</td>
+                    <td class="small">{{ c.key_concepts|join:", " }}</td>
+                    <td>{{ c.doc_count }}</td>
+                    <td>{{ c.chunk_count }}</td>
+                    <td class="small">{{ c.summary|truncatechars:200 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+fetch("{% url 'api-clusters' job.pk %}")
+    .then(r => {
+        if (!r.ok) throw new Error("HTTP " + r.status + " " + r.statusText);
+        return r.json();
+    })
+    .then(data => {
+        const container = document.getElementById("cluster-graph");
+
+        if (!data.nodes.length) {
+            container.innerHTML = '<p class="text-muted text-center mt-5">Aucun cluster \u00e0 afficher</p>';
+            return;
+        }
+
+        const chart = echarts.init(container, null, { renderer: "canvas" });
+        const labelColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim() || "#f8f8f8";
+
+        const colorPalette = ["#8b5cf6", "#0d6efd", "#198754", "#ffc107", "#dc3545", "#60a5fa", "#f472b6", "#34d399", "#fb923c", "#a78bfa"];
+
+        // Build parent color map
+        const parentNodes = data.nodes.filter(n => n.level === 0);
+        const parentColorMap = {};
+        parentNodes.forEach((n, i) => {
+            parentColorMap[n.id] = colorPalette[i % colorPalette.length];
+        });
+        const getColor = (n) => {
+            if (n.level > 0 && n.parent_id) return parentColorMap[n.parent_id] || colorPalette[0];
+            return parentColorMap[n.id] || colorPalette[0];
+        };
+
+        // Build legend
+        const legendEl = document.getElementById("cluster-legend");
+        let legendHtml = '<div style="font-weight:600;margin-bottom:6px;color:var(--ds-grey-100);">Clusters</div>';
+        parentNodes.forEach((n, i) => {
+            const color = colorPalette[i % colorPalette.length];
+            const label = n.label.length > 28 ? n.label.slice(0, 25) + "\u2026" : n.label;
+            legendHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+                + '<span style="width:10px;height:10px;border-radius:50%;background:' + color + ';flex-shrink:0;"></span>'
+                + '<span style="color:var(--ds-grey-100);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + n.label.replace(/"/g, '&quot;') + '">' + label + '</span>'
+                + '</div>';
+        });
+        const hasGaps = data.gaps && data.gaps.some(g => g.related_cluster);
+        if (hasGaps) {
+            legendHtml += '<div style="border-top:1px solid var(--ds-grey-500);margin:6px 0;"></div>';
+            legendHtml += '<div style="font-weight:600;margin-bottom:4px;color:var(--ds-grey-100);">Lacunes</div>';
+            [["#dc3545", "Haute"], ["#ffc107", "Moyenne"], ["#198754", "Basse"]].forEach(([c, l]) => {
+                legendHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+                    + '<span style="width:10px;height:10px;transform:rotate(45deg);background:' + c + ';flex-shrink:0;"></span>'
+                    + '<span style="color:var(--ds-grey-100);">' + l + '</span>'
+                    + '</div>';
+            });
+        }
+        legendEl.innerHTML = legendHtml;
+        legendEl.style.display = "block";
+
+        const maxDocs = Math.max(...data.nodes.map(n => n.doc_count), 1);
+        const getSize = (n) => {
+            const base = 20 + Math.sqrt(n.doc_count / maxDocs) * 50;
+            return n.level > 0 ? base * 0.6 : base;
+        };
+
+        // ECharts graph nodes
+        const nodes = data.nodes.map(n => ({
+            id: n.id,
+            name: n.label,
+            symbolSize: getSize(n),
+            x: n.x != null ? n.x * 5 : undefined,
+            y: n.y != null ? n.y * 5 : undefined,
+            itemStyle: {
+                color: getColor(n),
+                opacity: n.level > 0 ? 0.6 : 0.85,
+                borderColor: "rgba(255,255,255,0.15)",
+                borderWidth: n.level > 0 ? 1 : 2,
+                shadowBlur: n.level > 0 ? 0 : 8,
+                shadowColor: getColor(n) + "40",
+            },
+            label: {
+                show: true,
+                position: "top",
+                distance: 5,
+                fontSize: n.level > 0 ? 10 : 12,
+                color: labelColor,
+                formatter: n.label.length > 30 ? n.label.slice(0, 27) + "..." : n.label,
+            },
+            _raw: n,
+        }));
+
+        // Gap diamond nodes
+        data.gaps.filter(g => g.related_cluster).forEach(gap => {
+            const severityColor = gap.severity === "high" ? "#dc3545" : gap.severity === "medium" ? "#ffc107" : "#198754";
+            nodes.push({
+                id: gap.id,
+                name: gap.label,
+                symbol: "diamond",
+                symbolSize: 16,
+                itemStyle: { color: severityColor, borderColor: "rgba(255,255,255,0.2)", borderWidth: 1 },
+                label: { show: false },
+                _raw: { ...gap, _isGap: true },
+            });
+        });
+
+        // ECharts graph edges
+        const links = data.edges.map(e => ({
+            source: e.source,
+            target: e.target,
+            lineStyle: {
+                width: e.type === "hierarchy" ? 1.5 : Math.min(e.weight * 2, 8),
+                color: e.type === "hierarchy" ? "#6c757d" : "#37383a",
+                type: e.type === "hierarchy" ? "dashed" : "solid",
+                opacity: 0.6,
+                curveness: 0.1,
+            }
+        }));
+
+        // Link gaps to their related cluster
+        data.gaps.filter(g => g.related_cluster).forEach(gap => {
+            links.push({
+                source: gap.related_cluster,
+                target: gap.id,
+                lineStyle: { width: 1, color: "#6c757d", type: "dotted", opacity: 0.4 },
+            });
+        });
+
+        const option = {
+            backgroundColor: "transparent",
+            tooltip: {
+                trigger: "item",
+                confine: true,
+                backgroundColor: "#27282a",
+                borderColor: "#37383a",
+                textStyle: { color: "#f8f8f8", fontSize: 12 },
+                extraCssText: "max-width:320px;white-space:normal;word-break:break-word;",
+                formatter: function(params) {
+                    if (params.dataType === "edge") return null;
+                    const raw = params.data._raw || {};
+                    if (raw._isGap) {
+                        return '<strong>Lacune : ' + raw.label + '</strong><br>Type : ' + (raw.type || '') + '<br>S\u00e9v\u00e9rit\u00e9 : ' + (raw.severity || '');
+                    }
+                    let html = '<strong>' + (raw.label || params.name) + '</strong>';
+                    if (raw.content_purpose) html += '<br><em>' + raw.content_purpose + '</em>';
+                    html += '<br>' + raw.doc_count + ' documents, ' + raw.chunk_count + ' fragments';
+                    if (raw.key_concepts && raw.key_concepts.length) html += '<br>Concepts : ' + raw.key_concepts.join(', ');
+                    return html;
+                }
+            },
+            series: [{
+                type: "graph",
+                layout: "force",
+                data: nodes,
+                links: links,
+                roam: "move",
+                draggable: true,
+                force: {
+                    repulsion: 400,
+                    gravity: 0.1,
+                    edgeLength: [80, 200],
+                    friction: 0.6,
+                },
+                emphasis: {
+                    focus: "adjacency",
+                    itemStyle: {
+                        borderColor: "#fff",
+                        borderWidth: 3,
+                        shadowBlur: 15,
+                        shadowColor: "rgba(13,110,253,0.5)",
+                    },
+                    lineStyle: { width: 3, color: "#0d6efd" },
+                },
+                animationDuration: 1500,
+                animationEasingUpdate: "quinticInOut",
+            }],
+        };
+
+        chart.setOption(option);
+        window.addEventListener("resize", function() { chart.resize(); });
+
+        // Update label color on theme toggle
+        new MutationObserver(function() {
+            const newColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim();
+            const updatedData = chart.getOption().series[0].data.map(function(n) {
+                if (n.label) n.label.color = newColor;
+                return n;
+            });
+            chart.setOption({ series: [{ data: updatedData }] });
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+
+        // Zoom controls (programmatic via setOption, scroll zoom stays disabled)
+        let currentZoom = 1;
+        document.getElementById("zoom-in").addEventListener("click", function() {
+            currentZoom *= 1.3;
+            chart.setOption({ series: [{ zoom: currentZoom }] });
+        });
+        document.getElementById("zoom-out").addEventListener("click", function() {
+            currentZoom *= 0.7;
+            chart.setOption({ series: [{ zoom: currentZoom }] });
+        });
+    })
+    .catch(err => {
+        console.error("Cluster graph error:", err);
+        const container = document.getElementById("cluster-graph");
+        container.innerHTML = '<p class="text-danger text-center mt-5">Erreur de chargement du graphe : ' + err.message + '</p>';
+    });
+</script>
+{% endblock %}

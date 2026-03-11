@@ -1,0 +1,548 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Audit RAG" %} — {% trans "Analyse" %} {{ job.id|truncatechars:12 }}{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block nav_analysis_submenu %}
+<a class="sidebar-subitem" href="{% url 'analysis-detail' job.pk %}">{% trans "Vue d'ensemble" %}</a>
+<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.pk %}">{% trans "Audit RAG" %}</a>
+<a class="sidebar-subitem" href="{% url 'analysis-trace' job.pk %}">{% trans "Trace pipeline" %}</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Audit card shared ── */
+    .audit-card { border-radius: 16px; }
+    .audit-card .card-body { padding: 20px 24px; }
+    .audit-card-header {
+        display: flex; align-items: center;
+        justify-content: space-between; margin-bottom: 14px;
+    }
+    .audit-card-title {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 15px; font-weight: 600; color: var(--ds-grey-100);
+    }
+    .audit-info-icon { width: 16px; height: 16px; color: var(--ds-text-muted); flex-shrink: 0; }
+    .audit-details-btn {
+        font-size: 13px; font-weight: 500;
+        padding: 5px 16px; border: 1px solid var(--ds-grey-500);
+        border-radius: 8px; color: var(--ds-grey-100);
+        text-decoration: none; background: transparent;
+        white-space: nowrap;
+    }
+    .audit-details-btn:hover { background: var(--ds-grey-500); color: var(--ds-grey-100); }
+
+    /* ── Score ── */
+    .audit-score-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px; }
+    .audit-score-value { font-size: 36px; font-weight: 800; line-height: 1; color: var(--ds-grey-100); }
+    .audit-score-suffix { font-size: 14px; color: var(--ds-text-muted); font-weight: 400; }
+
+    /* ── Stacked bar ── */
+    .audit-stacked-bar {
+        display: flex; gap: 3px; height: 14px; width: 100%;
+        border-radius: 7px; overflow: hidden; margin-bottom: 10px;
+    }
+    .audit-stacked-segment {
+        border-radius: 7px; min-width: 6px; flex-basis: 0%;
+        transition: opacity 0.15s;
+    }
+    .audit-stacked-segment:hover { opacity: 0.75; }
+
+    /* ── Bar legend ── */
+    .audit-bar-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 4px; }
+    .audit-legend-item {
+        display: flex; align-items: center; gap: 5px;
+        font-size: 12px; color: var(--ds-text-muted);
+    }
+    .audit-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Dashed divider ── */
+    .audit-divider { border: none; border-top: 1.5px dashed var(--ds-grey-500); margin: 14px 0; }
+
+    /* ── Sub-scores table ── */
+    .audit-sub-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+    .audit-sub-table thead th {
+        font-size: 10px; font-weight: 700; color: var(--ds-text-muted);
+        text-transform: uppercase; letter-spacing: 0.04em;
+        padding: 0 0 8px; border: none;
+    }
+    .audit-sub-table tbody td { padding: 6px 0; border: none; vertical-align: middle; }
+    .audit-sub-name {
+        display: flex; align-items: center; gap: 8px;
+        font-weight: 500; color: var(--ds-grey-100);
+    }
+    .audit-sub-dot {
+        width: 22px; height: 22px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .audit-sub-dot-inner { width: 8px; height: 8px; border-radius: 50%; }
+    .audit-sub-value { font-weight: 600; color: var(--ds-grey-100); }
+    .audit-sub-trend {
+        display: inline-flex; align-items: center; justify-content: flex-end;
+        gap: 3px; font-weight: 600; font-size: 12px;
+        min-width: 72px; text-align: right;
+    }
+    .audit-sub-trend.good { color: #34d399; }
+    .audit-sub-trend.warn { color: #fbbf24; }
+    .audit-sub-trend.bad { color: #f87171; }
+    .audit-sub-trend svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* ── Bottom button ── */
+    .audit-view-btn {
+        display: block; width: 100%; padding: 10px;
+        text-align: center; font-size: 14px; font-weight: 600;
+        background: var(--ds-grey-800); border: 1px solid var(--ds-grey-500);
+        border-radius: 10px; color: var(--ds-grey-100);
+        text-decoration: none; margin-top: 16px;
+    }
+    .audit-view-btn:hover { background: var(--ds-grey-500); color: var(--ds-grey-100); }
+
+    /* ── Donut card (overall) ── */
+    .audit-donut-layout { display: flex; align-items: center; gap: 24px; }
+    .audit-donut-legend { flex: 1; min-width: 0; }
+    .audit-donut-legend-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 5px 0; font-size: 13px;
+    }
+    .audit-donut-legend-label {
+        font-weight: 500; color: var(--ds-grey-100);
+        flex: 1; min-width: 0;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .audit-donut-legend-value { font-weight: 700; color: var(--ds-grey-100); min-width: 28px; text-align: right; }
+    .audit-donut-legend-sep { color: var(--ds-text-muted); }
+    .audit-donut-legend-pct { color: var(--ds-text-muted); min-width: 35px; text-align: right; }
+
+    /* ── Radar card ── */
+    .audit-radar-legend {
+        display: flex; align-items: center;
+        border: 1px solid var(--ds-grey-500); border-radius: 10px;
+        overflow: hidden; margin-bottom: 8px;
+    }
+    .audit-radar-legend-item {
+        flex: 1; display: flex; align-items: center;
+        justify-content: center; gap: 8px;
+        padding: 8px 12px; font-size: 13px;
+        font-weight: 500; color: var(--ds-text-muted);
+    }
+    .audit-radar-legend-item + .audit-radar-legend-item {
+        border-left: 1px solid var(--ds-grey-500);
+    }
+    .audit-grade-chip {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 2px 12px; border-radius: 6px;
+        font-size: 13px; font-weight: 600;
+        background: rgba(52,211,153,0.12); color: #34d399;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-2">
+    <ol class="breadcrumb mb-0" style="font-size:13px;--bs-breadcrumb-divider:'/';">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">{% trans "Analyses" %}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.pk %}" style="color:var(--ds-text-muted);text-decoration:none;">{% trans "Analyse" %} {{ analysis_number }}</a></li>
+        <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">{% trans "Audit RAG" %}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="mb-0">{% trans "Audit RAG" %}</h2>
+</div>
+
+{% if linked_audit and linked_audit.status == "completed" %}
+
+<!-- ─── Overall score (donut) + radar ─── -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-5">
+        <div class="card audit-card h-100">
+            <div class="card-body">
+                <div class="audit-card-header">
+                    <div class="audit-card-title">
+                        {% trans "Score global RAG" %}
+                        <svg class="audit-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="{% trans "Score pond&eacute;r&eacute; des 6 axes de qualit&eacute; RAG de votre base documentaire." %}" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.3"/><path d="M8 7v4M8 5.5v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </div>
+                    <span class="docuscore-pill active docuscore-{{ linked_audit.overall_grade }}" style="width:36px;height:36px;font-size:16px;">{{ linked_audit.overall_grade }}</span>
+                </div>
+                <div class="audit-donut-layout">
+                    <div id="overall-donut" style="width:150px;height:150px;flex-shrink:0;"></div>
+                    <div class="audit-donut-legend">
+                        {% for axis in audit_axes %}
+                        <div class="audit-donut-legend-row">
+                            <span class="audit-legend-dot" style="background:{{ axis.color }}"></span>
+                            <span class="audit-donut-legend-label">{{ axis.label }}</span>
+                            <span class="audit-donut-legend-value">{{ axis.score|floatformat:0 }}</span>
+                            <span class="audit-donut-legend-sep">&middot;</span>
+                            <span class="audit-donut-legend-pct">{{ axis.score_pct }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card audit-card h-100">
+            <div class="card-body">
+                <div class="audit-card-header">
+                    <div class="audit-card-title">
+                        {% trans "Scores par axe" %}
+                        <svg class="audit-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="{% trans "Comparaison des scores actuels avec l'objectif de 70/100 sur chaque axe." %}" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.3"/><path d="M8 7v4M8 5.5v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </div>
+                    <span class="audit-details-btn" style="cursor:default;">{{ linked_audit.overall_grade }}</span>
+                </div>
+                <div class="audit-score-row">
+                    <span class="audit-score-value">{{ linked_audit.overall_score|floatformat:0 }}</span>
+                    <span class="audit-score-suffix">/100</span>
+                    <span class="audit-grade-chip">{{ linked_audit.overall_grade }}</span>
+                </div>
+                <div class="audit-radar-legend">
+                    <span class="audit-radar-legend-item">
+                        <span class="audit-legend-dot" style="background:#f97316"></span>
+                        {% trans "Scores actuels" %}
+                    </span>
+                    <span class="audit-radar-legend-item">
+                        <span class="audit-legend-dot" style="background:#34d399"></span>
+                        {% trans "Objectif (70)" %}
+                    </span>
+                </div>
+                <div id="radar-chart" style="height:300px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Axis cards (2×3 grid) ─── -->
+<div class="row g-3">
+    {% for axis in audit_axes %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card audit-card h-100">
+            <div class="card-body">
+                <!-- Header -->
+                <div class="audit-card-header">
+                    <div class="audit-card-title">
+                        {{ axis.label }}
+                        <svg class="audit-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ axis.tooltip }}" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.3"/><path d="M8 7v4M8 5.5v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </div>
+                    {% if axis.url %}
+                    <a href="{{ axis.url }}" class="audit-details-btn">{% trans "D&eacute;tails" %}</a>
+                    {% endif %}
+                </div>
+
+                {% if axis.score is not None %}
+                <!-- Score -->
+                <div class="audit-score-row">
+                    <span class="audit-score-value">{{ axis.score|floatformat:0 }}</span>
+                    <span class="audit-score-suffix">/100</span>
+                </div>
+
+                <!-- Stacked bar -->
+                {% if axis.sub_scores %}
+                <div class="audit-stacked-bar">
+                    {% for sub in axis.sub_scores %}
+                    <div class="audit-stacked-segment" style="flex:{{ sub.value|floatformat:0|default:'1' }} 0 0%;background:{{ sub.color }}" title="{{ sub.label }}: {{ sub.value }}"></div>
+                    {% endfor %}
+                </div>
+
+                <!-- Legend -->
+                <div class="audit-bar-legend">
+                    {% for sub in axis.sub_scores %}
+                    <span class="audit-legend-item">
+                        <span class="audit-legend-dot" style="background:{{ sub.color }}"></span>
+                        {{ sub.label }}
+                    </span>
+                    {% endfor %}
+                </div>
+
+                <!-- Divider -->
+                <hr class="audit-divider">
+
+                <!-- Sub-scores table -->
+                <table class="audit-sub-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left">{% trans "Sous-scores" %}</th>
+                            <th style="text-align:center">{% trans "Valeur" %}</th>
+                            <th style="text-align:right">{% trans "Niveau" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sub in axis.sub_scores %}
+                        <tr>
+                            <td>
+                                <div class="audit-sub-name">
+                                    <span class="audit-sub-dot" style="background:{{ sub.color }}20">
+                                        <span class="audit-sub-dot-inner" style="background:{{ sub.color }}"></span>
+                                    </span>
+                                    {{ sub.label }}
+                                </div>
+                            </td>
+                            <td class="audit-sub-value" style="text-align:center">{{ sub.value }}</td>
+                            <td style="text-align:right">
+                                {% if sub.value >= 70 %}
+                                <span class="audit-sub-trend good">
+                                    <svg viewBox="0 0 14 14" fill="none"><path d="M7 10.5V3.5M7 3.5L4 6.5M7 3.5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    +{{ sub.value|floatformat:1 }}%
+                                </span>
+                                {% elif sub.value >= 40 %}
+                                <span class="audit-sub-trend warn">
+                                    <svg viewBox="0 0 14 14" fill="none"><path d="M7 3.5v7M7 10.5l-3-3M7 10.5l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    {{ sub.value|floatformat:1 }}%
+                                </span>
+                                {% else %}
+                                <span class="audit-sub-trend bad">
+                                    <svg viewBox="0 0 14 14" fill="none"><path d="M7 3.5v7M7 10.5l-3-3M7 10.5l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    {{ sub.value|floatformat:1 }}%
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <span class="badge bg-secondary" style="font-size:16px;">&mdash;</span>
+                    <p class="mt-2 mb-0" style="font-size:12px;">{% trans "Aucun r&eacute;sultat" %}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if coverage_chart_data_json %}
+<div class="row g-3 mt-1">
+    <div class="col-12">
+        <div class="card audit-card">
+            <div class="card-header d-flex justify-content-between">
+                <strong>{% trans "Projection 2D par topic" %}</strong>
+                {% if linked_audit %}
+                <a href="{% url 'audit-coverage' pk=linked_audit.id %}" class="btn btn-sm btn-outline-primary">{% trans "Vue compl&egrave;te" %}</a>
+                {% endif %}
+            </div>
+            <div class="card-body p-2" id="scatter-2d" style="height:420px;"></div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card audit-card p-4 text-center text-muted">
+    {% if linked_audit %}
+    {% trans "L'audit RAG est en cours de traitement&hellip;" %}
+    {% else %}
+    {% trans "Aucun audit RAG n'est disponible pour cette analyse." %}
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+{% if linked_audit and linked_audit.status == "completed" and audit_axes %}
+
+// ── Donut chart (overall score) ──
+(function() {
+    var axesData = JSON.parse('{{ axes_json|escapejs }}');
+    var donutEl = document.getElementById("overall-donut");
+    if (!donutEl || !axesData.length) return;
+
+    var isDark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+    var labelColor = isDark ? "#f8f8f8" : "#1d1e21";
+
+    var chart = echarts.init(donutEl, null, { renderer: "canvas" });
+    chart.setOption({
+        backgroundColor: "transparent",
+        series: [{
+            type: "pie",
+            radius: ["52%", "78%"],
+            center: ["50%", "50%"],
+            padAngle: 3,
+            itemStyle: { borderRadius: 6 },
+            label: {
+                show: true,
+                position: "center",
+                fontSize: 28,
+                fontWeight: 800,
+                color: labelColor,
+                formatter: "{{ linked_audit.overall_score|stringformat:".0f" }}",
+            },
+            emphasis: {
+                label: { show: true, fontSize: 28, fontWeight: 800 },
+                scaleSize: 4,
+            },
+            data: axesData.map(function(a) {
+                return { name: a.label, value: a.score, itemStyle: { color: a.color } };
+            }),
+            animationDuration: 800,
+        }],
+        tooltip: {
+            trigger: "item",
+            confine: true,
+            backgroundColor: "#27282a",
+            borderColor: "#37383a",
+            textStyle: { color: "#f8f8f8", fontSize: 11 },
+            formatter: function(p) { return p.name + " : " + p.value + "/100"; },
+        },
+    });
+
+    // Theme change
+    new MutationObserver(function() {
+        var dark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+        chart.setOption({ series: [{ label: { color: dark ? "#f8f8f8" : "#1d1e21" } }] });
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+
+    window.addEventListener("resize", function() { chart.resize(); });
+})();
+
+// ── Radar chart ──
+(function() {
+    var radarData = JSON.parse('{{ radar_data_json|escapejs }}');
+    var el = document.getElementById("radar-chart");
+    if (!el) return;
+
+    var isDark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+
+    function radarTheme(dark) {
+        return {
+            nameColor: dark ? "#ccc" : "#666",
+            nameBg: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+            splitLine: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
+            axisLine: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+        };
+    }
+    var t = radarTheme(isDark);
+
+    var chart = echarts.init(el, null, { renderer: "canvas" });
+    chart.setOption({
+        backgroundColor: "transparent",
+        radar: {
+            indicator: radarData.map(function(d) { return { name: d.axis, max: 100 }; }),
+            shape: "polygon",
+            splitNumber: 5,
+            radius: "65%",
+            axisName: {
+                color: t.nameColor,
+                fontSize: 11,
+                fontWeight: 500,
+                backgroundColor: t.nameBg,
+                borderRadius: 6,
+                padding: [4, 10],
+            },
+            splitLine: { lineStyle: { color: t.splitLine, width: 1 } },
+            splitArea: { show: false },
+            axisLine: { lineStyle: { color: t.axisLine } },
+        },
+        series: [{
+            type: "radar",
+            data: [
+                {
+                    value: radarData.map(function(d) { return d.score; }),
+                    name: "Scores actuels",
+                    areaStyle: { color: "rgba(249,115,22,0.12)" },
+                    lineStyle: { color: "#f97316", width: 2 },
+                    itemStyle: { color: "#fff", borderColor: "#f97316", borderWidth: 2 },
+                    symbol: "circle",
+                    symbolSize: 9,
+                    z: 3,
+                },
+                {
+                    value: radarData.map(function() { return 70; }),
+                    name: "Objectif (70)",
+                    areaStyle: { color: "rgba(52,211,153,0.08)" },
+                    lineStyle: { color: "#34d399", width: 2 },
+                    itemStyle: { color: "#fff", borderColor: "#34d399", borderWidth: 2 },
+                    symbol: "circle",
+                    symbolSize: 7,
+                    z: 2,
+                }
+            ],
+            animationDuration: 800,
+        }],
+        tooltip: {
+            trigger: "item",
+            confine: true,
+            backgroundColor: "#27282a",
+            borderColor: "#37383a",
+            textStyle: { color: "#f8f8f8", fontSize: 12 },
+            extraCssText: "max-width:280px;white-space:normal;border-radius:8px;",
+        },
+    });
+
+    // Theme change
+    new MutationObserver(function() {
+        var dark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+        var th = radarTheme(dark);
+        chart.setOption({
+            radar: {
+                axisName: { color: th.nameColor, backgroundColor: th.nameBg },
+                splitLine: { lineStyle: { color: th.splitLine } },
+                axisLine: { lineStyle: { color: th.axisLine } },
+            }
+        });
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+
+    window.addEventListener("resize", function() { chart.resize(); });
+})();
+{% endif %}
+
+{% if coverage_chart_data_json %}
+// ── Coverage 2D scatter ──
+(function() {
+    var chartData = JSON.parse('{{ coverage_chart_data_json|escapejs }}');
+    var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    var topicLabels = {};
+    if (chartData.topics_table) {
+        chartData.topics_table.forEach(function(t) {
+            topicLabels[t.id] = t.terms.slice(0, 3).join(", ");
+        });
+    }
+
+    if (chartData.scatter_2d && chartData.scatter_2d.length) {
+        var data = chartData.scatter_2d;
+        var container = d3.select("#scatter-2d");
+        var w = container.node().clientWidth, h = 420;
+        var margin = {top: 10, right: 10, bottom: 30, left: 40};
+        var svg = container.append("svg").attr("viewBox", "0 0 " + w + " " + h);
+
+        var x = d3.scaleLinear().domain(d3.extent(data, function(d) { return d.x; })).nice().range([margin.left, w - margin.right]);
+        var y = d3.scaleLinear().domain(d3.extent(data, function(d) { return d.y; })).nice().range([h - margin.bottom, margin.top]);
+
+        var tooltip = d3.select("body").append("div").attr("class","tooltip-viz").style("display","none");
+
+        svg.selectAll("circle").data(data).join("circle")
+            .attr("cx", function(d) { return x(d.x); }).attr("cy", function(d) { return y(d.y); })
+            .attr("r", function(d) { return d.outlier ? 5 : 3; })
+            .attr("fill", function(d) { return d.outlier ? "#dc3545" : color(d.topic); })
+            .attr("opacity", 0.7)
+            .attr("stroke", function(d) { return d.outlier ? "#fff" : "none"; })
+            .attr("stroke-width", function(d) { return d.outlier ? 1 : 0; })
+            .on("mouseover", function(e, d) {
+                var tLabel = topicLabels[d.topic] || ("Topic " + d.topic);
+                tooltip.style("display","block").html("<strong>" + d.doc_title + "</strong><br>Topic: " + tLabel + (d.outlier ? " (outlier)" : ""));
+            })
+            .on("mousemove", function(e) {
+                tooltip.style("left", (e.pageX+10)+"px").style("top", (e.pageY-10)+"px");
+            })
+            .on("mouseout", function() { tooltip.style("display","none"); });
+
+        svg.append("g").attr("transform", "translate(0," + (h-margin.bottom) + ")").call(d3.axisBottom(x).ticks(6)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.append("g").attr("transform", "translate(" + margin.left + ",0)").call(d3.axisLeft(y).ticks(6)).selectAll("text").attr("fill","var(--ds-grey-100)");
+        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    }
+})();
+{% endif %}
+
+// Initialize Bootstrap tooltips
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+    new bootstrap.Tooltip(el);
+});
+</script>
+{% endblock %}

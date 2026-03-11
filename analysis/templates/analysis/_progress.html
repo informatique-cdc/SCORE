@@ -1,0 +1,36 @@
+{% load i18n %}
+<turbo-frame id="analysis-progress">
+<div data-controller="auto-refresh"
+     data-auto-refresh-url-value="{% url 'analysis-progress-partial' job.pk %}"
+     data-auto-refresh-frame-value="analysis-progress"
+     data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+
+{% if job.status == "running" %}
+<p class="text-muted mb-1">
+    <span class="badge bg-primary">{{ job.get_status_display }}</span>
+    <span class="ms-2">{% trans "Phase :" %} {{ job.get_current_phase_display }} ({{ job.progress_pct }}%)</span>
+    {% if overall_eta %}<span class="ms-2" style="font-size:12px;color:var(--ds-text-muted,#9ca3af);">{% trans "Temps restant :" %} {{ overall_eta }}</span>{% endif %}
+</p>
+<div class="progress mb-2" style="height: 24px;">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: {{ job.progress_pct }}%">{{ job.progress_pct }}%</div>
+</div>
+{% if job.phase_detail.step %}
+<div class="d-flex align-items-center gap-2 mb-4">
+    <small class="text-muted text-nowrap">
+        {{ job.phase_detail.step }} — {{ job.phase_detail.done }} / {{ job.phase_detail.total }}{% if sub_eta %} ({{ sub_eta }}){% endif %}
+    </small>
+    {% widthratio job.phase_detail.done job.phase_detail.total 100 as sub_pct %}
+    <div class="progress flex-grow-1" style="height: 10px;">
+        <div class="progress-bar bg-info" style="width: {{ sub_pct }}%"></div>
+    </div>
+</div>
+{% else %}
+<div class="mb-4"></div>
+{% endif %}
+{% endif %}
+
+{% if job.error_message %}
+<div class="alert alert-danger">{{ job.error_message|truncatechars:500 }}</div>
+{% endif %}
+</div>
+</turbo-frame>

@@ -1,0 +1,114 @@
+# DocuScore configuration
+# Values here can be overridden by environment variables.
+
+llm:
+  provider: azure_mistral          # "openai", "azure", or "azure_mistral"
+  chat_model: Mistral-Large-3
+  embedding_model: text-embedding-3-small
+  embedding_dimensions: 1536
+  requests_per_minute: 500
+  embedding_batch_size: 500
+  max_tokens_per_request: 2048
+  fallback_models:                # essayés dans l'ordre sur 429
+    - Mistral-Large-3
+  fallback_retries_per_model: 1   # tentatives par modèle avant fallback
+  batch_model:       # modèle pour Batch API (null = chat_model)
+  batch_poll_interval_seconds: 1
+  batch_max_wait_seconds: 1800    # 30 min max
+
+chunking:
+  strategy: heading_aware   # "heading_aware" or "token_fixed"
+  chunk_size: 1024          # tokens
+  chunk_overlap: 32         # tokens
+  min_chunk_size: 80        # tokens — discard smaller
+
+analysis:
+  duplicate:
+    semantic_weight: 0.55
+    lexical_weight: 0.25
+    metadata_weight: 0.20
+    semantic_threshold: 0.92      # high-confidence semantic alone
+    combined_threshold: 0.85      # weighted score to flag (higher = fewer candidates)
+    cross_encoder_threshold: 0.80 # minimum threshold to consider as candidate
+    llm_verify_threshold: 0.90   # only pairs above this go to LLM (below = auto "review")
+    llm_batch_size: 10           # pairs per LLM call
+    lsh_threshold: 0.6           # MinHash LSH Jaccard threshold for candidate generation
+    minhash_num_perm: 64
+  contradiction:
+    confidence_threshold: 0.90
+    similarity_threshold: 0.90    # min cosine similarity to consider a claim pair
+    max_neighbors: 3             # related claims fetched per claim (reduce to speed up)
+    max_claims_per_chunk: 2
+    staleness_days: 180           # docs older than this get staleness penalty
+  clustering:
+    algorithm: hdbscan            # "hdbscan" or "kmeans"
+    min_cluster_size: 5
+    min_samples: 3
+    kmeans_k: null                # auto-select if null
+    subcluster_min_members: 10    # only subcluster if parent has >= 10 chunks
+    subcluster_k: null            # auto-select if null (sqrt of cluster size, capped 2-5)
+  use_batch_api: false             # Batch API pour les phases d'analyse (>= 10 prompts)
+  gap_detection:
+    coverage_question_count: 2    # questions per cluster
+    confidence_threshold: 0.5     # below this = gap
+    orphan_cluster_max_size: 2
+  hallucination:
+    min_acronym_frequency: 2      # min occurrences to flag an acronym
+    jargon_tfidf_threshold: 0.15  # min TF-IDF score to consider a term as jargon
+    hedging_density_threshold: 0.02  # min hedging phrases per word to flag
+    max_items_per_type: 50        # max items per risk type
+
+tenant_defaults:
+  max_documents: 10000
+  max_connectors: 10
+  roles: [admin, editor, viewer]
+
+audit:
+  axis_weights:
+    hygiene: 0.20
+    structure: 0.15
+    coverage: 0.20
+    coherence: 0.15
+    retrievability: 0.20
+    governance: 0.10
+  hygiene:
+    minhash_num_perm: 64
+    neardup_jaccard_threshold: 0.5
+    boilerplate_freq_threshold: 0.3
+  structure:
+    min_chunk_tokens: 80
+    max_chunk_tokens: 1024
+    optimal_chunk_tokens: 768
+  coverage:
+    tfidf_max_features: 5000
+    svd_components: 30
+    max_topics: 10
+    outlier_contamination: 0.05
+  coherence:
+    min_term_frequency: 3
+    levenshtein_threshold: 0.85
+  retrievability:
+    bm25_top_k: 5
+    queries_per_doc: 1
+    recall_k_values: [1, 5, 10]
+  governance:
+    required_fields: [author, source_modified_at, doc_type, path]
+    staleness_days: 180
+
+semantic_graph:
+  enabled: true
+  spacy_model: fr_core_news_sm      # French spaCy model for concept extraction
+  chunk_max_chars: 600
+  top_k: 5
+  hops: 1
+  max_nodes: 40
+  evidence_cap: 3
+
+authority_rules:
+  # Higher = more authoritative. Used to resolve contradictions.
+  source_weights:
+    sharepoint: 1.0
+    confluence: 0.9
+    generic: 0.5
+  # Prefer newer docs when contradictions arise
+  recency_bias: true

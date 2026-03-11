@@ -1,0 +1,1459 @@
+{% load static i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'fr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="turbo-cache-control" content="no-cache">
+    <script>
+    // Patch storage access for restricted contexts (Turbo internally uses sessionStorage)
+    (function() {
+        function safeguardStorage(name) {
+            try { window[name].setItem('_t','1'); window[name].removeItem('_t'); }
+            catch(e) {
+                var data = {};
+                var proxy = { getItem: function(k){return data.hasOwnProperty(k)?data[k]:null;}, setItem: function(k,v){data[k]=String(v);}, removeItem: function(k){delete data[k];}, clear: function(){data={};}, get length(){return Object.keys(data).length;}, key: function(i){return Object.keys(data)[i]||null;} };
+                try { Object.defineProperty(window, name, {value:proxy,writable:false,configurable:true}); } catch(e2) {}
+            }
+        }
+        safeguardStorage('sessionStorage');
+        safeguardStorage('localStorage');
+        window.addEventListener('unhandledrejection', function(e) {
+            var msg = String((e.reason&&e.reason.message)||e.reason||'');
+            if (/storage/i.test(msg)) e.preventDefault();
+        });
+    })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DocuScore{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script>
+    (function(){
+        try {
+            var s = localStorage.getItem('ds-theme');
+            var t = (s === 'light' || s === 'dark') ? s
+                  : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-bs-theme', t);
+        } catch(e) {
+            document.documentElement.setAttribute('data-bs-theme',
+                window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        }
+    })();
+    </script>
+    <style>
+        /* ── Design Tokens: Light ── */
+        [data-bs-theme="light"] {
+            --ds-grey-800: #f5f6fa;
+            --ds-grey-700: #ffffff;
+            --ds-grey-500: #e2e4e9;
+            --ds-grey-100: #1d1e21;
+            --ds-text-muted: #6c717e;
+            --ds-shadow: rgba(0,0,0,0.06);
+            --ds-radius: 8px;
+            --ds-link: #0d6efd;
+            --ds-link-hover: #0a58ca;
+            --ds-code: #d63384;
+            --ds-table-hover: rgba(0,0,0,0.03);
+            --ds-table-stripe: rgba(0,0,0,0.015);
+
+            --bs-body-bg: var(--ds-grey-800);
+            --bs-body-color: var(--ds-grey-100);
+            --bs-body-font-family: 'Inter', sans-serif;
+            --bs-card-bg: var(--ds-grey-700);
+            --bs-card-border-color: var(--ds-grey-500);
+            --bs-card-cap-bg: var(--ds-grey-700);
+            --bs-border-color: var(--ds-grey-500);
+            --bs-tertiary-bg: var(--ds-grey-700);
+            --bs-secondary-color: var(--ds-text-muted);
+        }
+
+        /* ── Design Tokens: Dark ── */
+        [data-bs-theme="dark"] {
+            --ds-grey-800: #1f2024;
+            --ds-grey-700: #27282a;
+            --ds-grey-500: #37383a;
+            --ds-grey-100: #f8f8f8;
+            --ds-text-muted: #6c717e;
+            --ds-shadow: rgba(19,20,21,0.5);
+            --ds-radius: 8px;
+            --ds-link: #6ea8fe;
+            --ds-link-hover: #9ec5fe;
+            --ds-code: #e685b5;
+            --ds-table-hover: rgba(255,255,255,0.04);
+            --ds-table-stripe: rgba(255,255,255,0.02);
+
+            --bs-body-bg: var(--ds-grey-800);
+            --bs-body-color: var(--ds-grey-100);
+            --bs-body-font-family: 'Inter', sans-serif;
+            --bs-card-bg: var(--ds-grey-700);
+            --bs-card-border-color: var(--ds-grey-500);
+            --bs-card-cap-bg: var(--ds-grey-700);
+            --bs-border-color: var(--ds-grey-500);
+            --bs-tertiary-bg: var(--ds-grey-700);
+            --bs-secondary-color: var(--ds-text-muted);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--ds-grey-800);
+            color: var(--ds-grey-100);
+        }
+
+        /* ── Sidebar (Figma: nav/opened/black) ── */
+        .sidebar {
+            width: 236px;
+            min-width: 236px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            background: var(--ds-grey-800);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 8px;
+            gap: 24px;
+            box-shadow: inset -1px 0 0 var(--ds-grey-500);
+            overflow-y: auto;
+        }
+        .sidebar-top {
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+        }
+        .sidebar-logo {
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--ds-grey-100);
+            padding: 4px 8px;
+        }
+        .sidebar-logo:hover { opacity: 0.85; }
+        .sidebar-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--ds-grey-700);
+            border: 1px solid var(--ds-grey-500);
+            border-radius: 8px;
+            padding: 8px 12px;
+            box-shadow: 0 1px 2px var(--ds-shadow);
+            font-weight: 500;
+            font-size: 14px;
+            line-height: 24px;
+            color: var(--ds-grey-100);
+            text-decoration: none;
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .sidebar-btn:hover {
+            background: var(--ds-grey-500);
+            color: #fff;
+        }
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            width: 100%;
+        }
+        .sidebar-section-header {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 0 8px;
+            margin-bottom: 2px;
+        }
+        .sidebar-section-label {
+            font-weight: 700;
+            font-size: 10px;
+            line-height: 1.5;
+            text-transform: uppercase;
+            color: var(--ds-text-muted);
+            flex: 1;
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 32px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: 400;
+            font-size: 14px;
+            line-height: 24px;
+            color: var(--ds-grey-100);
+            text-decoration: none;
+            width: 100%;
+        }
+        .sidebar-item:hover {
+            background: var(--ds-grey-700);
+            color: #fff;
+        }
+        .sidebar-item.active {
+            background: var(--ds-grey-700);
+            color: #fff;
+            font-weight: 500;
+        }
+        .sidebar-item--muted { color: var(--ds-text-muted); }
+        .sidebar-item--muted:hover { color: var(--ds-grey-100); }
+        .sidebar-icon {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+        }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--ds-grey-700);
+            border: 1px solid var(--ds-grey-500);
+            border-radius: var(--ds-radius);
+            box-shadow: 0 1px 2px var(--ds-shadow);
+        }
+        .card-header {
+            background: var(--ds-grey-700);
+            border-bottom: 1px solid var(--ds-grey-500);
+        }
+        .card-footer {
+            background: var(--ds-grey-700);
+            border-top: 1px solid var(--ds-grey-500);
+        }
+
+        /* ── Stat cards ── */
+        .stat-card { border-left: 4px solid; }
+        .stat-card.primary { border-color: #0d6efd; }
+        .stat-card.warning { border-color: #ffc107; }
+        .stat-card.danger { border-color: #dc3545; }
+        .stat-card.success { border-color: #198754; }
+
+        /* ── Tables ── */
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--ds-grey-100);
+            --bs-table-border-color: var(--ds-grey-500);
+            --bs-table-hover-bg: var(--ds-table-hover);
+            --bs-table-striped-bg: var(--ds-table-stripe);
+        }
+        .table thead th {
+            color: var(--ds-text-muted);
+            font-weight: 700;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            border-bottom-color: var(--ds-grey-500);
+        }
+
+        /* ── Offcanvas ── */
+        .offcanvas {
+            background: var(--ds-grey-800);
+            color: var(--ds-grey-100);
+        }
+        .offcanvas-header {
+            border-bottom-color: var(--ds-grey-500) !important;
+        }
+        [data-bs-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        /* ── Forms / Inputs ── */
+        .form-control, .form-select {
+            background: var(--ds-grey-700);
+            border-color: var(--ds-grey-500);
+            color: var(--ds-grey-100);
+        }
+        .form-control:focus, .form-select:focus {
+            background: var(--ds-grey-700);
+            border-color: #0d6efd;
+            color: var(--ds-grey-100);
+            box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
+        }
+
+        /* ── Progress bars ── */
+        .progress {
+            background: var(--ds-grey-500);
+            border-radius: 4px;
+        }
+        .progress-bar-animated { transition: width 0.5s ease; }
+
+        /* ── Alerts ── */
+        .alert-light {
+            background: var(--ds-grey-700);
+            border-color: var(--ds-grey-500);
+            color: var(--ds-grey-100);
+        }
+
+        /* ── Badges ── */
+        .badge-severity-high { background: #dc3545; }
+        .badge-severity-medium { background: #ffc107; color: #000; }
+        .badge-severity-low { background: #198754; }
+        .badge.bg-light { background: var(--ds-grey-500) !important; color: var(--ds-grey-100) !important; }
+
+        /* ── Report cards (gaps, contradictions) ── */
+        .report-card {
+            background: var(--ds-grey-700);
+            border: 1px solid var(--ds-grey-500);
+            border-left: 4px solid var(--ds-grey-500);
+            border-radius: var(--ds-radius);
+            box-shadow: 0 1px 2px var(--ds-shadow);
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            transition: box-shadow 0.15s;
+        }
+        .report-card:hover {
+            box-shadow: 0 2px 8px var(--ds-shadow);
+        }
+        .report-card.resolved { opacity: 0.55; }
+        .report-card-accent-danger  { border-left-color: #dc3545; }
+        .report-card-accent-warning { border-left-color: #ffc107; }
+        .report-card-accent-info    { border-left-color: #0dcaf0; }
+        .report-card-accent-success { border-left-color: #198754; }
+        .report-card-accent-secondary { border-left-color: #6c757d; }
+
+        .report-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .report-card-pills {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .report-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.6;
+            border: 1.5px solid;
+            background: transparent;
+        }
+        .report-pill-danger  { border-color: #dc3545; color: #dc3545; }
+        .report-pill-warning { border-color: #e0a800; color: #e0a800; }
+        .report-pill-info    { border-color: #0dcaf0; color: #0dcaf0; }
+        .report-pill-success { border-color: #198754; color: #198754; }
+        .report-pill-secondary { border-color: var(--ds-text-muted); color: var(--ds-text-muted); }
+        .report-pill-high    { border-color: #dc3545; color: #dc3545; }
+        .report-pill-medium  { border-color: #e0a800; color: #e0a800; }
+        .report-pill-low     { border-color: #198754; color: #198754; }
+
+        [data-bs-theme="light"] .report-pill-warning { border-color: #997404; color: #997404; }
+        [data-bs-theme="light"] .report-pill-medium  { border-color: #997404; color: #997404; }
+
+        .report-card-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 0 0 4px;
+            color: var(--ds-grey-100);
+        }
+        .report-card-desc {
+            font-size: 13px;
+            color: var(--ds-text-muted);
+            margin: 0 0 8px;
+            line-height: 1.5;
+        }
+        .report-card-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+            color: var(--ds-text-muted);
+            margin-top: 8px;
+        }
+        .report-card-meta svg {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+            opacity: 0.6;
+        }
+        .report-card-actions {
+            display: inline-flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .report-card-actions .btn {
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 20px;
+        }
+
+        /* ── Pagination ── */
+        .page-link {
+            background: var(--ds-grey-700);
+            border-color: var(--ds-grey-500);
+            color: var(--ds-grey-100);
+        }
+        .page-link:hover {
+            background: var(--ds-grey-500);
+            border-color: var(--ds-grey-500);
+            color: #fff;
+        }
+        .page-item.active .page-link {
+            background: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .page-item.disabled .page-link {
+            background: var(--ds-grey-800);
+            border-color: var(--ds-grey-500);
+            color: var(--ds-text-muted);
+        }
+
+        /* ── Visualization ── */
+        .viz-container {
+            min-height: 500px;
+            border: 1px solid var(--ds-grey-500);
+            border-radius: var(--ds-radius);
+        }
+        .tooltip-viz {
+            position: absolute;
+            padding: 8px 12px;
+            background: var(--ds-grey-700);
+            color: var(--ds-grey-100);
+            border: 1px solid var(--ds-grey-500);
+            border-radius: var(--ds-radius);
+            font-size: 12px;
+            pointer-events: none;
+            box-shadow: 0 1px 2px var(--ds-shadow);
+        }
+
+        /* ── Text helpers ── */
+        .text-muted { color: var(--ds-text-muted) !important; }
+        h1, h2, h3, h4, h5, h6 { color: var(--ds-grey-100); }
+        a { color: var(--ds-link); }
+        a:hover { color: var(--ds-link-hover); }
+        code { color: var(--ds-code); }
+        hr { border-color: var(--ds-grey-500); }
+
+        /* ── DocuScore Nutri-Score badge ── */
+        .docuscore-badge { gap: 2px; }
+        .docuscore-pill {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 6px;
+            font-weight: 700; font-size: 13px; color: #fff; opacity: 0.35;
+            transition: all 0.2s;
+        }
+        .docuscore-pill.active { width: 44px; height: 44px; font-size: 22px; opacity: 1; box-shadow: 0 2px 8px var(--ds-shadow); }
+        .docuscore-A { background: #038141; }
+        .docuscore-B { background: #85bb2f; }
+        .docuscore-C { background: #fecb02; color: #333; }
+        .docuscore-D { background: #ee8100; }
+        .docuscore-E { background: #e63e11; }
+        .docuscore-number { font-size: 2rem; font-weight: 800; line-height: 1; }
+        .docuscore-color-A { color: #038141; }
+        .docuscore-color-B { color: #85bb2f; }
+        .docuscore-color-C { color: #c9a300; }
+        .docuscore-color-D { color: #ee8100; }
+        .docuscore-color-E { color: #e63e11; }
+        .docuscore-breakdown { min-width: 260px; }
+
+        /* ── Sidebar dropdowns ── */
+        .sidebar-dropdown {
+            position: relative;
+            width: 100%;
+        }
+        .sidebar-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: var(--ds-grey-700);
+            border: 1px solid var(--ds-grey-500);
+            border-radius: 8px;
+            padding: 8px 12px;
+            box-shadow: 0 1px 2px var(--ds-shadow);
+            font-weight: 500;
+            font-size: 14px;
+            line-height: 24px;
+            color: var(--ds-grey-100);
+            cursor: pointer;
+            text-align: left;
+            text-decoration: none;
+        }
+        .sidebar-dropdown-toggle:hover {
+            background: var(--ds-grey-500);
+            color: #fff;
+        }
+        .sidebar-dropdown-toggle .dd-label {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .sidebar-dropdown-toggle .dd-chevron {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+            transition: transform 0.15s;
+        }
+        .sidebar-dropdown.open .dd-chevron { transform: rotate(180deg); }
+        .sidebar-dropdown-menu {
+            display: none;
+            position: absolute;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: var(--ds-grey-700);
+            border: 1px solid var(--ds-grey-500);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px var(--ds-shadow);
+            padding: 4px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .sidebar-dropdown-menu--top { bottom: calc(100% + 4px); }
+        .sidebar-dropdown-menu--bottom { top: calc(100% + 4px); }
+        .sidebar-dropdown.open .sidebar-dropdown-menu { display: block; }
+        .sidebar-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--ds-grey-100);
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .sidebar-dropdown-item:hover { background: var(--ds-grey-500); color: #fff; }
+        .sidebar-dropdown-item.active { background: rgba(13,110,253,0.15); color: #6ea8fe; }
+        .sidebar-dropdown-divider {
+            height: 1px;
+            background: var(--ds-grey-500);
+            margin: 4px 0;
+        }
+        .sidebar-dropdown-hint {
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--ds-text-muted);
+            padding: 6px 10px 2px;
+        }
+        .sidebar-user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .sidebar-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #dc3545;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .sidebar-user-meta {
+            flex: 1;
+            min-width: 0;
+        }
+        .sidebar-user-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--ds-grey-100);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+        .sidebar-user-tenant {
+            font-size: 11px;
+            color: var(--ds-text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+            margin-top: -1px;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--ds-grey-800); }
+        ::-webkit-scrollbar-thumb { background: var(--ds-grey-500); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--ds-text-muted); }
+
+        /* ── Light mode hover overrides ── */
+        [data-bs-theme="light"] .sidebar-btn:hover,
+        [data-bs-theme="light"] .sidebar-item:hover,
+        [data-bs-theme="light"] .sidebar-item.active,
+        [data-bs-theme="light"] .sidebar-dropdown-toggle:hover,
+        [data-bs-theme="light"] .sidebar-dropdown-item:hover,
+        [data-bs-theme="light"] .sidebar-submenu-toggle:hover,
+        [data-bs-theme="light"] .sidebar-submenu-toggle.active,
+        [data-bs-theme="light"] .page-link:hover {
+            color: var(--ds-grey-100);
+        }
+
+        /* ── Theme toggle ── */
+        .sidebar-theme-toggle {
+            width: 28px; height: 28px;
+            background: none; border: none; border-radius: 6px;
+            color: var(--ds-text-muted); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0; margin-left: auto; flex-shrink: 0;
+        }
+        .sidebar-theme-toggle:hover { color: var(--ds-grey-100); background: rgba(128,128,128,0.15); }
+        /* ── Sidebar submenu ── */
+        .sidebar-submenu-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 32px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: 400;
+            font-size: 14px;
+            line-height: 24px;
+            color: var(--ds-grey-100);
+            text-decoration: none;
+            width: 100%;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        .sidebar-submenu-toggle:hover {
+            background: var(--ds-grey-700);
+            color: #fff;
+        }
+        .sidebar-submenu-toggle.active {
+            background: var(--ds-grey-700);
+            color: #fff;
+            font-weight: 500;
+        }
+        .sidebar-submenu-arrow {
+            width: 10px;
+            height: 10px;
+            flex-shrink: 0;
+            margin-left: auto;
+            transition: transform 0.2s ease;
+        }
+        .sidebar-submenu.open .sidebar-submenu-arrow {
+            transform: rotate(45deg);
+        }
+        .sidebar-submenu-items {
+            display: none;
+            flex-direction: column;
+            gap: 1px;
+            padding-left: 20px;
+        }
+        .sidebar-submenu.open .sidebar-submenu-items {
+            display: flex;
+        }
+        .sidebar-subitem {
+            display: flex;
+            align-items: center;
+            height: 28px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--ds-text-muted);
+            text-decoration: none;
+        }
+        .sidebar-subitem:hover {
+            background: var(--ds-grey-700);
+            color: var(--ds-grey-100);
+        }
+        .sidebar-subitem.active {
+            color: var(--ds-grey-100);
+            font-weight: 500;
+        }
+
+        /* ── Switch tenant modal items ── */
+        .switch-tenant-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--ds-grey-500);
+            border-radius: 10px;
+            background: transparent;
+            color: var(--ds-grey-100);
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .switch-tenant-item:hover {
+            background: var(--ds-grey-500);
+        }
+        .switch-tenant-item.active {
+            border-color: #198754;
+            background: rgba(25,135,84,0.08);
+        }
+        .switch-tenant-avatar {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            background: var(--ds-grey-500);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 15px;
+            color: var(--ds-grey-100); flex-shrink: 0;
+        }
+        .switch-tenant-info {
+            flex: 1; min-width: 0;
+            display: flex; flex-direction: column;
+        }
+        .switch-tenant-name {
+            font-size: 14px; font-weight: 600;
+            color: var(--ds-grey-100);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .switch-tenant-role {
+            font-size: 11px; color: var(--ds-text-muted);
+        }
+
+        [data-bs-theme="light"] .theme-icon-sun { display: none; }
+        [data-bs-theme="dark"] .theme-icon-moon { display: none; }
+
+        /* ── Feedback modal ── */
+        .fb-step { display: none; }
+        .fb-step.active { display: block; }
+        .fb-choices { display: grid; gap: 12px; }
+        .fb-choices--2 { grid-template-columns: 1fr 1fr; }
+        .fb-choices--3 { grid-template-columns: 1fr 1fr 1fr; }
+        .fb-choice {
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            padding: 20px 12px; border: 1.5px solid var(--ds-grey-500);
+            border-radius: 16px; background: transparent; color: var(--ds-grey-100);
+            cursor: pointer; transition: border-color 0.15s, background 0.15s;
+            text-align: center;
+        }
+        .fb-choice:hover { border-color: #0d6efd; background: rgba(13,110,253,0.06); }
+        .fb-choice-icon {
+            width: 56px; height: 56px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .fb-choice-title { font-weight: 600; font-size: 14px; line-height: 1.3; }
+        .fb-choice-sub { font-size: 12px; color: var(--ds-text-muted); line-height: 1.3; }
+        .fb-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            background: var(--ds-grey-500); color: var(--ds-grey-100);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+    <script type="importmap">
+    {
+        "imports": {
+            "@hotwired/turbo": "https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/dist/turbo.es2017-esm.js",
+            "@hotwired/stimulus": "https://cdn.jsdelivr.net/npm/@hotwired/stimulus@3.2.2/dist/stimulus.js"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as Turbo from "@hotwired/turbo";
+        import { Application, Controller } from "@hotwired/stimulus";
+
+        // Disable Turbo Drive — only use Turbo Frames
+        Turbo.session.drive = false;
+        // Prevent Turbo from accessing sessionStorage (snapshot cache)
+        try { Turbo.cache.clear(); Turbo.cache.exemptPageFromCache(); } catch(e) {}
+
+        const application = Application.start();
+
+        application.register("auto-refresh", class extends Controller {
+            static values = { url: String, frame: String, active: Boolean };
+            static classes = [];
+
+            connect() {
+                if (this.activeValue) this._startPolling();
+                this._onBeforeUnload = () => this._stopPolling();
+                window.addEventListener("beforeunload", this._onBeforeUnload);
+            }
+
+            disconnect() {
+                this._stopPolling();
+                window.removeEventListener("beforeunload", this._onBeforeUnload);
+            }
+
+            activeValueChanged(active) {
+                if (active) {
+                    this._startPolling();
+                } else {
+                    this._stopPolling();
+                }
+            }
+
+            _startPolling() {
+                if (this._timer) return;
+                this._timer = setInterval(() => this._reload(), 4000);
+            }
+
+            _stopPolling() {
+                if (this._timer) {
+                    clearInterval(this._timer);
+                    this._timer = null;
+                }
+            }
+
+            _reload() {
+                if (document.hidden) return;
+                const frame = document.getElementById(this.frameValue);
+                if (frame) {
+                    frame.src = this.urlValue;
+                    frame.reload();
+                }
+            }
+        });
+    </script>
+</head>
+<body>
+<div class="d-flex">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-top">
+            <a class="sidebar-logo" href="{% url 'dashboard-home' %}">DocuScore</a>
+            <button class="sidebar-theme-toggle" id="themeToggle" title="{% trans "Changer le thème" %}">
+                <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.7 3.7l1.4 1.4M10.9 10.9l1.4 1.4M12.3 3.7l-1.4 1.4M5.1 10.9l-1.4 1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 8.5a5.5 5.5 0 01-6-6 5.5 5.5 0 106 6z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+
+        <!-- Project selector (top) -->
+        {% if current_project %}
+        <div class="sidebar-dropdown" data-dropdown>
+            <button class="sidebar-dropdown-toggle" data-dropdown-toggle>
+                <svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M2 6h8M2 8.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                <span class="dd-label">{{ current_project.name }}</span>
+                <svg class="dd-chevron" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="sidebar-dropdown-menu sidebar-dropdown-menu--bottom">
+                <div class="sidebar-dropdown-hint">{% trans "Projets" %}</div>
+                {% for pm in user_projects %}
+                <form method="post" action="{% url 'project-list' %}" style="margin:0">
+                    {% csrf_token %}
+                    <input type="hidden" name="project_id" value="{{ pm.project_id }}">
+                    <button type="submit" class="sidebar-dropdown-item {% if pm.project_id == current_project.id %}active{% endif %}">
+                        <svg style="width:10px;height:10px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M2 6h8M2 8.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        <span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ pm.project.name }}</span>
+                        {% if pm.project_id == current_project.id %}
+                        <svg style="width:10px;height:10px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5l2.5 2.5 5-5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        {% endif %}
+                    </button>
+                </form>
+                {% endfor %}
+                {% if membership and membership.is_admin %}
+                <div class="sidebar-dropdown-divider"></div>
+                <button type="button" class="sidebar-dropdown-item" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+                    <svg style="width:10px;height:10px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><path d="M6 2.5v7M2.5 6h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                    <span>{% trans "Nouveau projet" %}</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">
+                <span class="sidebar-section-label">{% trans "Navigation" %}</span>
+            </div>
+            <a class="sidebar-item {% block nav_dashboard %}{% endblock %}" href="{% url 'dashboard-home' %}">
+                <svg class="sidebar-icon" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="6.5" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="6.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="6.5" y="6.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+                <span>{% trans "Tableau de bord" %}</span>
+            </a>
+            <a class="sidebar-item {% block nav_connectors %}{% endblock %}" href="{% url 'connector-list' %}">
+                <svg class="sidebar-icon" viewBox="0 0 12 12" fill="none"><path d="M4.5 7.5l3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M6.5 3.5l1-1a1.5 1.5 0 012 2l-1 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 8.5l-1 1a1.5 1.5 0 01-2-2l1-1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>{% trans "Connecteurs" %}</span>
+            </a>
+            <div class="sidebar-submenu" data-sidebar-submenu>
+                <a class="sidebar-submenu-toggle {% block nav_analysis %}{% endblock %}" href="{% url 'analysis-list' %}" data-sidebar-submenu-toggle>
+                    <svg class="sidebar-icon" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7.5L10.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                    <span>{% trans "Analyses" %}</span>
+                    <svg class="sidebar-submenu-arrow" viewBox="0 0 12 12" fill="none"><path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </a>
+                <div class="sidebar-submenu-items">
+                    {% block nav_analysis_submenu %}{% endblock %}
+                </div>
+            </div>
+            <a class="sidebar-item {% block nav_chat %}{% endblock %}" href="{% url 'chat-home' %}">
+                <svg class="sidebar-icon" viewBox="0 0 12 12" fill="none"><path d="M1.5 2.5a1 1 0 011-1h7a1 1 0 011 1v5a1 1 0 01-1 1H5l-2 2v-2h-.5a1 1 0 01-1-1v-5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                <span>{% trans "Assistant" %}</span>
+            </a>
+        </div>
+
+        {% block sidebar_extra %}{% endblock %}
+
+        {% if onboarding_steps %}
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">
+                <span class="sidebar-section-label">{% trans "Mise en route" %}</span>
+            </div>
+            {% for step in onboarding_steps %}
+            {% if step.url == "project-create" and not step.done %}
+            <button type="button" class="sidebar-item sidebar-item--muted" style="gap:6px;background:none;border:none;cursor:pointer;text-align:left;" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+            {% elif step.url and not step.done %}
+            <a class="sidebar-item sidebar-item--muted" href="{% url step.url %}" style="gap:6px;">
+            {% else %}
+            <span class="sidebar-item" style="gap:6px;{% if step.done %}opacity:0.5{% else %}color:var(--ds-text-muted){% endif %}">
+            {% endif %}
+                {% if step.done %}
+                <svg style="width:12px;height:12px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="2" fill="#198754"/><path d="M3.5 6.2l1.8 1.8 3.2-3.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                {% else %}
+                <svg style="width:12px;height:12px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="var(--ds-grey-500)" stroke-width="1"/></svg>
+                {% endif %}
+                <span style="font-size:12px;">{{ step.label }}</span>
+            {% if step.url == "project-create" and not step.done %}
+            </button>
+            {% elif step.url and not step.done %}
+            </a>
+            {% else %}
+            </span>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="sidebar-section">
+            <button class="sidebar-item" type="button" data-bs-toggle="modal" data-bs-target="#feedbackModal" style="background:none;border:none;cursor:pointer;text-align:left;">
+                <svg class="sidebar-icon" viewBox="0 0 12 12" fill="none"><path d="M1.5 2a1 1 0 011-1h7a1 1 0 011 1v5.5a1 1 0 01-1 1H5.3l-2.3 2V8.5h-.5a1 1 0 01-1-1V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="4" cy="4.75" r="0.6" fill="currentColor"/><circle cx="6" cy="4.75" r="0.6" fill="currentColor"/><circle cx="8" cy="4.75" r="0.6" fill="currentColor"/></svg>
+                <span>{% trans "Feedback" %}</span>
+            </button>
+        </div>
+
+        <!-- User / account (bottom) -->
+        <div class="sidebar-section" style="margin-top: auto;">
+            <div class="sidebar-dropdown" data-dropdown>
+                <button class="sidebar-dropdown-toggle" data-dropdown-toggle style="background:transparent;border-color:transparent;box-shadow:none;padding:6px 8px;">
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+                        <div class="sidebar-user-meta">
+                            <div class="sidebar-user-name">{{ user.get_full_name|default:user.username }}</div>
+                            {% if current_tenant %}
+                            <div class="sidebar-user-tenant">{{ current_tenant.name }}</div>
+                            {% endif %}
+                        </div>
+                        <svg class="dd-chevron" viewBox="0 0 12 12" fill="none"><path d="M3 7.5l3-3 3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                </button>
+                <div class="sidebar-dropdown-menu sidebar-dropdown-menu--top">
+                    <a href="{% url 'tenant-settings' %}" class="sidebar-dropdown-item">
+                        <svg style="width:10px;height:10px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 1v1.5M6 9.5V11M1 6h1.5M9.5 6H11M2.7 2.7l1 1M8.3 8.3l1 1M9.3 2.7l-1 1M3.7 8.3l-1 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        <span>{% trans "Paramètres" %}</span>
+                    </a>
+                    <div class="sidebar-dropdown-divider"></div>
+                    <button type="button" class="sidebar-dropdown-item" data-bs-toggle="modal" data-bs-target="#switchTenantModal">
+                        <svg style="width:10px;height:10px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><path d="M8 2l2 2-2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 4h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M4 6.5l-2 2 2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 8.5H2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        <span>{% trans "Changer d'espace" %}</span>
+                    </button>
+                    <a href="{% url 'account_logout' %}" class="sidebar-dropdown-item">
+                        <svg style="width:10px;height:10px;flex-shrink:0" viewBox="0 0 12 12" fill="none"><path d="M7 1.5H9.5a1 1 0 011 1v7a1 1 0 01-1 1H7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 8.5L1.5 6 4 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 6h6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        <span>{% trans "Déconnexion" %}</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="flex-fill p-4" style="min-height: 100vh; background: var(--ds-grey-800);">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+{% if membership and membership.is_admin %}
+<!-- New Project Modal -->
+<div class="modal fade" id="newProjectModal" tabindex="-1" aria-labelledby="newProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content" style="background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:16px;box-shadow:0 24px 48px rgba(0,0,0,0.25);">
+            <div class="modal-body" style="padding:32px 32px 28px;">
+                <!-- Icon -->
+                <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#0d6efd 0%,#6610f2 100%);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                </div>
+                <!-- Title -->
+                <h5 id="newProjectModalLabel" style="text-align:center;font-weight:700;font-size:18px;margin-bottom:4px;color:var(--ds-grey-100);">{% trans "Nouveau projet" %}</h5>
+                <p style="text-align:center;font-size:13px;color:var(--ds-text-muted);margin-bottom:24px;">{% trans "Créez un espace dédié pour analyser un corpus documentaire." %}</p>
+                <!-- Form -->
+                <form method="post" action="{% url 'project-create' %}">
+                    {% csrf_token %}
+                    <div style="margin-bottom:16px;">
+                        <label for="modal-project-name" style="font-size:13px;font-weight:600;color:var(--ds-grey-100);margin-bottom:6px;display:block;">{% trans "Nom du projet" %}</label>
+                        <input type="text" class="form-control" id="modal-project-name" name="name" required maxlength="200" placeholder="{% trans "ex. Audit Q4 2025" %}" style="border-radius:10px;padding:10px 14px;font-size:14px;">
+                    </div>
+                    <div style="margin-bottom:24px;">
+                        <label for="modal-project-desc" style="font-size:13px;font-weight:600;color:var(--ds-grey-100);margin-bottom:6px;display:block;">{% trans "Description" %} <span style="font-weight:400;color:var(--ds-text-muted);">({% trans "optionnel" %})</span></label>
+                        <textarea class="form-control" id="modal-project-desc" name="description" rows="3" placeholder="{% trans "Décrivez brièvement l'objectif de ce projet…" %}" style="border-radius:10px;padding:10px 14px;font-size:14px;resize:vertical;"></textarea>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="flex:1;border-radius:10px;padding:10px;font-weight:600;font-size:14px;">{% trans "Annuler" %}</button>
+                        <button type="submit" class="btn btn-primary" style="flex:1;border-radius:10px;padding:10px;font-weight:600;font-size:14px;">{% trans "Créer le projet" %}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Switch Tenant Modal -->
+<div class="modal fade" id="switchTenantModal" tabindex="-1" aria-labelledby="switchTenantModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:16px;box-shadow:0 24px 48px rgba(0,0,0,0.25);">
+            <div class="modal-body" style="padding:32px 32px 28px;">
+                <!-- Icon -->
+                <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#198754 0%,#0dcaf0 100%);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+                </div>
+                <!-- Title -->
+                <h5 id="switchTenantModalLabel" style="text-align:center;font-weight:700;font-size:18px;margin-bottom:4px;color:var(--ds-grey-100);">{% trans "Changer d'espace" %}</h5>
+                <p style="text-align:center;font-size:13px;color:var(--ds-text-muted);margin-bottom:20px;">{% trans "Sélectionnez l'espace de travail sur lequel vous souhaitez travailler." %}</p>
+                <!-- Tenant list -->
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;max-height:280px;overflow-y:auto;">
+                    {% for m in user_tenants %}
+                    <form method="post" action="{% url 'tenant-select' %}" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="tenant_id" value="{{ m.tenant_id }}">
+                        <button type="submit" class="switch-tenant-item{% if current_tenant and m.tenant_id == current_tenant.id %} active{% endif %}">
+                            <span class="switch-tenant-avatar">{{ m.tenant.name|truncatechars:1|upper }}</span>
+                            <span class="switch-tenant-info">
+                                <span class="switch-tenant-name">{{ m.tenant.name }}</span>
+                                <span class="switch-tenant-role">{{ m.get_role_display }}</span>
+                            </span>
+                            {% if current_tenant and m.tenant_id == current_tenant.id %}
+                            <svg style="width:16px;height:16px;flex-shrink:0;color:#198754;" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5l3 3 6-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            {% endif %}
+                        </button>
+                    </form>
+                    {% empty %}
+                    <div style="text-align:center;padding:16px 0;color:var(--ds-text-muted);font-size:13px;">{% trans "Aucun espace disponible." %}</div>
+                    {% endfor %}
+                </div>
+                <!-- Create new tenant -->
+                <button type="button" data-bs-toggle="modal" data-bs-target="#newTenantModal" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;border:1.5px dashed var(--ds-grey-500);border-radius:10px;color:var(--ds-text-muted);background:transparent;font-size:13px;font-weight:600;cursor:pointer;transition:border-color 0.15s,color 0.15s;">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2.5v9M2.5 7h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    {% trans "Créer un nouvel espace" %}
+                </button>
+                <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal" style="border-radius:10px;padding:10px;font-weight:600;font-size:14px;margin-top:12px;">{% trans "Fermer" %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Tenant Modal -->
+<div class="modal fade" id="newTenantModal" tabindex="-1" aria-labelledby="newTenantModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:16px;box-shadow:0 24px 48px rgba(0,0,0,0.25);">
+            <div class="modal-body" style="padding:32px 32px 28px;">
+                <!-- Icon -->
+                <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#f97316 0%,#fbbf24 100%);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+                </div>
+                <!-- Title -->
+                <h5 id="newTenantModalLabel" style="text-align:center;font-weight:700;font-size:18px;margin-bottom:4px;color:var(--ds-grey-100);">{% trans "Nouvel espace de travail" %}</h5>
+                <p style="text-align:center;font-size:13px;color:var(--ds-text-muted);margin-bottom:24px;">{% trans "Un espace regroupe vos projets, utilisateurs et données de manière isolée." %}</p>
+                <!-- Form -->
+                <form method="post" action="{% url 'tenant-create' %}">
+                    {% csrf_token %}
+                    <div style="margin-bottom:24px;">
+                        <label for="modal-tenant-name" style="font-size:13px;font-weight:600;color:var(--ds-grey-100);margin-bottom:6px;display:block;">{% trans "Nom de l'espace" %}</label>
+                        <input type="text" class="form-control" id="modal-tenant-name" name="name" required maxlength="200" placeholder="{% trans "ex. Mon entreprise" %}" style="border-radius:10px;padding:10px 14px;font-size:14px;">
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="flex:1;border-radius:10px;padding:10px;font-weight:600;font-size:14px;">{% trans "Annuler" %}</button>
+                        <button type="submit" class="btn btn-primary" style="flex:1;border-radius:10px;padding:10px;font-weight:600;font-size:14px;">{% trans "Créer l'espace" %}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+        <div class="modal-content" style="background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:16px;box-shadow:0 24px 48px rgba(0,0,0,0.25);">
+            <div class="modal-body" style="padding:32px 32px 28px;">
+
+                <!-- Step 1: Type -->
+                <div class="fb-step active" data-fb-step="1">
+                    <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#0d6efd 0%,#6610f2 100%);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    </div>
+                    <h5 id="feedbackModalLabel" style="text-align:center;font-weight:700;font-size:18px;margin-bottom:4px;color:var(--ds-grey-100);">{% trans "Feedback" %}</h5>
+                    <p style="text-align:center;font-size:13px;color:var(--ds-text-muted);margin-bottom:24px;">{% trans "Comment pouvons-nous vous aider ?" %}</p>
+                    <div class="fb-choices fb-choices--2">
+                        <button type="button" class="fb-choice" data-fb-type="feedback">
+                            <span class="fb-choice-icon" style="background:linear-gradient(135deg,#6610f2 0%,#a855f7 100%);">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
+                            </span>
+                            <span class="fb-choice-title">Feedback</span>
+                            <span class="fb-choice-sub">{% trans "Partagez une idée ou suggestion" %}</span>
+                        </button>
+                        <button type="button" class="fb-choice" data-fb-type="issue">
+                            <span class="fb-choice-icon" style="background:linear-gradient(135deg,#dc3545 0%,#ff6b6b 100%);">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            </span>
+                            <span class="fb-choice-title">{% trans "Signaler un problème" %}</span>
+                            <span class="fb-choice-sub">{% trans "Quelque chose ne fonctionne pas" %}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Area -->
+                <div class="fb-step" data-fb-step="2">
+                    <h5 style="text-align:center;font-weight:700;font-size:18px;margin-bottom:4px;color:var(--ds-grey-100);">{% trans "Zone concernée" %}</h5>
+                    <p style="text-align:center;font-size:13px;color:var(--ds-text-muted);margin-bottom:24px;">{% trans "Sélectionnez la fonctionnalité concernée." %}</p>
+                    <div class="fb-choices fb-choices--3">
+                        <button type="button" class="fb-choice" data-fb-area="connectors">
+                            <span class="fb-choice-icon" style="background:linear-gradient(135deg,#0d6efd 0%,#0dcaf0 100%);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 017 7h2"/><path d="M15 7h2a5 5 0 010 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                            </span>
+                            <span class="fb-choice-title">{% trans "Connecteurs" %}</span>
+                        </button>
+                        <button type="button" class="fb-choice" data-fb-area="analysis">
+                            <span class="fb-choice-icon" style="background:linear-gradient(135deg,#198754 0%,#20c997 100%);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            </span>
+                            <span class="fb-choice-title">{% trans "Analyses" %}</span>
+                        </button>
+                        <button type="button" class="fb-choice" data-fb-area="audit">
+                            <span class="fb-choice-icon" style="background:linear-gradient(135deg,#f97316 0%,#fbbf24 100%);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            </span>
+                            <span class="fb-choice-title">{% trans "Audit RAG" %}</span>
+                        </button>
+                        <button type="button" class="fb-choice" data-fb-area="assistant">
+                            <span class="fb-choice-icon" style="background:linear-gradient(135deg,#6610f2 0%,#d63384 100%);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                            </span>
+                            <span class="fb-choice-title">{% trans "Assistant" %}</span>
+                        </button>
+                        <button type="button" class="fb-choice" data-fb-area="users">
+                            <span class="fb-choice-icon" style="background:linear-gradient(135deg,#0dcaf0 0%,#198754 100%);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                            </span>
+                            <span class="fb-choice-title">{% trans "Utilisateurs" %}</span>
+                        </button>
+                        <button type="button" class="fb-choice" data-fb-area="other">
+                            <span class="fb-choice-icon" style="background:linear-gradient(135deg,#6c757d 0%,#adb5bd 100%);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                            </span>
+                            <span class="fb-choice-title">{% trans "Autre" %}</span>
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary w-100" style="border-radius:10px;padding:10px;font-weight:600;font-size:14px;margin-top:20px;" data-fb-back="1">{% trans "Retour" %}</button>
+                </div>
+
+                <!-- Step 3: Form -->
+                <div class="fb-step" data-fb-step="3">
+                    <h5 style="text-align:center;font-weight:700;font-size:18px;margin-bottom:4px;color:var(--ds-grey-100);">{% trans "Détails" %}</h5>
+                    <p style="text-align:center;font-size:13px;color:var(--ds-text-muted);margin-bottom:16px;">{% trans "Décrivez votre retour en détail." %}</p>
+                    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;">
+                        <span class="fb-badge" id="fbBadgeType"></span>
+                        <span class="fb-badge" id="fbBadgeArea"></span>
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <label for="fb-subject" style="font-size:13px;font-weight:600;color:var(--ds-grey-100);margin-bottom:6px;display:block;">{% trans "Sujet" %}</label>
+                        <input type="text" class="form-control" id="fb-subject" required maxlength="200" placeholder="{% trans "Résumé en une phrase" %}" style="border-radius:10px;padding:10px 14px;font-size:14px;">
+                    </div>
+                    <div style="margin-bottom:24px;">
+                        <label for="fb-description" style="font-size:13px;font-weight:600;color:var(--ds-grey-100);margin-bottom:6px;display:block;">{% trans "Description" %}</label>
+                        <textarea class="form-control" id="fb-description" rows="5" required placeholder="{% trans "Décrivez en détail…" %}" style="border-radius:10px;padding:10px 14px;font-size:14px;resize:vertical;"></textarea>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="btn btn-outline-secondary" style="flex:1;border-radius:10px;padding:10px;font-weight:600;font-size:14px;" data-fb-back="2">{% trans "Retour" %}</button>
+                        <button type="button" class="btn btn-primary" id="fbSubmitBtn" style="flex:1;border-radius:10px;padding:10px;font-weight:600;font-size:14px;">{% trans "Envoyer" %}</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Sidebar dropdown toggle
+    document.addEventListener("click", function(e) {
+        var toggle = e.target.closest("[data-dropdown-toggle]");
+        if (toggle) {
+            e.stopPropagation();
+            var dd = toggle.closest("[data-dropdown]");
+            // Close all other dropdowns
+            document.querySelectorAll("[data-dropdown].open").forEach(function(el) {
+                if (el !== dd) el.classList.remove("open");
+            });
+            dd.classList.toggle("open");
+            return;
+        }
+        // Close dropdowns when clicking outside
+        if (!e.target.closest("[data-dropdown]")) {
+            document.querySelectorAll("[data-dropdown].open").forEach(function(el) {
+                el.classList.remove("open");
+            });
+        }
+    });
+</script>
+<script>
+// Sidebar submenu logic
+(function() {
+    document.querySelectorAll('[data-sidebar-submenu]').forEach(function(submenu) {
+        var items = submenu.querySelector('.sidebar-submenu-items');
+        var toggle = submenu.querySelector('[data-sidebar-submenu-toggle]');
+        // Auto-open if submenu has content (child templates filled the block)
+        if (items && items.children.length > 0) {
+            submenu.classList.add('open');
+            // When submenu has items, toggle button should not navigate — just toggle
+            if (toggle) {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    submenu.classList.toggle('open');
+                });
+            }
+        } else {
+            // No submenu items — hide the arrow, let the link navigate normally
+            var arrow = submenu.querySelector('.sidebar-submenu-arrow');
+            if (arrow) arrow.style.display = 'none';
+        }
+    });
+})();
+</script>
+<script>
+(function() {
+    var btn = document.getElementById('themeToggle');
+    if (btn) {
+        btn.addEventListener('click', function() {
+            var html = document.documentElement;
+            var next = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-bs-theme', next);
+            try { localStorage.setItem('ds-theme', next); } catch(e) {}
+        });
+    }
+})();
+</script>
+<script>
+// Close sidebar dropdown when any modal opens
+document.querySelectorAll('.modal').forEach(function(modal) {
+    modal.addEventListener('show.bs.modal', function() {
+        document.querySelectorAll('[data-dropdown].open').forEach(function(el) {
+            el.classList.remove('open');
+        });
+    });
+});
+var newProjModal = document.getElementById('newProjectModal');
+if (newProjModal) {
+    newProjModal.addEventListener('shown.bs.modal', function() {
+        var nameInput = document.getElementById('modal-project-name');
+        if (nameInput) nameInput.focus();
+    });
+}
+var newTenantModal = document.getElementById('newTenantModal');
+if (newTenantModal) {
+    newTenantModal.addEventListener('shown.bs.modal', function() {
+        var nameInput = document.getElementById('modal-tenant-name');
+        if (nameInput) nameInput.focus();
+    });
+}
+</script>
+<script>
+// Feedback wizard
+(function() {
+    var fbType = '', fbArea = '';
+    var modal = document.getElementById('feedbackModal');
+    if (!modal) return;
+
+    var typeLabels = {feedback: '{% trans "Feedback" %}', issue: '{% trans "Problème" %}'};
+    var areaLabels = {connectors: '{% trans "Connecteurs" %}', analysis: '{% trans "Analyses" %}', audit: '{% trans "Audit RAG" %}', assistant: '{% trans "Assistant" %}', users: '{% trans "Utilisateurs" %}', other: '{% trans "Autre" %}'};
+
+    function showStep(n) {
+        modal.querySelectorAll('.fb-step').forEach(function(s) { s.classList.remove('active'); });
+        var step = modal.querySelector('[data-fb-step="' + n + '"]');
+        if (step) step.classList.add('active');
+    }
+
+    // Step 1: type selection
+    modal.querySelectorAll('[data-fb-type]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            fbType = btn.getAttribute('data-fb-type');
+            showStep(2);
+        });
+    });
+
+    // Step 2: area selection
+    modal.querySelectorAll('[data-fb-area]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            fbArea = btn.getAttribute('data-fb-area');
+            document.getElementById('fbBadgeType').textContent = typeLabels[fbType] || fbType;
+            document.getElementById('fbBadgeArea').textContent = areaLabels[fbArea] || fbArea;
+            showStep(3);
+        });
+    });
+
+    // Back buttons
+    modal.querySelectorAll('[data-fb-back]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            showStep(parseInt(btn.getAttribute('data-fb-back')));
+        });
+    });
+
+    // Submit
+    var submitBtn = document.getElementById('fbSubmitBtn');
+    submitBtn.addEventListener('click', function() {
+        var subject = document.getElementById('fb-subject').value.trim();
+        var description = document.getElementById('fb-description').value.trim();
+        if (!subject || !description) return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '{% trans "Envoi…" %}';
+        fetch('{% url "dashboard-feedback" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')
+                    ? document.querySelector('[name=csrfmiddlewaretoken]').value
+                    : document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
+            },
+            body: JSON.stringify({type: fbType, area: fbArea, subject: subject, description: description})
+        }).then(function(r) { return r.json(); }).then(function() {
+            bootstrap.Modal.getInstance(modal).hide();
+        }).catch(function() {
+            alert('{% trans "Erreur lors de l\'envoi. Veuillez réessayer." %}');
+        }).finally(function() {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '{% trans "Envoyer" %}';
+        });
+    });
+
+    // Reset on close
+    modal.addEventListener('hidden.bs.modal', function() {
+        fbType = ''; fbArea = '';
+        showStep(1);
+        document.getElementById('fb-subject').value = '';
+        document.getElementById('fb-description').value = '';
+    });
+})();
+</script>
+{% include "dashboard/includes/toasts.html" %}
+
+<!-- Confirm dialog -->
+<div class="modal fade" id="dsConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content" style="background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:16px;box-shadow:0 24px 48px rgba(0,0,0,0.25);">
+            <div class="modal-body" style="padding:28px 28px 0;">
+                <div style="display:flex;align-items:flex-start;gap:16px;">
+                    <div style="min-width:44px;height:44px;border-radius:50%;background:rgba(220,53,69,0.12);display:flex;align-items:center;justify-content:center;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div>
+                        <h5 id="dsConfirmTitle" style="font-weight:700;font-size:16px;margin:0 0 6px;color:var(--ds-grey-100);"></h5>
+                        <p id="dsConfirmMessage" style="font-size:14px;line-height:1.6;color:var(--ds-text-muted);margin:0;"></p>
+                    </div>
+                </div>
+                <div id="dsConfirmInputWrap" style="display:none;margin-top:16px;">
+                    <label id="dsConfirmInputLabel" style="font-size:13px;color:var(--ds-text-muted);margin-bottom:6px;display:block;"></label>
+                    <input id="dsConfirmInput" type="text" class="form-control" autocomplete="off" style="border-radius:8px;">
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:none;padding:16px 28px;display:flex;justify-content:flex-end;gap:10px;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:10px;padding:8px 20px;font-weight:600;font-size:14px;">{% trans "Annuler" %}</button>
+                <button type="button" id="dsConfirmAction" class="btn btn-danger" style="border-radius:10px;padding:8px 20px;font-weight:600;font-size:14px;"></button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    var modal = new bootstrap.Modal(document.getElementById('dsConfirmModal'));
+    var titleEl = document.getElementById('dsConfirmTitle');
+    var msgEl = document.getElementById('dsConfirmMessage');
+    var actionBtn = document.getElementById('dsConfirmAction');
+    var inputWrap = document.getElementById('dsConfirmInputWrap');
+    var inputLabel = document.getElementById('dsConfirmInputLabel');
+    var inputEl = document.getElementById('dsConfirmInput');
+    var pendingResolve = null;
+    var pendingForm = null;
+    var requiredWord = null;
+
+    function setupInput(word) {
+        requiredWord = word || null;
+        if (requiredWord) {
+            inputLabel.textContent = 'Tapez « ' + requiredWord + ' » pour confirmer';
+            inputEl.value = '';
+            inputWrap.style.display = 'block';
+            actionBtn.disabled = true;
+        } else {
+            inputWrap.style.display = 'none';
+            actionBtn.disabled = false;
+        }
+    }
+
+    inputEl.addEventListener('input', function() {
+        if (!requiredWord) return;
+        actionBtn.disabled = inputEl.value.trim() !== requiredWord;
+    });
+
+    // Promise-based API for JS callers
+    window.dsConfirm = function(title, message, actionLabel) {
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        actionBtn.textContent = actionLabel || 'Supprimer';
+        setupInput(null);
+        pendingForm = null;
+        modal.show();
+        return new Promise(function(resolve) { pendingResolve = resolve; });
+    };
+
+    // Intercept form submissions with data-confirm
+    document.addEventListener('submit', function(e) {
+        var form = e.target;
+        var title = form.getAttribute('data-confirm-title');
+        if (!title) return;
+        e.preventDefault();
+        titleEl.textContent = title;
+        msgEl.textContent = form.getAttribute('data-confirm-message') || '';
+        actionBtn.textContent = form.getAttribute('data-confirm-action') || 'Supprimer';
+        setupInput(form.getAttribute('data-confirm-input'));
+        pendingForm = form;
+        pendingResolve = null;
+        modal.show();
+    }, true);
+
+    // Action button click -> submit form or resolve promise
+    actionBtn.addEventListener('click', function() {
+        modal.hide();
+        if (pendingForm) {
+            pendingForm.removeAttribute('data-confirm-title');
+            pendingForm.requestSubmit();
+            pendingForm.setAttribute('data-confirm-title', titleEl.textContent);
+            pendingForm = null;
+        }
+        if (pendingResolve) {
+            pendingResolve(true);
+            pendingResolve = null;
+        }
+    });
+
+    // Dismiss -> resolve false & reset input
+    document.getElementById('dsConfirmModal').addEventListener('hidden.bs.modal', function() {
+        if (pendingResolve) {
+            pendingResolve(false);
+            pendingResolve = null;
+        }
+        pendingForm = null;
+        setupInput(null);
+    });
+})();
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

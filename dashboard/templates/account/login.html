@@ -1,0 +1,32 @@
+{% extends "account/base_auth.html" %}
+{% load i18n %}
+{% block title %}{% trans "Connexion" %} - DocuScore{% endblock %}
+{% block subtitle %}{% trans "Connectez-vous à votre compte" %}{% endblock %}
+
+{% block content %}
+{% if form.errors %}
+<div class="alert alert-danger">{% trans "Identifiants invalides. Veuillez réessayer." %}</div>
+{% endif %}
+
+<form method="post" action="{% url 'account_login' %}">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="id_login" class="form-label">{% trans "Nom d'utilisateur ou email" %}</label>
+        <input type="text" name="login" id="id_login" class="form-control" value="{{ form.login.value|default:'' }}" autofocus required>
+    </div>
+    <div class="mb-3">
+        <label for="id_password" class="form-label">{% trans "Mot de passe" %}</label>
+        <input type="password" name="password" id="id_password" class="form-control" required>
+    </div>
+    {% if redirect_field_value %}
+    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+    {% endif %}
+    <button type="submit" class="btn btn-danger w-100">{% trans "Connexion" %}</button>
+</form>
+
+<div class="auth-footer">
+    <a href="{% url 'account_reset_password' %}">{% trans "Mot de passe oublié ?" %}</a>
+    <span class="mx-2">|</span>
+    <a href="{% url 'account_signup' %}">{% trans "Créer un compte" %}</a>
+</div>
+{% endblock %}

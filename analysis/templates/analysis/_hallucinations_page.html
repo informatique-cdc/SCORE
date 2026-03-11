@@ -1,0 +1,106 @@
+{% load i18n %}
+<turbo-frame id="hallu-page-{{ page_obj.number }}">
+{% for report in reports %}
+<div class="report-card report-card-accent-{% if report.risk_type == 'conflicting_acronym' %}danger{% elif report.risk_type == 'undefined_acronym' %}danger{% elif report.risk_type == 'ambiguous_acronym' %}warning{% elif report.risk_type == 'jargon_no_context' %}info{% else %}secondary{% endif %} hallu-item {% if report.resolution == 'resolved' %}resolved{% endif %}">
+    <div class="report-card-header">
+        <div class="report-card-pills">
+            {% if can_edit %}
+            <input type="checkbox" class="form-check-input hallu-checkbox" form="batch-form" name="selected" value="{{ report.pk }}">
+            {% endif %}
+            <span class="report-pill report-pill-{% if report.risk_type == 'conflicting_acronym' or report.risk_type == 'undefined_acronym' %}danger{% elif report.risk_type == 'ambiguous_acronym' %}warning{% elif report.risk_type == 'jargon_no_context' %}info{% else %}secondary{% endif %}">
+                {{ report.get_risk_type_display }}
+            </span>
+            <span class="report-pill report-pill-{{ report.severity }}">{{ report.get_severity_display }}</span>
+            {% if report.resolution == 'resolved' %}
+                <span class="report-pill report-pill-success">{% trans "Trait&eacute;" %}</span>
+            {% elif report.resolution == 'kept' %}
+                <span class="report-pill report-pill-info">{% trans "Conserv&eacute;" %}</span>
+            {% endif %}
+        </div>
+        {% if can_edit %}
+        <div class="report-card-actions">
+            {% if report.resolution != 'resolved' %}
+            <button type="submit" form="single-{{ report.pk }}" name="resolution" value="resolved" class="btn btn-outline-success" title="{% trans 'Marquer comme trait&eacute;' %}">{% trans "Trait&eacute;" %}</button>
+            {% endif %}
+            {% if report.resolution != 'kept' %}
+            <button type="submit" form="single-{{ report.pk }}" name="resolution" value="kept" class="btn btn-outline-info" title="{% trans 'Conserver tel quel' %}">{% trans "Conserver" %}</button>
+            {% endif %}
+            {% if report.resolution %}
+            <button type="submit" form="single-{{ report.pk }}" name="resolution" value="" class="btn btn-outline-secondary" title="{% trans 'R&eacute;initialiser' %}">{% trans "Annuler" %}</button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <h6 class="report-card-title">{{ report.title }}</h6>
+    <p class="report-card-desc">{{ report.description }}</p>
+
+    {% if report.term %}
+    <div class="mb-1">
+        <span class="badge bg-dark bg-opacity-10 text-dark" style="font-family: monospace; font-size: 12px;">{{ report.term }}</span>
+    </div>
+    {% endif %}
+
+    {% if report.expansions %}
+    <details class="mt-1">
+        <summary class="small fw-semibold">{% trans "D&eacute;finitions trouv&eacute;es" %} ({{ report.expansions|length }})</summary>
+        <ul class="small mb-0 mt-1">
+            {% for exp in report.expansions %}
+            <li>
+                <strong>{{ exp.expansion }}</strong>
+                {% if exp.doc_titles %}
+                <span class="text-muted">
+                    &mdash; {% for dt in exp.doc_titles %}{{ dt }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+
+    {% if report.evidence.examples %}
+    <details class="mt-1">
+        <summary class="small fw-semibold">{% trans "Exemples de contexte" %} ({{ report.evidence.examples|length }})</summary>
+        <ul class="small mb-0 mt-1 text-muted" style="font-size: 11px;">
+            {% for ex in report.evidence.examples %}
+            <li style="margin-bottom: 4px;"><em>{{ ex|truncatechars:200 }}</em></li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+
+    <div class="report-card-meta">
+        <span>
+            <svg viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            {% trans "Score de risque :" %} <strong>{{ report.risk_score|floatformat:2 }}</strong>
+        </span>
+        {% if report.doc_count > 0 %}
+        <span>
+            <svg viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1" stroke="currentColor" stroke-width="1"/><path d="M4 0v4M8 0v4" stroke="currentColor" stroke-width="1"/></svg>
+            {{ report.doc_count }} {% trans "document(s)" %}
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+{# Individual form for this card #}
+{% if can_edit %}
+<form method="post" action="{% url 'hallucination-resolve' job.pk report.pk %}" id="single-{{ report.pk }}" class="d-none">
+    {% csrf_token %}
+    <input type="hidden" name="type_filter" value="{{ type_filter }}">
+    <input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
+</form>
+{% endif %}
+{% endfor %}
+
+{# Next page lazy load #}
+{% if next_page_url %}
+<turbo-frame id="hallu-page-{{ page_obj.next_page_number }}" loading="lazy" src="{{ next_page_url }}">
+    <div class="text-center py-3">
+        <div class="spinner-border spinner-border-sm text-muted" role="status">
+            <span class="visually-hidden">{% trans "Chargement..." %}</span>
+        </div>
+    </div>
+</turbo-frame>
+{% endif %}
+</turbo-frame>

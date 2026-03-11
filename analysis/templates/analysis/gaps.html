@@ -1,0 +1,187 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Lacunes de couverture" %} - DocuScore{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">{% trans "Lacunes de couverture et sujets manquants" %}</h2>
+        <span class="text-muted" style="font-size:13px;">{{ page_obj.paginator.count }} {% trans "r&eacute;sultat(s)" %}</span>
+    </div>
+    <div>
+        <a href="{% url 'export-gaps-csv' job.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Exporter CSV" %}</a>
+        <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Retour" %}</a>
+    </div>
+</div>
+
+<div class="mb-3 d-flex flex-wrap gap-2">
+    <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Filtre par type' %}">
+        <a href="{% url 'analysis-gaps' job.pk %}{% if resolution_filter %}?resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-secondary {% if not type_filter %}active{% endif %}">{% trans "Tous" %}</a>
+        <a href="{% url 'analysis-gaps' job.pk %}?type=missing_topic{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-danger {% if type_filter == 'missing_topic' %}active{% endif %}">{% trans "Sujets manquants" %}</a>
+        <a href="{% url 'analysis-gaps' job.pk %}?type=low_coverage{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-warning {% if type_filter == 'low_coverage' %}active{% endif %}">{% trans "Faible couverture" %}</a>
+        <a href="{% url 'analysis-gaps' job.pk %}?type=stale_area{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-info {% if type_filter == 'stale_area' %}active{% endif %}">{% trans "Zones obsol&egrave;tes" %}</a>
+        <a href="{% url 'analysis-gaps' job.pk %}?type=orphan_topic{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-secondary {% if type_filter == 'orphan_topic' %}active{% endif %}">{% trans "Sujets orphelins" %}</a>
+    </div>
+
+    <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Filtre par statut' %}">
+        <a href="{% url 'analysis-gaps' job.pk %}{% if type_filter %}?type={{ type_filter }}{% endif %}" class="btn btn-outline-secondary {% if not resolution_filter %}active{% endif %}">{% trans "Tous" %}</a>
+        <a href="{% url 'analysis-gaps' job.pk %}?resolution=unresolved{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-secondary {% if resolution_filter == 'unresolved' %}active{% endif %}">{% trans "Non trait&eacute;" %}</a>
+        <a href="{% url 'analysis-gaps' job.pk %}?resolution=resolved{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-success {% if resolution_filter == 'resolved' %}active{% endif %}">{% trans "Trait&eacute;" %}</a>
+        <a href="{% url 'analysis-gaps' job.pk %}?resolution=kept{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-info {% if resolution_filter == 'kept' %}active{% endif %}">{% trans "Conserv&eacute;" %}</a>
+    </div>
+</div>
+
+{% if can_edit and gaps %}
+<div class="mb-2">
+    <label class="form-check form-check-inline">
+        <input type="checkbox" class="form-check-input" id="select-all">
+        <span class="form-check-label small">{% trans "Tout s&eacute;lectionner" %}</span>
+    </label>
+</div>
+{% endif %}
+
+{# Batch form: only hidden inputs — checkboxes and buttons reference it via form attribute #}
+<form method="post" action="{% url 'gap-batch-resolve' job.pk %}" id="batch-form">
+{% csrf_token %}
+<input type="hidden" name="type_filter" value="{{ type_filter }}">
+<input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
+</form>
+
+{% for gap in gaps %}
+<div class="report-card report-card-accent-{% if gap.gap_type == 'missing_topic' %}danger{% elif gap.gap_type == 'low_coverage' %}warning{% elif gap.gap_type == 'stale_area' %}info{% else %}secondary{% endif %} gap-item {% if gap.resolution == 'resolved' %}resolved{% endif %}">
+    <div class="report-card-header">
+        <div class="report-card-pills">
+            {% if can_edit %}
+            <input type="checkbox" class="form-check-input gap-checkbox" form="batch-form" name="selected" value="{{ gap.pk }}">
+            {% endif %}
+            <span class="report-pill report-pill-{% if gap.gap_type == 'missing_topic' %}danger{% elif gap.gap_type == 'low_coverage' %}warning{% elif gap.gap_type == 'stale_area' %}info{% else %}secondary{% endif %}">
+                {{ gap.get_gap_type_display }}
+            </span>
+            <span class="report-pill report-pill-{{ gap.severity }}">{{ gap.severity }}</span>
+            {% if gap.resolution == 'resolved' %}
+                <span class="report-pill report-pill-success">{% trans "Trait&eacute;" %}</span>
+            {% elif gap.resolution == 'kept' %}
+                <span class="report-pill report-pill-info">{% trans "Conserv&eacute;" %}</span>
+            {% endif %}
+        </div>
+        {% if can_edit %}
+        <div class="report-card-actions">
+            {% if gap.resolution != 'resolved' %}
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="resolved" class="btn btn-outline-success" title="{% trans 'Marquer comme trait&eacute;' %}">{% trans "Trait&eacute;" %}</button>
+            {% endif %}
+            {% if gap.resolution != 'kept' %}
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="kept" class="btn btn-outline-info" title="{% trans 'Conserver tel quel' %}">{% trans "Conserver" %}</button>
+            {% endif %}
+            {% if gap.resolution %}
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="" class="btn btn-outline-secondary" title="{% trans 'R&eacute;initialiser' %}">{% trans "Annuler" %}</button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <h6 class="report-card-title">{{ gap.title }}</h6>
+    <p class="report-card-desc">{{ gap.description }}</p>
+
+    {% if gap.evidence.unanswered_questions %}
+    <details class="mt-1">
+        <summary class="small fw-semibold">{% trans "Questions sans r&eacute;ponse" %} ({{ gap.evidence.unanswered_questions|length }})</summary>
+        <ul class="small mb-0 mt-1">
+            {% for q in gap.evidence.unanswered_questions %}
+            <li>
+                {{ q.question }}
+                <span class="report-pill report-pill-{{ q.importance }}" style="font-size:10px;padding:0 6px;">{{ q.importance }}</span>
+                {% if q.missing_info %}<br><em class="text-muted">{% trans "Manquant :" %} {{ q.missing_info|truncatechars:200 }}</em>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+
+    <div class="report-card-meta">
+        {% if gap.coverage_score is not None %}
+        <span>
+            <svg viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            {% trans "Couverture :" %} <strong>{{ gap.coverage_score|floatformat:0 }}%</strong>
+        </span>
+        {% endif %}
+        {% if gap.related_cluster %}
+        <span>
+            <svg viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="1.2"/><circle cx="3" cy="3" r="1.2" stroke="currentColor" stroke-width="0.8"/><circle cx="9" cy="3" r="1.2" stroke="currentColor" stroke-width="0.8"/></svg>
+            {{ gap.related_cluster.label }}
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-success">{% trans "Aucune lacune de couverture significative d&eacute;tect&eacute;e." %}</div>
+{% endfor %}
+
+{# Individual per-card forms (outside batch form to avoid nesting) #}
+{% if can_edit %}
+{% for gap in gaps %}
+<form method="post" action="{% url 'gap-resolve' job.pk gap.pk %}" id="single-{{ gap.pk }}" class="d-none">
+    {% csrf_token %}
+    <input type="hidden" name="type_filter" value="{{ type_filter }}">
+    <input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
+</form>
+{% endfor %}
+{% endif %}
+
+{# Infinite scroll: lazy-load next page via Turbo Frame #}
+{% if next_page_url %}
+<turbo-frame id="gaps-page-{{ page_obj.next_page_number }}" loading="lazy" src="{{ next_page_url }}">
+    <div class="text-center py-3">
+        <div class="spinner-border spinner-border-sm text-muted" role="status">
+            <span class="visually-hidden">{% trans "Chargement..." %}</span>
+        </div>
+    </div>
+</turbo-frame>
+{% endif %}
+
+{% if can_edit %}
+{# Sticky batch action bar — hidden until checkboxes are ticked #}
+<div id="batch-bar" class="position-fixed bottom-0 start-50 translate-middle-x mb-3 px-4 py-2 rounded-pill shadow d-none d-flex align-items-center gap-3" style="background: var(--bs-body-bg, #fff); border: 1px solid var(--bs-border-color, #dee2e6); z-index: 1050;">
+    <span id="batch-count" class="fw-semibold small"></span>
+    <button form="batch-form" type="submit" name="resolution" value="resolved" class="btn btn-sm btn-success">{% trans "Trait&eacute;" %}</button>
+    <button form="batch-form" type="submit" name="resolution" value="kept" class="btn btn-sm btn-info">{% trans "Conserver" %}</button>
+    <button form="batch-form" type="submit" name="resolution" value="" class="btn btn-sm btn-outline-secondary">{% trans "R&eacute;initialiser" %}</button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const selectAll = document.getElementById('select-all');
+    const batchBar = document.getElementById('batch-bar');
+    const batchCount = document.getElementById('batch-count');
+    if (!selectAll || !batchBar) return;
+
+    function getCheckboxes() {
+        return document.querySelectorAll('.gap-checkbox');
+    }
+
+    function updateBar() {
+        const checked = document.querySelectorAll('.gap-checkbox:checked').length;
+        if (checked > 0) {
+            batchBar.classList.remove('d-none');
+            batchCount.textContent = checked + ' sélectionné' + (checked > 1 ? 's' : '');
+        } else {
+            batchBar.classList.add('d-none');
+        }
+        const all = getCheckboxes();
+        selectAll.checked = all.length > 0 && checked === all.length;
+        selectAll.indeterminate = checked > 0 && checked < all.length;
+    }
+
+    selectAll.addEventListener('change', function() {
+        getCheckboxes().forEach(cb => { cb.checked = selectAll.checked; });
+        updateBar();
+    });
+
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('gap-checkbox')) updateBar();
+    });
+})();
+</script>
+{% endblock %}

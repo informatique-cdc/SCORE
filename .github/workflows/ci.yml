@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      DEBUG: "true"
+      LLM_PROVIDER: openai
+      OPENAI_API_KEY: sk-fake-ci-key
+      CELERY_BROKER_BACKEND: database
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-django pytest-cov ruff faker
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ \
+            --cov=analysis --cov=chat --cov=connectors --cov=dashboard \
+            --cov=ingestion --cov=reports --cov=tenants --cov=vectorstore \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=70 \
+            -v
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml

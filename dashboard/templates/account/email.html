@@ -1,0 +1,39 @@
+{% extends "account/base_auth.html" %}
+{% load i18n %}
+{% block title %}{% trans "Gestion des emails" %} - DocuScore{% endblock %}
+{% block subtitle %}{% trans "Gérer vos adresses email" %}{% endblock %}
+
+{% block content %}
+{% if emailaddresses %}
+<div class="mb-3">
+    {% for emailaddress in emailaddresses %}
+    <div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid var(--ds-grey-500);">
+        <div>
+            <span style="font-size:14px;">{{ emailaddress.email }}</span>
+            {% if emailaddress.primary %}
+            <span class="badge bg-primary ms-2" style="font-size:10px;">{% trans "Principal" %}</span>
+            {% endif %}
+            {% if emailaddress.verified %}
+            <span class="badge bg-success ms-2" style="font-size:10px;">{% trans "Vérifié" %}</span>
+            {% else %}
+            <span class="badge bg-warning ms-2" style="font-size:10px;">{% trans "Non vérifié" %}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h6 style="font-size:14px;font-weight:600;margin-top:1.5rem;margin-bottom:1rem;">{% trans "Ajouter une adresse email" %}</h6>
+<form method="post" action="{% url 'account_email' %}">
+    {% csrf_token %}
+    <div class="input-group mb-3">
+        <input type="email" name="email" class="form-control" placeholder="nouvelle@email.com" required>
+        <button type="submit" name="action_add" class="btn btn-primary">{% trans "Ajouter" %}</button>
+    </div>
+</form>
+
+<div class="auth-footer">
+    <a href="{% url 'dashboard-home' %}">{% trans "Retour au tableau de bord" %}</a>
+</div>
+{% endblock %}

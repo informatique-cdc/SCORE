@@ -1,0 +1,133 @@
+{% load i18n %}
+<turbo-frame id="progress-monitor">
+{% if job.status == "completed" or job.status == "failed" or job.status == "cancelled" %}
+<script>window.location.reload();</script>
+{% endif %}
+
+<div class="progress-page">
+    <!-- Header -->
+    <div class="progress-header">
+        <div class="progress-header-icon">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+        </div>
+        <h2>{% if job.status == "queued" %}{% trans "Analyse en attente" %}{% else %}{% trans "Analyse en cours" %}{% endif %}</h2>
+        <div class="subtitle">
+            {{ job.created_at|date:"d M Y, H:i" }}
+            &middot; {{ job.project.name }}
+        </div>
+    </div>
+
+    <!-- Overall progress -->
+    <div class="overall-bar-wrapper">
+        <div class="overall-bar-top">
+            <span class="overall-pct">{{ job.progress_pct }}%</span>
+            {% if overall_eta %}
+            <span class="overall-eta">{% trans "Temps restant :" %} {{ overall_eta }}</span>
+            {% endif %}
+        </div>
+        <div class="overall-progress">
+            <div class="overall-progress-fill" style="width:{{ job.progress_pct }}%"></div>
+        </div>
+    </div>
+
+    <!-- Stepper: Analysis phases -->
+    <div class="stepper-section">
+        <div class="stepper-section-title">{% trans "Analyse du corpus" %}</div>
+        <ul class="stepper-list">
+            {% for phase in analysis_phases %}
+            <li class="stepper-item {{ phase.status }}">
+                <div class="stepper-indicator">
+                    {% if phase.status == "done" %}
+                    <svg fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    {% else %}
+                    <svg fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="{{ phase.icon_svg }}"/></svg>
+                    {% endif %}
+                </div>
+                <div class="stepper-body">
+                    <div class="stepper-label">{{ phase.label }}</div>
+                    {% if phase.status == "active" and job.phase_detail.step %}
+                    <div class="stepper-sub">
+                        <div class="stepper-sub-label">
+                            {{ job.phase_detail.step }}
+                            &mdash; {{ job.phase_detail.done }} / {{ job.phase_detail.total }}
+                            {% if sub_eta %}({{ sub_eta }}){% endif %}
+                        </div>
+                        {% widthratio job.phase_detail.done job.phase_detail.total 100 as sub_pct %}
+                        <div class="stepper-sub-bar">
+                            <div class="stepper-sub-bar-fill" style="width:{{ sub_pct }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Stepper: Audit phases -->
+    <div class="stepper-section">
+        <div class="stepper-section-title">{% trans "Audit qualit&eacute;" %}</div>
+        <ul class="stepper-list">
+            {% for phase in audit_phases %}
+            <li class="stepper-item {{ phase.status }}">
+                <div class="stepper-indicator">
+                    {% if phase.status == "done" %}
+                    <svg fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    {% else %}
+                    <svg fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="{{ phase.icon_svg }}"/></svg>
+                    {% endif %}
+                </div>
+                <div class="stepper-body">
+                    <div class="stepper-label">{{ phase.label }}</div>
+                    {% if phase.status == "active" and job.phase_detail.step %}
+                    <div class="stepper-sub">
+                        <div class="stepper-sub-label">
+                            {{ job.phase_detail.step }}
+                            &mdash; {{ job.phase_detail.done }} / {{ job.phase_detail.total }}
+                            {% if sub_eta %}({{ sub_eta }}){% endif %}
+                        </div>
+                        {% widthratio job.phase_detail.done job.phase_detail.total 100 as sub_pct %}
+                        <div class="stepper-sub-bar">
+                            <div class="stepper-sub-bar-fill" style="width:{{ sub_pct }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {% if job.error_message %}
+    <div class="alert alert-danger mt-4" style="font-size:13px;">{{ job.error_message|truncatechars:500 }}</div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="d-flex justify-content-center align-items-center gap-3 mt-4" style="font-size:13px;">
+        <a href="{% url 'analysis-list' %}" class="text-muted" style="text-decoration:none;" data-turbo-frame="_top">&larr; {% trans "Retour &agrave; l'historique" %}</a>
+        <span style="color:var(--ds-grey-500);">&middot;</span>
+        <form method="post" action="{% url 'analysis-cancel' job.pk %}" data-turbo-frame="_top" style="display:inline;"
+              data-confirm-title="{% trans "Arr&ecirc;ter l'analyse" %}"
+              data-confirm-message="{% trans "Arr&ecirc;ter cette analyse en cours ?" %}"
+              data-confirm-action="{% trans "Arr&ecirc;ter" %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-warning" style="font-size:12px;padding:3px 12px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:3px;"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                {% trans "Arr&ecirc;ter" %}
+            </button>
+        </form>
+        <form method="post" action="{% url 'analysis-delete' job.pk %}" data-turbo-frame="_top" style="display:inline;"
+              data-confirm-title="{% trans "Supprimer l'analyse" %}"
+              data-confirm-message="{% trans "Supprimer cette analyse et tous ses r&eacute;sultats ? Cette action est irr&eacute;versible." %}"
+              data-confirm-action="{% trans "Supprimer" %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:12px;padding:3px 12px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                {% trans "Supprimer" %}
+            </button>
+        </form>
+    </div>
+</div>
+</turbo-frame>

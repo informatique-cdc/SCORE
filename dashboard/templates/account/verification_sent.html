@@ -1,0 +1,15 @@
+{% extends "account/base_auth.html" %}
+{% load i18n %}
+{% block title %}{% trans "Vérification email" %} - DocuScore{% endblock %}
+{% block subtitle %}{% trans "Vérifiez votre email" %}{% endblock %}
+
+{% block content %}
+<div class="text-center" style="font-size:14px;color:var(--ds-text-muted);">
+    <p>{% trans "Un email de vérification a été envoyé à votre adresse." %}</p>
+    <p>{% trans "Cliquez sur le lien dans l'email pour activer votre compte." %}</p>
+</div>
+
+<div class="auth-footer">
+    <a href="{% url 'account_login' %}">{% trans "Retour à la connexion" %}</a>
+</div>
+{% endblock %}

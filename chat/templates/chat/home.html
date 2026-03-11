@@ -1,0 +1,2762 @@
+{% extends "dashboard/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Assistant — DocuScore" %}{% endblock %}
+{% block nav_chat %}active{% endblock %}
+
+{% block sidebar_extra %}
+<!-- Historique -->
+<div class="sidebar-section sidebar-section--scroll">
+    <div class="sidebar-section-header" id="historyHeader">
+        <span class="sidebar-section-label">{% trans "Historique" %}</span>
+        <div class="history-header-actions">
+            <button class="history-header-btn" id="historySearchBtn" type="button" title="{% trans "Rechercher" %}">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+            <button class="history-header-btn" id="newChatBtn" type="button" title="{% trans "Nouveau chat" %}">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="history-search-bar" id="historySearchBar">
+        <svg class="history-search-icon" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input type="text" id="historySearchInput" placeholder="{% trans "Rechercher..." %}" autocomplete="off" spellcheck="false">
+        <button class="history-search-close" id="historySearchClose" type="button" title="{% trans "Fermer" %}">
+            <svg viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+    </div>
+    <div class="history-list" id="historyList">
+        {% trans "Sans titre" as sans_titre_label %}
+        {% for conv in conversations %}
+        <button class="sidebar-item history-item" data-conversation-id="{{ conv.id }}">
+            <span class="history-item-title">{{ conv.title|default:sans_titre_label }}</span>
+        </button>
+        {% empty %}
+        <div id="historyEmpty" class="history-empty">{% trans "Aucune conversation" %}</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Chat page layout overrides ── */
+    body { overflow: hidden; height: 100vh; }
+    .sidebar + main { padding: 0 !important; min-height: unset !important; overflow: hidden; height: 100vh; }
+
+    /* ── Historique sidebar ── */
+    .sidebar-section--scroll {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .sidebar-section--scroll .sidebar-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px;
+        margin-bottom: 4px;
+    }
+    .history-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+    .history-header-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        color: var(--ds-text-muted);
+        cursor: pointer;
+        padding: 0;
+        transition: color 0.15s, background 0.15s;
+    }
+    .history-header-btn:hover {
+        color: var(--ds-grey-100);
+        background: var(--ds-grey-500);
+    }
+    .history-header-btn svg { width: 16px; height: 16px; }
+
+    /* Search bar (hidden by default) */
+    .history-search-bar {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        margin-bottom: 4px;
+    }
+    .history-search-bar.open {
+        display: flex;
+    }
+    .history-search-icon {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        color: var(--ds-text-muted);
+    }
+    .history-search-bar input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        font-family: inherit;
+        font-size: 13px;
+        color: var(--ds-grey-100);
+        min-width: 0;
+    }
+    .history-search-bar input::placeholder {
+        color: var(--ds-text-muted);
+    }
+    .history-search-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border: none;
+        background: transparent;
+        border-radius: 4px;
+        color: var(--ds-text-muted);
+        cursor: pointer;
+        padding: 0;
+        flex-shrink: 0;
+    }
+    .history-search-close:hover {
+        color: var(--ds-grey-100);
+        background: var(--ds-grey-500);
+    }
+    .history-search-close svg { width: 12px; height: 12px; }
+
+    /* List */
+    .history-list {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+    .history-item {
+        border: none;
+        gap: 0;
+        background: transparent;
+    }
+    .history-item:hover,
+    .history-item.active {
+        background: transparent;
+    }
+    .history-item-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+        font-weight: 400;
+    }
+    .history-empty {
+        padding: 8px;
+        font-size: 12px;
+        color: var(--ds-text-muted);
+    }
+    .history-item.filtered-out {
+        display: none !important;
+    }
+
+    /* ── Chat-specific tokens ── */
+    [data-bs-theme="light"] {
+        --chat-text-placeholder: #75758a;
+        --chat-chatbox-bg: #ffffff;
+        --chat-chatbox-text: #1d1e21;
+        --chat-chatbox-border: #e9eaf0;
+        --chat-toolbar-btn-bg: #ffffff;
+        --chat-toolbar-btn-border: #e9eaf0;
+        --chat-toolbar-hover: #f5f5f7;
+        --chat-toolbar-btn-text: #1d1e21;
+        --chat-code-bg: rgba(0,0,0,0.04);
+        --chat-overlay-subtle: rgba(0,0,0,0.03);
+        --chat-gradient-1: rgba(200,100,150,0.06);
+        --chat-gradient-2: rgba(100,80,200,0.04);
+    }
+    [data-bs-theme="dark"] {
+        --chat-text-placeholder: #75758a;
+        --chat-chatbox-bg: #27282a;
+        --chat-chatbox-text: #f8f8f8;
+        --chat-chatbox-border: #37383a;
+        --chat-toolbar-btn-bg: #27282a;
+        --chat-toolbar-btn-border: #37383a;
+        --chat-toolbar-hover: #37383a;
+        --chat-toolbar-btn-text: #f8f8f8;
+        --chat-code-bg: rgba(255,255,255,0.06);
+        --chat-overlay-subtle: rgba(255,255,255,0.05);
+        --chat-gradient-1: rgba(120,40,80,0.12);
+        --chat-gradient-2: rgba(60,40,120,0.08);
+    }
+
+    /* ── Main Content Area ── */
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+        height: 100vh;
+        background: var(--ds-grey-800);
+        background-image:
+            radial-gradient(ellipse at 15% 50%, var(--chat-gradient-1) 0%, transparent 50%),
+            radial-gradient(ellipse at 85% 30%, var(--chat-gradient-2) 0%, transparent 50%);
+    }
+
+    /* ── Landing State ── */
+    .chat-landing {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        padding: 40px;
+    }
+    .chat-landing.hidden { display: none; }
+
+    .text-illu {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .illustration {
+        width: 120px;
+        height: 120px;
+        margin-bottom: 8px;
+        position: relative;
+    }
+    .illustration svg { width: 100%; height: 100%; }
+
+    .landing-title {
+        font-weight: 500;
+        font-size: 32px;
+        line-height: 1.2;
+        color: var(--ds-grey-100);
+        text-align: center;
+    }
+    .landing-subtitle {
+        font-weight: 400;
+        font-size: 16px;
+        line-height: 1.5;
+        color: var(--ds-text-muted);
+        text-align: center;
+    }
+
+    /* ── Chatbox ── */
+    .chatbox {
+        width: 100%;
+        max-width: 601px;
+        background: var(--chat-chatbox-bg);
+        border: 1px solid var(--chat-chatbox-border);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px var(--ds-shadow);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .chatbox textarea {
+        width: 100%;
+        border: none;
+        outline: none;
+        resize: none;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        line-height: 24px;
+        color: var(--chat-chatbox-text);
+        background: transparent;
+        min-height: 24px;
+        max-height: 120px;
+    }
+    .chatbox textarea::placeholder {
+        color: var(--chat-text-placeholder);
+    }
+
+    /* Toolbar */
+    .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .toolbar-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--chat-toolbar-btn-bg);
+        border: 1px solid var(--chat-toolbar-btn-border);
+        border-radius: var(--ds-radius);
+        height: 32px;
+        padding: 4px 6px;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        line-height: 24px;
+        color: var(--chat-toolbar-btn-text);
+    }
+    .toolbar-btn:hover {
+        background: var(--chat-toolbar-hover);
+    }
+    .toolbar-btn svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+    }
+    .toolbar-btn--format {
+        width: 36px;
+        justify-content: center;
+        padding: 0;
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--ds-grey-100);
+        position: relative;
+    }
+    .toolbar-btn--format .format-plus {
+        color: #dc3545;
+        font-size: 11px;
+        font-weight: 700;
+        vertical-align: super;
+        line-height: 1;
+        margin-left: -1px;
+    }
+    .toolbar-btn .mistral-logo {
+        width: 18px;
+        height: 14px;
+        flex-shrink: 0;
+    }
+
+    /* Send button */
+    .send-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: #2d2d2d;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        color: #fff;
+        padding: 0;
+        flex-shrink: 0;
+        transition: opacity 0.15s;
+    }
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .send-btn svg { width: 16px; height: 16px; }
+    [data-bs-theme="light"] .send-btn {
+        background: #3a3a3a;
+    }
+
+    /* ── Conversation State ── */
+    .chat-conversation {
+        flex: 1;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0 40px 24px;
+    }
+    .chat-conversation.active { display: flex; }
+
+    /* ── Context Bar (top of conversation) ── */
+    .chat-context-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--ds-grey-500);
+        flex-shrink: 0;
+        min-height: 40px;
+        gap: 12px;
+    }
+    .context-bar-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+    }
+    .context-bar-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--ds-text-muted);
+        flex-shrink: 0;
+    }
+    .context-bar-items {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        overflow: hidden;
+    }
+    .context-bar-empty {
+        font-size: 12px;
+        color: var(--ds-text-muted);
+        font-style: italic;
+    }
+    .context-bar-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ds-grey-100);
+        white-space: nowrap;
+    }
+    .context-bar-item svg {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        color: var(--ds-text-muted);
+    }
+    .context-bar-sep {
+        width: 1px;
+        height: 14px;
+        background: var(--ds-grey-500);
+        flex-shrink: 0;
+    }
+    .context-bar-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        color: var(--ds-text-muted);
+        cursor: pointer;
+        padding: 0;
+        flex-shrink: 0;
+        transition: color 0.15s, background 0.15s;
+    }
+    .context-bar-btn:hover {
+        color: var(--ds-grey-100);
+        background: var(--ds-grey-500);
+    }
+    .context-bar-btn svg { width: 16px; height: 16px; }
+
+    /* Conversation menu dropdown */
+    .conv-menu-wrap { position: relative; flex-shrink: 0; }
+    .conv-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        z-index: 120;
+        min-width: 220px;
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 10px;
+        box-shadow: 0 8px 24px var(--ds-shadow);
+        padding: 4px;
+    }
+    .conv-menu.open { display: block; }
+    .conv-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        background: none;
+        border-radius: 8px;
+        font-size: 13px;
+        color: var(--ds-grey-100);
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.12s;
+    }
+    .conv-menu-item:hover { background: var(--ds-grey-500); }
+    .conv-menu-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .conv-menu-item--danger { color: #dc3545; }
+    .conv-menu-item--danger:hover { background: rgba(220,53,69,0.1); }
+    .conv-menu-divider { height: 1px; background: var(--ds-grey-500); margin: 4px 0; }
+
+    .chat-thread {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 24px 0;
+        max-width: 900px;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    /* ── Messages ── */
+    .chat-msg {
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-msg.user {
+        align-self: flex-end;
+        max-width: 65%;
+    }
+    .chat-msg.assistant {
+        align-self: stretch;
+        max-width: 100%;
+    }
+
+    .chat-bubble {
+        font-size: 15px;
+        line-height: 1.65;
+        color: var(--ds-grey-100);
+    }
+
+    /* User bubble: compact, rounded, grey background */
+    .chat-msg.user .chat-bubble {
+        background: var(--ds-grey-500);
+        padding: 12px 18px;
+        border-radius: 18px;
+        border-bottom-right-radius: 4px;
+    }
+
+    /* Assistant: no bubble, full-width plain text */
+    .chat-msg.assistant .chat-bubble {
+        background: transparent;
+        border: none;
+        padding: 16px 0;
+        border-radius: 0;
+    }
+
+    /* Markdown in assistant messages */
+    .chat-bubble p { margin: 0 0 12px; }
+    .chat-bubble p:last-child { margin-bottom: 0; }
+    .chat-bubble ul, .chat-bubble ol { margin: 8px 0; padding-left: 24px; }
+    .chat-bubble li { margin-bottom: 6px; }
+    .chat-bubble li:last-child { margin-bottom: 0; }
+    .chat-bubble strong { font-weight: 600; }
+    .chat-bubble h1, .chat-bubble h2, .chat-bubble h3 {
+        font-weight: 700;
+        margin: 20px 0 8px;
+        line-height: 1.3;
+    }
+    .chat-bubble h1 { font-size: 22px; }
+    .chat-bubble h2 { font-size: 18px; }
+    .chat-bubble h3 { font-size: 16px; }
+    .chat-bubble hr {
+        border: none;
+        border-top: 1px solid var(--ds-grey-500);
+        margin: 20px 0;
+    }
+    .chat-bubble code {
+        background: var(--chat-code-bg);
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 13px;
+    }
+    .chat-bubble pre {
+        background: var(--chat-code-bg);
+        border-radius: 8px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        margin: 12px 0;
+    }
+    .chat-bubble pre code {
+        background: none;
+        padding: 0;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .chat-bubble blockquote {
+        border-left: 3px solid var(--ds-grey-400);
+        margin: 12px 0;
+        padding: 4px 16px;
+        color: var(--ds-text-muted);
+    }
+    .chat-bubble blockquote p { margin-bottom: 4px; }
+    .chat-bubble table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 12px 0;
+        font-size: 14px;
+    }
+    .chat-bubble th, .chat-bubble td {
+        border: 1px solid var(--ds-grey-500);
+        padding: 8px 12px;
+        text-align: left;
+    }
+    .chat-bubble th {
+        background: var(--chat-code-bg);
+        font-weight: 600;
+    }
+    .chat-bubble a { color: var(--ds-link); }
+    .chat-bubble a:hover { color: var(--ds-link-hover); }
+    .chat-doc-ref {
+        color: var(--ds-link);
+        text-decoration: none;
+        border-bottom: 1px dashed var(--ds-link);
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s;
+    }
+    .chat-doc-ref:hover {
+        color: var(--ds-link-hover);
+        border-color: var(--ds-link-hover);
+    }
+
+    /* ── Sources (dropdown below message) ── */
+    .chat-sources {
+        margin-top: 6px;
+    }
+    .chat-sources-toggle {
+        background: none;
+        border: none;
+        color: var(--ds-text-muted);
+        font-size: 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 0;
+        transition: color 0.15s;
+    }
+    .chat-sources-toggle:hover { color: var(--ds-grey-100); }
+    .chat-sources-toggle .chevron {
+        width: 12px; height: 12px;
+        transition: transform 0.2s;
+    }
+    .chat-sources-toggle.open .chevron { transform: rotate(180deg); }
+    .chat-sources-list {
+        display: none;
+        margin-top: 6px;
+        border-left: 2px solid var(--ds-grey-500);
+        padding-left: 10px;
+    }
+    .chat-sources-list.open { display: block; }
+    .chat-source-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--ds-grey-100);
+        text-decoration: none;
+        transition: background 0.15s;
+        cursor: pointer;
+    }
+    .chat-source-item:hover {
+        background: var(--chat-overlay-subtle);
+        color: var(--ds-grey-100);
+    }
+    .chat-source-item .source-icon {
+        width: 22px; height: 22px;
+        border-radius: 4px;
+        background: var(--chat-code-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .chat-source-item .source-icon svg { width: 12px; height: 12px; color: var(--ds-text-muted); }
+    .chat-source-item:hover .source-icon svg { color: var(--ds-grey-100); }
+    .chat-source-item .source-title {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 500;
+    }
+    .chat-source-item .source-sim {
+        font-size: 11px;
+        color: var(--ds-text-muted);
+        flex-shrink: 0;
+    }
+
+    /* ── Typing Indicator ── */
+    .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px 16px;
+        align-items: center;
+    }
+    .typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--ds-text-muted);
+        animation: typing-bounce 1.2s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes typing-bounce {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+        30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* ── Error ── */
+    .chat-error {
+        background: rgba(220,53,69,0.15);
+        border: 1px solid rgba(220,53,69,0.3);
+        color: #dc3545;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+        align-self: center;
+    }
+
+    /* ── Conversation Chatbox (bottom) ── */
+    .conv-chatbox-wrap {
+        max-width: 700px;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    /* ── Tools Dropdown ── */
+    .tools-dropdown-wrap { position: relative; }
+    .tools-dropdown {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--chat-chatbox-bg);
+        border: 1px solid var(--chat-chatbox-border);
+        border-radius: 10px;
+        box-shadow: 0 4px 20px var(--ds-shadow);
+        min-width: 230px;
+        padding: 6px;
+        z-index: 20;
+    }
+    .tools-dropdown.open { display: block; }
+    .tools-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        border: none;
+        background: none;
+        width: 100%;
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--chat-chatbox-text);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.12s;
+        text-align: left;
+    }
+    .tools-dropdown-item:hover { background: var(--chat-toolbar-hover); }
+    .tool-icon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+    }
+    .tool-icon svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+    }
+    .tool-icon--blue { color: #3b82f6; }
+    .tool-icon--green { color: #22c55e; }
+    .tool-icon--orange { color: #f59e0b; }
+    .tool-icon--red { color: #ef4444; }
+    .tool-icon--indigo { color: #8b5cf6; }
+    .tool-icon--pink { color: #ec4899; }
+    .tool-icon--teal { color: #14b8a6; }
+    .tool-icon--amber { color: #f59e0b; }
+    .tools-dropdown-label { flex: 1; }
+    .tools-check {
+        width: 14px;
+        height: 14px;
+        color: var(--ds-grey-100);
+        opacity: 0;
+        transition: opacity 0.12s;
+        flex-shrink: 0;
+    }
+    .tools-dropdown-item.active .tools-check { opacity: 1; }
+
+    /* ── Tool Tags ── */
+    .tool-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tool-tags:empty { display: none; }
+    .tool-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 6px 3px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid;
+        line-height: 1.4;
+    }
+    .tool-tag-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border: none;
+        background: none;
+        border-radius: 3px;
+        cursor: pointer;
+        padding: 0;
+        color: inherit;
+        opacity: 0.5;
+        font-size: 14px;
+        line-height: 1;
+        transition: opacity 0.12s;
+    }
+    .tool-tag-close:hover { opacity: 1; }
+    .tool-tag-icon { display: inline-flex; align-items: center; }
+    .tool-tag-icon svg { width: 14px; height: 14px; }
+    .tool-tag--blue { color: #3b82f6; border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.1); }
+    .tool-tag--green { color: #22c55e; border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.1); }
+    .tool-tag--orange { color: #b45309; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.1); }
+    .tool-tag--red { color: #ef4444; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1); }
+    .tool-tag--indigo { color: #8b5cf6; border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.1); }
+    .tool-tag--pink { color: #ec4899; border-color: rgba(236,72,153,0.3); background: rgba(236,72,153,0.1); }
+    .tool-tag--teal { color: #14b8a6; border-color: rgba(20,184,166,0.3); background: rgba(20,184,166,0.1); }
+    .tool-tag--amber { color: #f59e0b; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.1); }
+    [data-bs-theme="light"] .tool-tag--blue { color: #2563eb; border-color: rgba(37,99,235,0.25); background: rgba(37,99,235,0.06); }
+    [data-bs-theme="light"] .tool-tag--green { color: #16a34a; border-color: rgba(22,163,74,0.25); background: rgba(22,163,74,0.06); }
+    [data-bs-theme="light"] .tool-tag--orange { color: #b45309; border-color: rgba(180,83,9,0.25); background: rgba(180,83,9,0.06); }
+    [data-bs-theme="light"] .tool-tag--red { color: #dc2626; border-color: rgba(220,38,38,0.25); background: rgba(220,38,38,0.06); }
+    [data-bs-theme="light"] .tool-tag--indigo { color: #7c3aed; border-color: rgba(124,58,237,0.25); background: rgba(124,58,237,0.06); }
+    [data-bs-theme="light"] .tool-tag--pink { color: #db2777; border-color: rgba(219,39,119,0.25); background: rgba(219,39,119,0.06); }
+    [data-bs-theme="light"] .tool-tag--teal { color: #0d9488; border-color: rgba(13,148,136,0.25); background: rgba(13,148,136,0.06); }
+    [data-bs-theme="light"] .tool-tag--amber { color: #b45309; border-color: rgba(180,83,9,0.25); background: rgba(180,83,9,0.06); }
+    .toolbar-btn--tools.has-active { border-color: var(--ds-grey-300); }
+
+    /* ── Model Selector Dropdown ── */
+    .model-dropdown-wrap { position: relative; }
+    .model-dropdown {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--chat-chatbox-bg);
+        border: 1px solid var(--chat-chatbox-border);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px var(--ds-shadow);
+        padding: 16px 20px;
+        z-index: 20;
+        min-width: 300px;
+    }
+    .model-dropdown.open { display: block; }
+    .model-category {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 6px 0;
+    }
+    .model-category + .model-category { border-top: 1px solid var(--chat-chatbox-border); margin-top: 4px; padding-top: 10px; }
+    .model-category-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ds-text-muted);
+        white-space: nowrap;
+        min-width: 105px;
+    }
+    .model-category-options { display: flex; gap: 8px; flex-wrap: wrap; }
+    .model-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border: 1px solid var(--chat-chatbox-border);
+        border-radius: 8px;
+        background: none;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--chat-chatbox-text);
+        cursor: pointer;
+        transition: border-color 0.12s, background 0.12s;
+        white-space: nowrap;
+    }
+    .model-option:hover { background: var(--chat-toolbar-hover); }
+    .model-option.active { border-color: var(--chat-chatbox-text); }
+    .model-option .mistral-logo { width: 18px; height: 14px; }
+    .toolbar-btn--model { gap: 5px; }
+    .toolbar-btn--model .model-label { pointer-events: none; }
+
+    /* ── Document Viewer Panel ── */
+    #chatDocReader {
+        width: 55vw; max-width: 820px; min-width: 400px;
+        display: flex; flex-direction: column;
+        padding: 0;
+    }
+    #chatDocReader .offcanvas-header,
+    #chatDocReader .offcanvas-body { display: none !important; }
+
+    .doc-viewer-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--ds-grey-500);
+        flex-shrink: 0;
+    }
+    .doc-viewer-title {
+        font-size: 15px; font-weight: 600; color: var(--ds-grey-100);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        flex: 1; margin-right: 12px;
+    }
+    .doc-viewer-meta {
+        font-size: 11px; color: var(--ds-text-muted); margin-top: 2px;
+    }
+    .doc-viewer-actions {
+        display: flex; gap: 2px; flex-shrink: 0;
+    }
+    .doc-viewer-icon-btn {
+        width: 34px; height: 34px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border: none; background: none;
+        color: var(--ds-text-muted); border-radius: 6px; cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        text-decoration: none;
+    }
+    .doc-viewer-icon-btn:hover {
+        background: var(--ds-grey-600); color: var(--ds-grey-100);
+    }
+    .doc-viewer-icon-btn svg { width: 18px; height: 18px; }
+
+    .doc-viewer-pager {
+        display: flex; align-items: center; justify-content: center;
+        gap: 8px; padding: 6px 0;
+        border-bottom: 1px solid var(--ds-grey-600);
+        flex-shrink: 0; background: var(--ds-grey-700);
+    }
+    .doc-pager-btn {
+        width: 28px; height: 28px;
+        display: flex; align-items: center; justify-content: center;
+        border: none; background: none;
+        color: var(--ds-text-muted); border-radius: 4px; cursor: pointer;
+    }
+    .doc-pager-btn:hover { background: var(--ds-grey-600); color: var(--ds-grey-100); }
+    .doc-pager-btn:disabled { opacity: 0.3; cursor: default; }
+    .doc-pager-btn:disabled:hover { background: none; color: var(--ds-text-muted); }
+    .doc-pager-btn svg { width: 16px; height: 16px; }
+    .doc-pager-info {
+        font-size: 13px; font-weight: 500; color: var(--ds-grey-100);
+        min-width: 48px; text-align: center;
+        padding: 2px 14px; background: var(--ds-grey-600); border-radius: 4px;
+    }
+
+    .doc-viewer-body {
+        flex: 1; overflow-y: auto; position: relative; background: #e8e8e8;
+    }
+    [data-bs-theme="dark"] .doc-viewer-body { background: #1e2028; }
+
+    .doc-viewer-loading {
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; padding: 80px 20px;
+        color: var(--ds-text-muted); font-size: 13px;
+    }
+    .doc-viewer-loading .spinner-border { margin-bottom: 14px; }
+
+    .chat-doc-pdf-wrap {
+        display: flex; justify-content: center; padding: 24px 16px;
+    }
+    .chat-doc-pdf-canvas {
+        max-width: 100%;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+        background: #fff;
+    }
+
+    .chat-doc-text {
+        padding: 28px 24px;
+    }
+    .chat-doc-text p {
+        margin-bottom: 0.75rem; line-height: 1.7;
+        white-space: pre-wrap; color: var(--ds-grey-100);
+    }
+    .chat-doc-text h5 {
+        color: #6ea8fe;
+        border-bottom: 1px solid var(--ds-grey-500);
+        padding-bottom: 0.3rem;
+    }
+    /* Highlighted chunk in text view */
+    .chat-doc-text p.chunk-highlight {
+        background: rgba(59, 130, 246, 0.12);
+        border-left: 3px solid var(--ds-link);
+        padding-left: 12px;
+        margin-left: -15px;
+        border-radius: 0 6px 6px 0;
+    }
+    /* Cited passage banner for PDF view */
+    .doc-cited-passage {
+        margin: 12px 16px 0;
+        padding: 12px 16px;
+        background: rgba(59, 130, 246, 0.10);
+        border-left: 3px solid var(--ds-link);
+        border-radius: 0 8px 8px 0;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--ds-grey-100);
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
+    .doc-viewer-zoom {
+        position: absolute; bottom: 20px; right: 20px;
+        display: flex; gap: 6px; z-index: 10;
+    }
+    .doc-zoom-btn {
+        width: 38px; height: 38px;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid var(--ds-grey-500);
+        background: var(--ds-grey-800); color: var(--ds-text-muted);
+        border-radius: 10px; cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .doc-zoom-btn:hover {
+        background: var(--ds-grey-700); color: var(--ds-grey-100);
+    }
+    .doc-zoom-btn svg { width: 18px; height: 18px; }
+
+    /* ── System Prompt Config Modal ── */
+    .sp-modal .modal-dialog { max-width: 720px; }
+    .sp-modal .modal-content {
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 16px;
+    }
+    .sp-modal .modal-header {
+        border-bottom: 1px solid var(--ds-grey-500);
+        padding: 20px 24px 16px;
+    }
+    .sp-modal .modal-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--ds-grey-100);
+    }
+    .sp-modal .modal-body { padding: 20px 24px; }
+    .sp-modal .modal-footer {
+        border-top: 1px solid var(--ds-grey-500);
+        padding: 14px 24px;
+        gap: 8px;
+    }
+    .sp-modal .btn-close { filter: var(--ds-btn-close-filter, none); }
+
+    .sp-description {
+        font-size: 13px;
+        color: var(--ds-text-muted);
+        margin-bottom: 12px;
+        line-height: 1.5;
+    }
+
+    .sp-variables-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+    .sp-variables-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--ds-text-muted);
+        flex-shrink: 0;
+    }
+    .sp-var-insert-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border: 1px dashed var(--ds-grey-400);
+        border-radius: 6px;
+        background: transparent;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ds-text-muted);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .sp-var-insert-btn:hover {
+        border-color: #8b5cf6;
+        color: #8b5cf6;
+        background: rgba(139, 92, 246, 0.08);
+    }
+    .sp-var-insert-btn svg { width: 12px; height: 12px; }
+
+    /* Prompt editor (contenteditable) */
+    .sp-editor-wrap {
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 10px;
+        background: var(--ds-grey-800);
+        overflow: hidden;
+        transition: border-color 0.15s;
+    }
+    .sp-editor-wrap:focus-within {
+        border-color: var(--ds-grey-300);
+    }
+    .sp-editor {
+        width: 100%;
+        min-height: 280px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 14px 16px;
+        font-family: 'Inter', sans-serif;
+        font-size: 13.5px;
+        line-height: 1.75;
+        color: var(--ds-grey-100);
+        outline: none;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    .sp-editor:empty::before {
+        content: attr(data-placeholder);
+        color: var(--ds-text-muted);
+        pointer-events: none;
+    }
+
+    /* Variable pills inside the editor */
+    .sp-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 10px;
+        margin: 0 2px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        vertical-align: baseline;
+        line-height: 1.6;
+        user-select: all;
+        -webkit-user-modify: read-only;
+    }
+    .sp-pill svg {
+        width: 11px;
+        height: 11px;
+        flex-shrink: 0;
+    }
+    .sp-pill--context {
+        background: rgba(139, 92, 246, 0.15);
+        color: #a78bfa;
+        border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    [data-bs-theme="light"] .sp-pill--context {
+        background: rgba(139, 92, 246, 0.1);
+        color: #7c3aed;
+        border-color: rgba(139, 92, 246, 0.25);
+    }
+
+    .sp-editor-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 14px;
+        border-top: 1px solid var(--ds-grey-600);
+    }
+    .sp-char-count {
+        font-size: 11px;
+        color: var(--ds-text-muted);
+    }
+    .sp-has-context {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    .sp-has-context--ok { color: #22c55e; }
+    .sp-has-context--missing { color: #ef4444; }
+    .sp-has-context svg { width: 12px; height: 12px; }
+
+    /* Modal buttons */
+    .sp-btn-reset {
+        background: transparent;
+        border: 1px solid var(--ds-grey-500);
+        border-radius: var(--ds-radius);
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ds-grey-100);
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .sp-btn-reset:hover { background: var(--ds-grey-600); }
+    .sp-btn-save {
+        background: #8b5cf6;
+        border: none;
+        border-radius: var(--ds-radius);
+        padding: 8px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        cursor: pointer;
+        transition: opacity 0.15s;
+    }
+    .sp-btn-save:hover { opacity: 0.9; }
+    .sp-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+    .sp-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--ds-grey-700);
+        border: 1px solid var(--ds-grey-500);
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ds-grey-100);
+        box-shadow: 0 4px 20px var(--ds-shadow);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.25s, transform 0.25s;
+        pointer-events: none;
+    }
+    .sp-toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    .toolbar-btn--prompt.has-custom {
+        color: #8b5cf6;
+        border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    /* ── No Documents Empty State ── */
+    .chat-no-docs {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 20px 28px;
+        margin-top: 12px;
+        max-width: 460px;
+        width: 100%;
+        border-radius: 12px;
+        background: rgba(245, 158, 11, 0.06);
+        border: 1px solid rgba(245, 158, 11, 0.18);
+    }
+    [data-bs-theme="light"] .chat-no-docs {
+        background: rgba(245, 158, 11, 0.06);
+        border-color: rgba(245, 158, 11, 0.22);
+    }
+    .chat-no-docs-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(245, 158, 11, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-bottom: 2px;
+    }
+    .chat-no-docs-icon svg {
+        width: 20px;
+        height: 20px;
+        color: #f59e0b;
+    }
+    .chat-no-docs-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ds-grey-100);
+        text-align: center;
+    }
+    .chat-no-docs-text {
+        font-size: 13px;
+        color: var(--ds-text-muted);
+        text-align: center;
+        line-height: 1.5;
+    }
+    .chat-no-docs-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        padding: 7px 16px;
+        border-radius: var(--ds-radius);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        background: rgba(245, 158, 11, 0.1);
+        font-size: 13px;
+        font-weight: 500;
+        color: #f59e0b;
+        text-decoration: none;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .chat-no-docs-link:hover {
+        background: rgba(245, 158, 11, 0.18);
+        border-color: rgba(245, 158, 11, 0.45);
+        color: #f59e0b;
+    }
+    .chat-no-docs-link svg {
+        width: 14px;
+        height: 14px;
+    }
+    /* Disabled chatbox overlay */
+    .chatbox.chatbox--disabled {
+        opacity: 0.45;
+        pointer-events: none;
+        user-select: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-main">
+    <!-- Landing state -->
+    <div class="chat-landing" id="chatLanding">
+        <div class="text-illu">
+            <div class="illustration">
+                <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="28" y="20" width="50" height="65" rx="6" fill="#2a2b2e" stroke="#4a4b4e" stroke-width="1.5"/>
+                    <path d="M38 40h30M38 48h25M38 56h28M38 64h15" stroke="#4a4b4e" stroke-width="1.5" stroke-linecap="round"/>
+                    <rect x="42" y="35" width="50" height="65" rx="6" fill="#35363a" stroke="#555" stroke-width="1.5"/>
+                    <path d="M52 55h30M52 63h25M52 71h28M52 79h15" stroke="#666" stroke-width="1.5" stroke-linecap="round"/>
+                    <rect x="72" y="30" width="22" height="22" rx="6" fill="#dc3545"/>
+                    <path d="M79 38l3 3 5-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h1 class="landing-title" id="landingTitle">{% trans "Assistant documentaire" %}</h1>
+            <p class="landing-subtitle" id="landingSubtitle">{% trans "Posez des questions sur vos documents." %}</p>
+        </div>
+        {% if not has_documents %}
+        <div class="chat-no-docs" id="chatNoDocs">
+            <div class="chat-no-docs-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            </div>
+            <span class="chat-no-docs-title">{% trans "Aucun document dans ce projet" %}</span>
+            <span class="chat-no-docs-text">{% trans "Ajoutez des documents via un connecteur pour interroger l'assistant." %}</span>
+            <a class="chat-no-docs-link" href="{% url 'connector-list' %}">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+                {% trans "Ajouter un connecteur" %}
+            </a>
+        </div>
+        {% endif %}
+        <div class="chatbox{% if not has_documents %} chatbox--disabled{% endif %}">
+            <textarea id="chatInputLanding" rows="1" placeholder="{% trans "Posez votre question à Archi+" %}"></textarea>
+            <div class="tool-tags" id="toolTagsLanding"></div>
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <button class="toolbar-btn toolbar-btn--format" type="button" title="Format">A<span class="format-plus">+</span></button>
+                    <div class="tools-dropdown-wrap">
+                        <button class="toolbar-btn toolbar-btn--tools" type="button">
+                            <svg viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6 1v1.5M6 9.5V11M1 6h1.5M9.5 6H11M2.7 2.7l1 1M8.3 8.3l1 1M9.3 2.7l-1 1M3.7 8.3l-1 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+                            {% trans "Outils" %}
+                        </button>
+                        <div class="tools-dropdown">
+                            <button class="tools-dropdown-item" data-tool="rag-fusion" data-color="blue" type="button"><span class="tool-icon tool-icon--blue"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h4l3 4-3 4H2"/><path d="M6 4h4l3 4-3 4H6"/></svg></span><span class="tools-dropdown-label">RAG Fusion</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button class="tools-dropdown-item" data-tool="reranking" data-color="green" type="button"><span class="tool-icon tool-icon--green"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3 4h10M3 8h7M3 12h4"/></svg></span><span class="tools-dropdown-label">Re-ranking</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button class="tools-dropdown-item" data-tool="hyde" data-color="orange" type="button"><span class="tool-icon tool-icon--orange"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2a3.5 3.5 0 013.5 3.5c0 1.5-1 2.3-1.5 3-.4.5-.5.8-.5 1.5H6.5c0-.7-.1-1-.5-1.5-.5-.7-1.5-1.5-1.5-3A3.5 3.5 0 018 2z"/><path d="M6.5 13h3M7 14.5h2"/></svg></span><span class="tools-dropdown-label">HyDE</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button class="tools-dropdown-item" data-tool="decomposition" data-color="red" type="button"><span class="tool-icon tool-icon--red"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3M10 4h3M10 8h3M10 12h3"/><path d="M6 8l4-4M6 8l4 4M6 8h4"/></svg></span><span class="tools-dropdown-label">Decomposition</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button class="tools-dropdown-item" data-tool="graph-rag" data-color="indigo" type="button"><span class="tool-icon tool-icon--indigo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="8" cy="4" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><path d="M6.5 5.5L5 10M9.5 5.5L11 10M6 12h4"/></svg></span><span class="tools-dropdown-label">Graph RAG</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button class="tools-dropdown-item" data-tool="self-rag" data-color="pink" type="button"><span class="tool-icon tool-icon--pink"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 6.5A4.5 4.5 0 108 13"/><path d="M10 5l3 1.5L12 3"/><path d="M8 10v3l2-1.5"/></svg></span><span class="tools-dropdown-label">Self-RAG</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button class="tools-dropdown-item" data-tool="crag" data-color="teal" type="button"><span class="tool-icon tool-icon--teal"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5l6 3.5v5c0 3-3 5-6 6.5C5 15 2 13 2 10V5l6-3.5z"/><path d="M5.5 8l2 2 3.5-3.5"/></svg></span><span class="tools-dropdown-label">CRAG</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button class="tools-dropdown-item" data-tool="agentic-rag" data-color="amber" type="button"><span class="tool-icon tool-icon--amber"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1 3h-2l1-3zM13 6l-2.5 1.5 1 1.5-3-.5zM3 6l2.5 1.5-1 1.5 3-.5z"/><circle cx="8" cy="10" r="3"/><path d="M8 9v2M7 10h2"/></svg></span><span class="tools-dropdown-label">Agentic RAG</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        </div>
+                    </div>
+                    <div class="model-dropdown-wrap">
+                        <button class="toolbar-btn toolbar-btn--model" type="button">
+                            <svg class="mistral-logo" viewBox="0 0 190 135"><rect x="27" y="0" width="27" height="27" fill="#FFD800"/><rect x="136" y="0" width="27" height="27" fill="#FFD800"/><rect x="27" y="27" width="54" height="27" fill="#FFAF00"/><rect x="109" y="27" width="54" height="27" fill="#FFAF00"/><rect x="27" y="54" width="136" height="27" fill="#FF8205"/><rect x="27" y="81" width="27" height="27" fill="#FA500F"/><rect x="81" y="81" width="27" height="27" fill="#FA500F"/><rect x="136" y="81" width="27" height="27" fill="#FA500F"/><rect x="0" y="108" width="81" height="27" fill="#E10500"/><rect x="109" y="108" width="81" height="27" fill="#E10500"/></svg>
+                            <span class="model-label">Medium</span>
+                        </button>
+                        <div class="model-dropdown"></div>
+                    </div>
+                    <button class="toolbar-btn toolbar-btn--prompt" type="button" title="{% trans "Prompt système" %}">
+                        <svg viewBox="0 0 12 12" fill="none"><path d="M1.5 2h9v8h-9V2z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5l1.5 1L4 7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+                    </button>
+                </div>
+                <button class="send-btn" id="sendBtnLanding" disabled type="button">
+                    <svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M5 6.5L8 3.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversation state -->
+    <div class="chat-conversation" id="chatConversation">
+        <div class="chat-context-bar" id="chatContextBar">
+            <div class="context-bar-left">
+                <span class="context-bar-label">{% trans "AGENTS :" %}</span>
+                <span class="context-bar-items" id="contextBarItems">
+                    <span class="context-bar-empty">{% trans "Aucun outil actif" %}</span>
+                </span>
+            </div>
+            <div class="conv-menu-wrap" id="convMenuWrap">
+                <button class="context-bar-btn" id="convMenuBtn" type="button" title="{% trans "Options" %}">
+                    <svg viewBox="0 0 16 16" fill="none"><path d="M13.5 8.5v-1l1.3-.8a.3.3 0 00.1-.3l-1.2-2a.3.3 0 00-.3-.1l-1.5.5a5 5 0 00-.8-.5L10.8 3a.3.3 0 00-.3-.2H8.1a.3.3 0 00-.3.2l-.3 1.3a5 5 0 00-.8.5L5.2 4.3a.3.3 0 00-.3.1l-1.2 2a.3.3 0 00.1.3l1.3.8v1l-1.3.8a.3.3 0 00-.1.3l1.2 2a.3.3 0 00.3.1l1.5-.5a5 5 0 00.8.5l.3 1.3a.3.3 0 00.3.2h2.4a.3.3 0 00.3-.2l.3-1.3a5 5 0 00.8-.5l1.5.5a.3.3 0 00.3-.1l1.2-2a.3.3 0 00-.1-.3l-1.3-.8z" stroke="currentColor" stroke-width="1.2"/><circle cx="9.3" cy="8" r="1.8" stroke="currentColor" stroke-width="1.2"/></svg>
+                </button>
+                <div class="conv-menu" id="convMenu">
+                    <button class="conv-menu-item" id="convMenuTools" type="button">
+                        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2M4.2 4.2l1.4 1.4M10.4 10.4l1.4 1.4M11.8 4.2l-1.4 1.4M5.6 10.4l-1.4 1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        <span>{% trans "Configurer les outils" %}</span>
+                    </button>
+                    <button class="conv-menu-item" id="convMenuPrompt" type="button">
+                        <svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12v10H2V3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 6l2.5 2L5 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        <span>{% trans "Prompt système" %}</span>
+                    </button>
+                    <div class="conv-menu-divider"></div>
+                    <button class="conv-menu-item conv-menu-item--danger" id="convMenuDelete" type="button">
+                        <svg viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 011-1h1a1 1 0 011 1v1.5M12 4.5l-.5 8a1.5 1.5 0 01-1.5 1.5H6a1.5 1.5 0 01-1.5-1.5L4 4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>{% trans "Supprimer la conversation" %}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="chat-thread" id="chatThread"></div>
+        <div class="conv-chatbox-wrap">
+            <div class="chatbox">
+                <textarea id="chatInputConv" rows="1" placeholder="{% trans "Posez votre question à Archi+" %}"></textarea>
+                <div class="tool-tags" id="toolTagsConv"></div>
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <button class="toolbar-btn toolbar-btn--format" type="button" title="Format">A<span class="format-plus">+</span></button>
+                        <div class="tools-dropdown-wrap">
+                            <button class="toolbar-btn toolbar-btn--tools" type="button">
+                                <svg viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M6 1v1.5M6 9.5V11M1 6h1.5M9.5 6H11M2.7 2.7l1 1M8.3 8.3l1 1M9.3 2.7l-1 1M3.7 8.3l-1 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+                                {% trans "Outils" %}
+                            </button>
+                            <div class="tools-dropdown">
+                                <button class="tools-dropdown-item" data-tool="rag-fusion" data-color="blue" type="button"><span class="tool-icon tool-icon--blue"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h4l3 4-3 4H2"/><path d="M6 4h4l3 4-3 4H6"/></svg></span><span class="tools-dropdown-label">RAG Fusion</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                                <button class="tools-dropdown-item" data-tool="reranking" data-color="green" type="button"><span class="tool-icon tool-icon--green"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3 4h10M3 8h7M3 12h4"/></svg></span><span class="tools-dropdown-label">Re-ranking</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                                <button class="tools-dropdown-item" data-tool="hyde" data-color="orange" type="button"><span class="tool-icon tool-icon--orange"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2a3.5 3.5 0 013.5 3.5c0 1.5-1 2.3-1.5 3-.4.5-.5.8-.5 1.5H6.5c0-.7-.1-1-.5-1.5-.5-.7-1.5-1.5-1.5-3A3.5 3.5 0 018 2z"/><path d="M6.5 13h3M7 14.5h2"/></svg></span><span class="tools-dropdown-label">HyDE</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                                <button class="tools-dropdown-item" data-tool="decomposition" data-color="red" type="button"><span class="tool-icon tool-icon--red"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3M10 4h3M10 8h3M10 12h3"/><path d="M6 8l4-4M6 8l4 4M6 8h4"/></svg></span><span class="tools-dropdown-label">Decomposition</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                                <button class="tools-dropdown-item" data-tool="graph-rag" data-color="indigo" type="button"><span class="tool-icon tool-icon--indigo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="8" cy="4" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><path d="M6.5 5.5L5 10M9.5 5.5L11 10M6 12h4"/></svg></span><span class="tools-dropdown-label">Graph RAG</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                                <button class="tools-dropdown-item" data-tool="self-rag" data-color="pink" type="button"><span class="tool-icon tool-icon--pink"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 6.5A4.5 4.5 0 108 13"/><path d="M10 5l3 1.5L12 3"/><path d="M8 10v3l2-1.5"/></svg></span><span class="tools-dropdown-label">Self-RAG</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                                <button class="tools-dropdown-item" data-tool="crag" data-color="teal" type="button"><span class="tool-icon tool-icon--teal"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5l6 3.5v5c0 3-3 5-6 6.5C5 15 2 13 2 10V5l6-3.5z"/><path d="M5.5 8l2 2 3.5-3.5"/></svg></span><span class="tools-dropdown-label">CRAG</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                                <button class="tools-dropdown-item" data-tool="agentic-rag" data-color="amber" type="button"><span class="tool-icon tool-icon--amber"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1 3h-2l1-3zM13 6l-2.5 1.5 1 1.5-3-.5zM3 6l2.5 1.5-1 1.5 3-.5z"/><circle cx="8" cy="10" r="3"/><path d="M8 9v2M7 10h2"/></svg></span><span class="tools-dropdown-label">Agentic RAG</span><svg class="tools-check" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            </div>
+                        </div>
+                        <div class="model-dropdown-wrap">
+                            <button class="toolbar-btn toolbar-btn--model" type="button">
+                                <svg class="mistral-logo" viewBox="0 0 190 135"><rect x="27" y="0" width="27" height="27" fill="#FFD800"/><rect x="136" y="0" width="27" height="27" fill="#FFD800"/><rect x="27" y="27" width="54" height="27" fill="#FFAF00"/><rect x="109" y="27" width="54" height="27" fill="#FFAF00"/><rect x="27" y="54" width="136" height="27" fill="#FF8205"/><rect x="27" y="81" width="27" height="27" fill="#FA500F"/><rect x="81" y="81" width="27" height="27" fill="#FA500F"/><rect x="136" y="81" width="27" height="27" fill="#FA500F"/><rect x="0" y="108" width="81" height="27" fill="#E10500"/><rect x="109" y="108" width="81" height="27" fill="#E10500"/></svg>
+                                <span class="model-label">Medium</span>
+                            </button>
+                            <div class="model-dropdown"></div>
+                        </div>
+                        <button class="toolbar-btn toolbar-btn--prompt" type="button" title="{% trans "Prompt système" %}">
+                            <svg viewBox="0 0 12 12" fill="none"><path d="M1.5 2h9v8h-9V2z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5l1.5 1L4 7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+                        </button>
+                    </div>
+                    <button class="send-btn" id="sendBtnConv" disabled type="button">
+                        <svg viewBox="0 0 16 16" fill="none"><path d="M8 12V4M5 6.5L8 3.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help button -->
+<!-- Document Viewer Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="chatDocReader">
+    <div class="offcanvas-header" style="display:none!important;"></div>
+    <div class="offcanvas-body" style="display:none!important;"></div>
+
+    <div class="doc-viewer-header">
+        <div style="min-width:0;flex:1;">
+            <div class="doc-viewer-title" id="chatDocTitle">{% trans "Document" %}</div>
+            <div class="doc-viewer-meta" id="chatDocMeta"></div>
+        </div>
+        <div class="doc-viewer-actions">
+            <a class="doc-viewer-icon-btn" id="chatDocDownload" title="{% trans "Télécharger" %}" download>
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </a>
+            <a class="doc-viewer-icon-btn" id="chatDocExternal" title="{% trans "Ouvrir la source" %}" target="_blank" rel="noopener" style="display:none;">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+            <button type="button" class="doc-viewer-icon-btn" data-bs-dismiss="offcanvas" title="{% trans "Fermer" %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="doc-viewer-pager" id="chatDocPager" style="display:none;">
+        <button id="chatDocPrevPage" class="doc-pager-btn" title="{% trans "Page précédente" %}">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <span class="doc-pager-info"><span id="chatDocCurPage">1</span>/<span id="chatDocTotPages">1</span></span>
+        <button id="chatDocNextPage" class="doc-pager-btn" title="{% trans "Page suivante" %}">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+    </div>
+
+    <div class="doc-viewer-body" id="chatDocBody">
+        <div id="chatDocLoading" class="doc-viewer-loading" style="display:none;">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p>{% trans "Chargement du document..." %}</p>
+        </div>
+        <div id="chatDocError" class="alert alert-danger m-3" style="display:none;"></div>
+        <div id="chatDocCited" class="doc-cited-passage" style="display:none;"></div>
+        <div id="chatDocPdfWrap" class="chat-doc-pdf-wrap" style="display:none;">
+            <canvas id="chatDocPdfCanvas" class="chat-doc-pdf-canvas"></canvas>
+        </div>
+        <div id="chatDocText" class="chat-doc-text" style="display:none;"></div>
+
+        <div class="doc-viewer-zoom" id="chatDocZoom" style="display:none;">
+            <button id="chatDocZoomOut" class="doc-zoom-btn" title="{% trans "Zoom arrière" %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button id="chatDocZoomIn" class="doc-zoom-btn" title="{% trans "Zoom avant" %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- System Prompt Configuration Modal -->
+<div class="modal fade sp-modal" id="systemPromptModal" tabindex="-1" aria-labelledby="spModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="spModalLabel">{% trans "Prompt système de l'assistant" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans "Fermer" %}"></button>
+            </div>
+            <div class="modal-body">
+                <p class="sp-description">
+                    {% trans "Personnalisez les instructions données à l'assistant. La variable" %} <strong>{context}</strong> {% trans "sera remplacée par les passages de documents trouvés — elle est obligatoire et ne peut pas être supprimée." %}
+                </p>
+                <div class="sp-variables-bar">
+                    <span class="sp-variables-label">{% trans "Variables :" %}</span>
+                    <button class="sp-var-insert-btn" id="spInsertContext" type="button" title="{% trans "Insérer {context}" %}">
+                        <svg viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                        context
+                    </button>
+                </div>
+                <div class="sp-editor-wrap">
+                    <div class="sp-editor" id="spEditor" contenteditable="true" data-placeholder="{% trans "Entrez votre prompt système personnalisé..." %}" spellcheck="true"></div>
+                    <div class="sp-editor-footer">
+                        <span class="sp-char-count" id="spCharCount">0 {% trans "caractères" %}</span>
+                        <span class="sp-has-context sp-has-context--ok" id="spContextStatus">
+                            <svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            {% trans "{context} présent" %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="sp-btn-reset" id="spResetBtn" type="button">{% trans "Rétablir par défaut" %}</button>
+                <button class="sp-btn-save" id="spSaveBtn" type="button">{% trans "Enregistrer" %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="sp-toast" id="spToast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
+<script>
+(function() {
+    var CSRF = '{{ csrf_token }}';
+    var ASK_URL = '{% url "chat-ask" %}';
+    var MSG_URL_TPL = '{% url "chat-conversation-messages" pk="00000000-0000-0000-0000-000000000000" %}';
+    var DEL_URL_TPL = '{% url "chat-conversation-delete" pk="00000000-0000-0000-0000-000000000000" %}';
+    var PLACEHOLDER_UUID = '00000000-0000-0000-0000-000000000000';
+    var HAS_DOCUMENTS = {{ has_documents|yesno:"true,false" }};
+
+    var landing = document.getElementById('chatLanding');
+    var conversationEl = document.getElementById('chatConversation');
+    var thread = document.getElementById('chatThread');
+    var historyList = document.getElementById('historyList');
+
+    // ── History search ──
+    var historyHeader = document.getElementById('historyHeader');
+    var historySearchBar = document.getElementById('historySearchBar');
+    var historySearchInput = document.getElementById('historySearchInput');
+    var historySearchBtn = document.getElementById('historySearchBtn');
+    var historySearchClose = document.getElementById('historySearchClose');
+
+    function openHistorySearch() {
+        historyHeader.style.display = 'none';
+        historySearchBar.classList.add('open');
+        historySearchInput.value = '';
+        filterHistory('');
+        historySearchInput.focus();
+    }
+    function closeHistorySearch() {
+        historySearchBar.classList.remove('open');
+        historyHeader.style.display = '';
+        historySearchInput.value = '';
+        filterHistory('');
+    }
+    function filterHistory(query) {
+        var q = query.toLowerCase().trim();
+        historyList.querySelectorAll('.history-item').forEach(function(el) {
+            var title = (el.querySelector('.history-item-title') || el).textContent.toLowerCase();
+            el.classList.toggle('filtered-out', q !== '' && title.indexOf(q) === -1);
+        });
+    }
+    historySearchBtn.addEventListener('click', openHistorySearch);
+    historySearchClose.addEventListener('click', closeHistorySearch);
+    historySearchInput.addEventListener('input', function() { filterHistory(this.value); });
+    historySearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeHistorySearch();
+    });
+
+    var inputLanding = document.getElementById('chatInputLanding');
+    var inputConv = document.getElementById('chatInputConv');
+    var sendBtnLanding = document.getElementById('sendBtnLanding');
+    var sendBtnConv = document.getElementById('sendBtnConv');
+
+    var history = [];
+    var isLoading = false;
+    var currentConversationId = null;
+
+    // ── Helpers ──
+    function msgUrl(id) { return MSG_URL_TPL.replace(PLACEHOLDER_UUID, id); }
+    function delUrl(id) { return DEL_URL_TPL.replace(PLACEHOLDER_UUID, id); }
+
+    // ── Auto-resize textareas ──
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+
+    [inputLanding, inputConv].forEach(function(input) {
+        input.addEventListener('input', function() {
+            autoResize(this);
+            updateSendBtn();
+        });
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isLoading && this.value.trim()) {
+                    sendMessage(this.value.trim());
+                }
+            }
+        });
+    });
+
+    // ── Send buttons ──
+    sendBtnLanding.addEventListener('click', function() {
+        if (!isLoading && inputLanding.value.trim()) sendMessage(inputLanding.value.trim());
+    });
+    sendBtnConv.addEventListener('click', function() {
+        if (!isLoading && inputConv.value.trim()) sendMessage(inputConv.value.trim());
+    });
+
+    function updateSendBtn() {
+        sendBtnLanding.disabled = !HAS_DOCUMENTS || isLoading || !inputLanding.value.trim();
+        sendBtnConv.disabled = !HAS_DOCUMENTS || isLoading || !inputConv.value.trim();
+    }
+
+    // ── URL hash persistence ──
+    function setConvHash(id) {
+        if (id) {
+            window.history.replaceState(null, '', '#conv=' + id);
+        } else {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }
+    function getConvHash() {
+        var m = window.location.hash.match(/^#conv=(.+)$/);
+        return m ? m[1] : null;
+    }
+
+    // ── New chat ──
+    document.getElementById('newChatBtn').addEventListener('click', function() {
+        history = [];
+        currentConversationId = null;
+        thread.innerHTML = '';
+        conversationEl.classList.remove('active');
+        landing.classList.remove('hidden');
+        inputLanding.value = '';
+        inputConv.value = '';
+        autoResize(inputLanding);
+        autoResize(inputConv);
+        updateSendBtn();
+        setActiveHistoryItem(null);
+        activeTools = {};
+        syncToolsUI();
+        setConvHash(null);
+        inputLanding.focus();
+    });
+
+    // ── Sidebar history: click to load conversation ──
+    historyList.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-conversation-id]');
+        if (!btn || isLoading) return;
+        var id = btn.getAttribute('data-conversation-id');
+        loadConversation(id);
+    });
+
+    function setActiveHistoryItem(id) {
+        historyList.querySelectorAll('[data-conversation-id]').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-conversation-id') === id);
+        });
+    }
+
+    function loadConversation(id) {
+        currentConversationId = id;
+        history = [];
+        thread.innerHTML = '';
+        setActiveHistoryItem(id);
+        setConvHash(id);
+        showConversation();
+
+        fetch(msgUrl(id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                data.messages.forEach(function(m) {
+                    addMessage(m.role, m.content, m.sources);
+                    history.push({ role: m.role, content: m.content });
+                });
+                // Update sidebar title if the server has a real title
+                if (data.title) {
+                    updateSidebarTitle(id, data.title);
+                }
+                // Restore tools selection from conversation
+                activeTools = {};
+                (data.tools || []).forEach(function(t) { activeTools[t] = true; });
+                syncToolsUI();
+            })
+            .catch(function() {
+                var errDiv = document.createElement('div');
+                errDiv.className = 'chat-error';
+                errDiv.textContent = '{% trans "Impossible de charger la conversation." %}';
+                thread.appendChild(errDiv);
+            });
+    }
+
+    // ── Add conversation to sidebar ──
+    function addToSidebar(id, title) {
+        var empty = document.getElementById('historyEmpty');
+        if (empty) empty.remove();
+        if (historyList.querySelector('[data-conversation-id="' + id + '"]')) return;
+        var btn = document.createElement('button');
+        btn.className = 'sidebar-item history-item';
+        btn.setAttribute('data-conversation-id', id);
+        btn.innerHTML = '<span class="history-item-title">' + escapeHtml(title || '{% trans "Sans titre" %}') + '</span>';
+        historyList.prepend(btn);
+    }
+
+    function updateSidebarTitle(id, title) {
+        var btn = historyList.querySelector('[data-conversation-id="' + id + '"]');
+        if (btn) {
+            var span = btn.querySelector('.history-item-title');
+            if (span) span.textContent = title;
+        }
+    }
+
+    // ── Switch to conversation state ──
+    function showConversation() {
+        landing.classList.add('hidden');
+        conversationEl.classList.add('active');
+        inputConv.focus();
+    }
+
+    // ── Scroll to bottom ──
+    function scrollToBottom() {
+        thread.scrollTop = thread.scrollHeight;
+    }
+
+    // ── Render markdown (marked.js) ──
+    marked.setOptions({ breaks: true, gfm: true });
+
+    function renderMarkdown(text) {
+        if (!text) return '';
+        try {
+            // Escape raw HTML to prevent LLM output from being rendered as DOM elements
+            var safe = text.replace(/</g, '&lt;');
+            return marked.parse(safe);
+        } catch (e) {
+            // Fallback: escaped plain text with line breaks
+            return '<p>' + text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') + '</p>';
+        }
+    }
+
+    // ── Linkify [Document Title] references ──
+    function linkifyDocRefs(html, sources) {
+        if (!sources || !sources.length) return html;
+        var refMap = {};
+        sources.forEach(function(s) {
+            if (s.connector_id && s.document_id) {
+                refMap[s.title] = {
+                    url: '/connectors/' + s.connector_id + '/documents/' + s.document_id + '/content/',
+                    chunkIndex: s.chunk_index
+                };
+            }
+        });
+        Object.keys(refMap).forEach(function(title) {
+            var escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            var re = new RegExp('\\[' + escaped + '\\](?!\\()', 'g');
+            var ci = refMap[title].chunkIndex;
+            var link = '<a href="javascript:void(0)" class="chat-doc-ref chat-doc-read-btn" data-content-url="'
+                + escapeHtml(refMap[title].url) + '"'
+                + (ci !== undefined ? ' data-chunk-index="' + ci + '"' : '')
+                + '>' + escapeHtml(title) + '</a>';
+            html = html.replace(re, link);
+        });
+        return html;
+    }
+
+    // ── Add message bubble ──
+    function addMessage(role, content, sources) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'chat-msg ' + role;
+
+        var bubble = document.createElement('div');
+        bubble.className = 'chat-bubble';
+
+        if (role === 'assistant') {
+            bubble.innerHTML = linkifyDocRefs(renderMarkdown(content), sources);
+        } else {
+            bubble.textContent = content;
+        }
+        wrapper.appendChild(bubble);
+
+        if (role === 'assistant' && sources && sources.length > 0) {
+            var sourcesDiv = document.createElement('div');
+            sourcesDiv.className = 'chat-sources';
+
+            var toggleBtn = document.createElement('button');
+            toggleBtn.className = 'chat-sources-toggle';
+            toggleBtn.innerHTML = '<svg class="chevron" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> ' + sources.length + ' ' + (sources.length > 1 ? '{% trans "sources" %}' : '{% trans "source" %}');
+
+            var sourcesList = document.createElement('div');
+            sourcesList.className = 'chat-sources-list';
+
+            sources.forEach(function(s) {
+                var item = document.createElement('a');
+                item.className = 'chat-source-item';
+
+                if (s.connector_id && s.document_id) {
+                    item.href = 'javascript:void(0)';
+                    item.className += ' chat-doc-read-btn';
+                    item.setAttribute('data-content-url', '/connectors/' + s.connector_id + '/documents/' + s.document_id + '/content/');
+                    if (s.chunk_index !== undefined) {
+                        item.setAttribute('data-chunk-index', s.chunk_index);
+                    }
+                } else if (s.source_url) {
+                    item.href = s.source_url;
+                    item.target = '_blank';
+                    item.rel = 'noopener';
+                } else {
+                    item.href = '#';
+                }
+
+                var iconSvg = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.414A2 2 0 0 0 13.414 3L11 .586A2 2 0 0 0 9.586 0H4zm5.586 1L13 4.414V14H3V2h6.586z"/></svg>';
+                var docType = (s.doc_type || '').toLowerCase();
+                if (docType === 'pdf') {
+                    iconSvg = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.414A2 2 0 0 0 13.414 3L11 .586A2 2 0 0 0 9.586 0H4zm1.5 7a.5.5 0 0 1 .5.5v.634l.549-.317a.5.5 0 1 1 .5.866L6.5 9l.549.317a.5.5 0 1 1-.5.866L6 9.866V10.5a.5.5 0 0 1-1 0v-.634l-.549.317a.5.5 0 1 1-.5-.866L4.5 9l-.549-.317a.5.5 0 1 1 .5-.866l.549.317V7.5a.5.5 0 0 1 .5-.5z"/></svg>';
+                } else if (docType === 'xlsx' || docType === 'xls' || docType === 'csv') {
+                    iconSvg = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.18 4.616a.5.5 0 0 1 .704.064L8 7.219l2.116-2.54a.5.5 0 1 1 .768.641L8.651 8l2.233 2.68a.5.5 0 0 1-.768.64L8 8.781l-2.116 2.54a.5.5 0 0 1-.768-.641L7.349 8 5.116 5.32a.5.5 0 0 1 .064-.704z"/><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4z"/></svg>';
+                }
+
+                item.innerHTML =
+                    '<span class="source-icon">' + iconSvg + '</span>' +
+                    '<span class="source-title">' + escapeHtml(s.title) + '</span>' +
+                    '<span class="source-sim">' + Math.round(s.similarity * 100) + '%</span>';
+
+                sourcesList.appendChild(item);
+            });
+
+            toggleBtn.addEventListener('click', function() {
+                this.classList.toggle('open');
+                sourcesList.classList.toggle('open');
+            });
+
+            sourcesDiv.appendChild(toggleBtn);
+            sourcesDiv.appendChild(sourcesList);
+            wrapper.appendChild(sourcesDiv);
+        }
+
+        thread.appendChild(wrapper);
+        scrollToBottom();
+    }
+
+    function escapeHtml(text) {
+        var d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+
+
+    // ── Typing indicator ──
+    function showTyping() {
+        var el = document.createElement('div');
+        el.className = 'chat-msg assistant';
+        el.id = 'typingIndicator';
+        el.innerHTML = '<div class="chat-bubble typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+        thread.appendChild(el);
+        scrollToBottom();
+    }
+    function hideTyping() {
+        var el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+    }
+
+    // ── Send message ──
+    function sendMessage(text) {
+        if (isLoading || !HAS_DOCUMENTS) return;
+        if (!conversationEl.classList.contains('active')) {
+            showConversation();
+        }
+
+        addMessage('user', text);
+        history.push({role: 'user', content: text});
+
+        inputLanding.value = '';
+        inputConv.value = '';
+        autoResize(inputLanding);
+        autoResize(inputConv);
+
+        isLoading = true;
+        updateSendBtn();
+        showTyping();
+
+        fetch(ASK_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify({
+                message: text,
+                conversation_id: currentConversationId,
+                history: history.slice(0, -1),
+                tools: Object.keys(activeTools),
+            }),
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(data) {
+            hideTyping();
+            isLoading = false;
+            updateSendBtn();
+
+            if (data.error) {
+                var errDiv = document.createElement('div');
+                errDiv.className = 'chat-error';
+                errDiv.textContent = data.error;
+                thread.appendChild(errDiv);
+                scrollToBottom();
+                return;
+            }
+
+            if (data.conversation_id) {
+                var isNew = !currentConversationId;
+                currentConversationId = data.conversation_id;
+                setConvHash(data.conversation_id);
+
+                if (isNew) {
+                    addToSidebar(data.conversation_id, data.title || '{% trans "Sans titre" %}');
+                }
+                if (data.title) {
+                    updateSidebarTitle(data.conversation_id, data.title);
+                }
+                setActiveHistoryItem(data.conversation_id);
+            }
+
+            addMessage('assistant', data.answer, data.sources);
+            history.push({role: 'assistant', content: data.answer});
+
+            if (history.length > 20) {
+                history = history.slice(-20);
+            }
+
+            inputConv.focus();
+        })
+        .catch(function() {
+            hideTyping();
+            isLoading = false;
+            updateSendBtn();
+            var errDiv = document.createElement('div');
+            errDiv.className = 'chat-error';
+            errDiv.textContent = '{% trans "Erreur de connexion. Veuillez réessayer." %}';
+            thread.appendChild(errDiv);
+            scrollToBottom();
+        });
+    }
+
+    updateSendBtn();
+
+    // ── Tools dropdown & tags ──
+    var activeTools = {};
+    var TOOL_COLORS = {
+        'rag-fusion': 'blue',
+        'reranking': 'green',
+        'hyde': 'orange',
+        'decomposition': 'red',
+        'graph-rag': 'indigo',
+        'self-rag': 'pink',
+        'crag': 'teal',
+        'agentic-rag': 'amber',
+    };
+    var TOOL_LABELS = {
+        'rag-fusion': 'RAG Fusion',
+        'reranking': 'Re-ranking',
+        'hyde': 'HyDE',
+        'decomposition': 'Decomposition',
+        'graph-rag': 'Graph RAG',
+        'self-rag': 'Self-RAG',
+        'crag': 'CRAG',
+        'agentic-rag': 'Agentic RAG',
+    };
+    var TOOL_ICONS = {
+        'rag-fusion': '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h4l3 4-3 4H2"/><path d="M6 4h4l3 4-3 4H6"/></svg>',
+        'reranking': '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3 4h10M3 8h7M3 12h4"/></svg>',
+        'hyde': '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2a3.5 3.5 0 013.5 3.5c0 1.5-1 2.3-1.5 3-.4.5-.5.8-.5 1.5H6.5c0-.7-.1-1-.5-1.5-.5-.7-1.5-1.5-1.5-3A3.5 3.5 0 018 2z"/><path d="M6.5 13h3M7 14.5h2"/></svg>',
+        'decomposition': '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h3M10 4h3M10 8h3M10 12h3"/><path d="M6 8l4-4M6 8l4 4M6 8h4"/></svg>',
+        'graph-rag': '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="8" cy="4" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><path d="M6.5 5.5L5 10M9.5 5.5L11 10M6 12h4"/></svg>',
+        'self-rag': '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 6.5A4.5 4.5 0 108 13"/><path d="M10 5l3 1.5L12 3"/><path d="M8 10v3l2-1.5"/></svg>',
+        'crag': '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5l6 3.5v5c0 3-3 5-6 6.5C5 15 2 13 2 10V5l6-3.5z"/><path d="M5.5 8l2 2 3.5-3.5"/></svg>',
+        'agentic-rag': '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1 3h-2l1-3zM13 6l-2.5 1.5 1 1.5-3-.5zM3 6l2.5 1.5-1 1.5 3-.5z"/><circle cx="8" cy="10" r="3"/><path d="M8 9v2M7 10h2"/></svg>',
+    };
+
+    // Toggle dropdown on Outils click
+    document.querySelectorAll('.toolbar-btn--tools').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.querySelectorAll('.model-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+            var dropdown = this.nextElementSibling;
+            var isOpen = dropdown.classList.contains('open');
+            // Close all dropdowns first
+            document.querySelectorAll('.tools-dropdown.open').forEach(function(d) {
+                d.classList.remove('open');
+            });
+            if (!isOpen) {
+                dropdown.classList.add('open');
+            }
+        });
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.tools-dropdown-wrap')) {
+            document.querySelectorAll('.tools-dropdown.open').forEach(function(d) {
+                d.classList.remove('open');
+            });
+        }
+        if (!e.target.closest('.model-dropdown-wrap')) {
+            document.querySelectorAll('.model-dropdown.open').forEach(function(d) {
+                d.classList.remove('open');
+            });
+        }
+    });
+
+    // Toggle tool on dropdown item click
+    document.querySelectorAll('.tools-dropdown-item').forEach(function(item) {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var toolId = this.getAttribute('data-tool');
+            if (activeTools[toolId]) {
+                delete activeTools[toolId];
+            } else {
+                activeTools[toolId] = true;
+            }
+            syncToolsUI();
+        });
+    });
+
+    function syncToolsUI() {
+        // Update dropdown items active state (both chatboxes)
+        document.querySelectorAll('.tools-dropdown-item').forEach(function(item) {
+            var toolId = item.getAttribute('data-tool');
+            item.classList.toggle('active', !!activeTools[toolId]);
+        });
+        // Update tool tags in both chatboxes
+        document.querySelectorAll('.tool-tags').forEach(function(container) {
+            container.innerHTML = '';
+            Object.keys(activeTools).forEach(function(toolId) {
+                var color = TOOL_COLORS[toolId];
+                var label = TOOL_LABELS[toolId];
+                var tag = document.createElement('span');
+                tag.className = 'tool-tag tool-tag--' + color;
+                tag.setAttribute('data-tool', toolId);
+                var iconSvg = TOOL_ICONS[toolId] || '';
+                tag.innerHTML = '<span class="tool-tag-icon">' + iconSvg + '</span>' + label + '<button class="tool-tag-close" type="button" title="{% trans "Retirer" %}">&times;</button>';
+                tag.querySelector('.tool-tag-close').addEventListener('click', function() {
+                    delete activeTools[toolId];
+                    syncToolsUI();
+                });
+                container.appendChild(tag);
+            });
+        });
+        // Update Outils button appearance
+        document.querySelectorAll('.toolbar-btn--tools').forEach(function(btn) {
+            btn.classList.toggle('has-active', Object.keys(activeTools).length > 0);
+        });
+        syncContextBar();
+    }
+
+    // ── Context bar (top of conversation) ──
+    var contextBarItems = document.getElementById('contextBarItems');
+    var TOOL_ICON_SVG_DEFAULT = '<svg viewBox="0 0 16 16" fill="none"><path d="M14 2H8l-1 2H2v10h12V4h-1l1-2zM4 7h8M4 10h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function syncContextBar() {
+        if (!contextBarItems) return;
+        contextBarItems.innerHTML = '';
+        var toolIds = Object.keys(activeTools);
+        if (toolIds.length === 0 && selectedModel === 'medium') {
+            contextBarItems.innerHTML = '<span class="context-bar-empty">{% trans "Aucun outil actif" %}</span>';
+            return;
+        }
+        // Show active tools
+        toolIds.forEach(function(toolId, i) {
+            if (i > 0) {
+                var sep = document.createElement('span');
+                sep.className = 'context-bar-sep';
+                contextBarItems.appendChild(sep);
+            }
+            var item = document.createElement('span');
+            item.className = 'context-bar-item';
+            item.innerHTML = (TOOL_ICONS[toolId] || TOOL_ICON_SVG_DEFAULT) + ' ' + escapeHtml(TOOL_LABELS[toolId] || toolId);
+            contextBarItems.appendChild(item);
+        });
+        // Show model if non-default
+        if (selectedModel !== 'medium') {
+            if (toolIds.length > 0) {
+                var sep = document.createElement('span');
+                sep.className = 'context-bar-sep';
+                contextBarItems.appendChild(sep);
+            }
+            var modelName = '';
+            MODEL_CATEGORIES.forEach(function(cat) {
+                cat.models.forEach(function(m) { if (m.id === selectedModel) modelName = m.name; });
+            });
+            var item = document.createElement('span');
+            item.className = 'context-bar-item';
+            item.innerHTML = MISTRAL_SVG_SMALL + ' ' + escapeHtml(modelName);
+            contextBarItems.appendChild(item);
+        }
+    }
+
+    // ── Model selector dropdown ──
+    var MISTRAL_SVG = '<svg class="mistral-logo" viewBox="0 0 190 135"><rect x="27" y="0" width="27" height="27" fill="#FFD800"/><rect x="136" y="0" width="27" height="27" fill="#FFD800"/><rect x="27" y="27" width="54" height="27" fill="#FFAF00"/><rect x="109" y="27" width="54" height="27" fill="#FFAF00"/><rect x="27" y="54" width="136" height="27" fill="#FF8205"/><rect x="27" y="81" width="27" height="27" fill="#FA500F"/><rect x="81" y="81" width="27" height="27" fill="#FA500F"/><rect x="136" y="81" width="27" height="27" fill="#FA500F"/><rect x="0" y="108" width="81" height="27" fill="#E10500"/><rect x="109" y="108" width="81" height="27" fill="#E10500"/></svg>';
+    var MISTRAL_SVG_SMALL = '<svg style="width:14px;height:14px;" viewBox="0 0 190 135"><rect x="27" y="0" width="27" height="27" fill="#FFD800"/><rect x="136" y="0" width="27" height="27" fill="#FFD800"/><rect x="27" y="27" width="54" height="27" fill="#FFAF00"/><rect x="109" y="27" width="54" height="27" fill="#FFAF00"/><rect x="27" y="54" width="136" height="27" fill="#FF8205"/><rect x="27" y="81" width="27" height="27" fill="#FA500F"/><rect x="81" y="81" width="27" height="27" fill="#FA500F"/><rect x="136" y="81" width="27" height="27" fill="#FA500F"/><rect x="0" y="108" width="81" height="27" fill="#E10500"/><rect x="109" y="108" width="81" height="27" fill="#E10500"/></svg>';
+    var MODEL_CATEGORIES = [
+        { label: '{% trans "Textuel" %}', models: [
+            { id: 'medium', name: 'Medium' },
+            { id: 'large', name: 'Large' },
+        ]},
+        { label: '{% trans "Codage" %}', models: [
+            { id: 'codestral', name: 'Codestral' },
+        ]},
+        { label: '{% trans "Raisonnement" %}', models: [
+            { id: 'magistral', name: 'Magistral' },
+        ]},
+    ];
+    var selectedModel = 'medium';
+
+    function buildModelDropdown(container) {
+        container.innerHTML = '';
+        MODEL_CATEGORIES.forEach(function(cat) {
+            var row = document.createElement('div');
+            row.className = 'model-category';
+            var label = document.createElement('span');
+            label.className = 'model-category-label';
+            label.textContent = cat.label + ' :';
+            row.appendChild(label);
+            var opts = document.createElement('div');
+            opts.className = 'model-category-options';
+            cat.models.forEach(function(m) {
+                var btn = document.createElement('button');
+                btn.className = 'model-option' + (m.id === selectedModel ? ' active' : '');
+                btn.type = 'button';
+                btn.setAttribute('data-model', m.id);
+                btn.innerHTML = MISTRAL_SVG + ' ' + m.name;
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    selectedModel = m.id;
+                    syncModelUI();
+                    document.querySelectorAll('.model-dropdown.open').forEach(function(d) {
+                        d.classList.remove('open');
+                    });
+                });
+                opts.appendChild(btn);
+            });
+            row.appendChild(opts);
+            container.appendChild(row);
+        });
+    }
+
+    function syncModelUI() {
+        var name = '';
+        MODEL_CATEGORIES.forEach(function(cat) {
+            cat.models.forEach(function(m) {
+                if (m.id === selectedModel) name = m.name;
+            });
+        });
+        document.querySelectorAll('.model-label').forEach(function(el) {
+            el.textContent = name;
+        });
+        document.querySelectorAll('.model-option').forEach(function(opt) {
+            opt.classList.toggle('active', opt.getAttribute('data-model') === selectedModel);
+        });
+        syncContextBar();
+    }
+
+    // Build dropdowns on init
+    document.querySelectorAll('.model-dropdown').forEach(buildModelDropdown);
+
+    // Toggle model dropdown
+    document.querySelectorAll('.toolbar-btn--model').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.querySelectorAll('.tools-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+            var dropdown = this.nextElementSibling;
+            var isOpen = dropdown.classList.contains('open');
+            document.querySelectorAll('.model-dropdown.open').forEach(function(d) {
+                d.classList.remove('open');
+            });
+            if (!isOpen) {
+                buildModelDropdown(dropdown);
+                dropdown.classList.add('open');
+            }
+        });
+    });
+
+    // ── Conversation menu dropdown ──
+    var convMenuWrap = document.getElementById('convMenuWrap');
+    var convMenuBtn = document.getElementById('convMenuBtn');
+    var convMenu = document.getElementById('convMenu');
+
+    convMenuBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        convMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+        if (!convMenuWrap.contains(e.target)) convMenu.classList.remove('open');
+    });
+
+    // Configure tools
+    document.getElementById('convMenuTools').addEventListener('click', function() {
+        convMenu.classList.remove('open');
+        var convToolsBtn = document.querySelector('#chatConversation .toolbar-btn--tools');
+        if (convToolsBtn) convToolsBtn.click();
+    });
+
+    // Delete conversation
+    document.getElementById('convMenuDelete').addEventListener('click', function() {
+        convMenu.classList.remove('open');
+        if (!currentConversationId) return;
+        dsConfirm('{% trans "Supprimer la conversation" %}', '{% trans "Supprimer cette conversation ?" %}', '{% trans "Supprimer" %}').then(function(ok) {
+            if (!ok) return;
+            var idToDelete = currentConversationId;
+            fetch(delUrl(idToDelete), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function(r) { return r.json(); }).then(function() {
+                // Remove from sidebar
+                var histItem = historyList.querySelector('[data-conversation-id="' + idToDelete + '"]');
+                if (histItem) histItem.remove();
+                // Reset to landing if this was the active conversation
+                if (currentConversationId === idToDelete) {
+                    history = [];
+                    currentConversationId = null;
+                    thread.innerHTML = '';
+                    conversationEl.classList.remove('active');
+                    landing.classList.remove('hidden');
+                    inputLanding.value = '';
+                    inputConv.value = '';
+                    autoResize(inputLanding);
+                    autoResize(inputConv);
+                    updateSendBtn();
+                    setActiveHistoryItem(null);
+                    activeTools = {};
+                    syncToolsUI();
+                    setConvHash(null);
+                    inputLanding.focus();
+                }
+                // Show empty state if no conversations left
+                if (!historyList.querySelector('.history-item')) {
+                    historyList.innerHTML = '<div id="historyEmpty" class="history-empty">{% trans "Aucune conversation" %}</div>';
+                }
+            });
+        });
+    });
+
+    // ── Document Viewer Panel ──
+    var docOffcanvasEl = document.getElementById('chatDocReader');
+    var docOffcanvas   = new bootstrap.Offcanvas(docOffcanvasEl);
+    var docTitleEl     = document.getElementById('chatDocTitle');
+    var docMetaEl      = document.getElementById('chatDocMeta');
+    var docLoadingEl   = document.getElementById('chatDocLoading');
+    var docErrorEl     = document.getElementById('chatDocError');
+    var docPdfWrap     = document.getElementById('chatDocPdfWrap');
+    var docPdfCanvas   = document.getElementById('chatDocPdfCanvas');
+    var docTextEl      = document.getElementById('chatDocText');
+    var docCitedEl     = document.getElementById('chatDocCited');
+    var docPagerEl     = document.getElementById('chatDocPager');
+    var docZoomEl      = document.getElementById('chatDocZoom');
+    var docCurPageEl   = document.getElementById('chatDocCurPage');
+    var docTotPageEl   = document.getElementById('chatDocTotPages');
+    var docPrevBtn     = document.getElementById('chatDocPrevPage');
+    var docNextBtn     = document.getElementById('chatDocNextPage');
+    var docDownloadBtn = document.getElementById('chatDocDownload');
+    var docExternalBtn = document.getElementById('chatDocExternal');
+
+    var docPdfDoc = null, docPageNum = 1, docScale = 1.5, docRendering = false;
+
+    // Lazy-load PDF.js
+    var docPdfjsReady = false;
+    function ensureDocPdfJs() {
+        if (docPdfjsReady) return Promise.resolve();
+        return new Promise(function(ok, fail) {
+            var s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload = function() {
+                pdfjsLib.GlobalWorkerOptions.workerSrc =
+                    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                docPdfjsReady = true;
+                ok();
+            };
+            s.onerror = fail;
+            document.head.appendChild(s);
+        });
+    }
+
+    function docRenderPage(num) {
+        if (docRendering || !docPdfDoc) return Promise.resolve();
+        docRendering = true;
+        docPageNum = num;
+        docCurPageEl.textContent = num;
+        docPrevBtn.disabled = (num <= 1);
+        docNextBtn.disabled = (num >= docPdfDoc.numPages);
+
+        return docPdfDoc.getPage(num).then(function(page) {
+            var vp  = page.getViewport({ scale: docScale });
+            var dpr = window.devicePixelRatio || 1;
+            var ctx = docPdfCanvas.getContext('2d');
+
+            docPdfCanvas.width  = vp.width  * dpr;
+            docPdfCanvas.height = vp.height * dpr;
+            docPdfCanvas.style.width  = vp.width  + 'px';
+            docPdfCanvas.style.height = vp.height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            return page.render({ canvasContext: ctx, viewport: vp }).promise;
+        }).then(function() { docRendering = false; })
+          .catch(function() { docRendering = false; });
+    }
+
+    function docLoadPdf(fileUrl) {
+        return ensureDocPdfJs().then(function() {
+            return pdfjsLib.getDocument(fileUrl).promise;
+        }).then(function(pdf) {
+            docPdfDoc = pdf;
+            docTotPageEl.textContent = pdf.numPages;
+            docPageNum = 1; docScale = 1.5;
+            docPdfWrap.style.display     = 'flex';
+            docPagerEl.style.display     = 'flex';
+            docZoomEl.style.display      = 'flex';
+            docTextEl.style.display      = 'none';
+            return docRenderPage(1);
+        });
+    }
+
+    function docLoadText(html) {
+        docPdfWrap.style.display     = 'none';
+        docPagerEl.style.display     = 'none';
+        docZoomEl.style.display      = 'none';
+        docTextEl.style.display      = 'block';
+        docTextEl.innerHTML          = html;
+    }
+
+    function docHighlightChunk(chunkIndex) {
+        docTextEl.querySelectorAll('.chunk-highlight').forEach(function(el) {
+            el.classList.remove('chunk-highlight');
+        });
+        if (chunkIndex === null || chunkIndex === undefined) return;
+        var target = docTextEl.querySelector('p[data-chunk-index="' + chunkIndex + '"]');
+        if (!target) return;
+        target.classList.add('chunk-highlight');
+        setTimeout(function() {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
+
+    function docShowCitedPassage(contentHtml, chunkIndex) {
+        docCitedEl.style.display = 'none';
+        docCitedEl.textContent = '';
+        if (chunkIndex === null || chunkIndex === undefined || !contentHtml) return;
+        var tmp = document.createElement('div');
+        tmp.innerHTML = contentHtml;
+        var p = tmp.querySelector('p[data-chunk-index="' + chunkIndex + '"]');
+        if (!p) return;
+        var text = p.textContent;
+        if (text.length > 300) text = text.substring(0, 300) + '\u2026';
+        docCitedEl.textContent = text;
+        docCitedEl.style.display = 'block';
+    }
+
+    function docResetViewer() {
+        docTitleEl.textContent       = '{% trans "Chargement..." %}';
+        docMetaEl.textContent        = '';
+        docPdfWrap.style.display     = 'none';
+        docTextEl.style.display      = 'none';
+        docTextEl.innerHTML          = '';
+        docCitedEl.style.display     = 'none';
+        docCitedEl.textContent       = '';
+        docErrorEl.style.display     = 'none';
+        docPagerEl.style.display     = 'none';
+        docZoomEl.style.display      = 'none';
+        docLoadingEl.style.display   = 'flex';
+        docExternalBtn.style.display = 'none';
+        docDownloadBtn.removeAttribute('href');
+        docPdfDoc = null;
+    }
+
+    docPrevBtn.addEventListener('click', function() {
+        if (docPageNum > 1) docRenderPage(docPageNum - 1);
+    });
+    docNextBtn.addEventListener('click', function() {
+        if (docPdfDoc && docPageNum < docPdfDoc.numPages) docRenderPage(docPageNum + 1);
+    });
+
+    document.getElementById('chatDocZoomOut').addEventListener('click', function() {
+        if (docScale > 0.5) { docScale -= 0.25; docRenderPage(docPageNum); }
+    });
+    document.getElementById('chatDocZoomIn').addEventListener('click', function() {
+        if (docScale < 4) { docScale += 0.25; docRenderPage(docPageNum); }
+    });
+
+    // Click handler for source items that open doc viewer
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.chat-doc-read-btn');
+        if (!btn) return;
+        e.preventDefault();
+
+        var url = btn.getAttribute('data-content-url');
+        var chunkIndex = btn.getAttribute('data-chunk-index');
+        docResetViewer();
+        docOffcanvas.show();
+
+        fetch(url)
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('{% trans "Échec du chargement" %}');
+                return resp.json();
+            })
+            .then(function(data) {
+                docTitleEl.textContent = data.title;
+
+                var meta = [];
+                if (data.doc_type) meta.push(data.doc_type.toUpperCase());
+                if (data.author) meta.push(data.author);
+                meta.push(data.word_count + ' {% trans "mots" %} \u00b7 ' + data.chunk_count + ' {% trans "fragments" %}');
+                docMetaEl.textContent = meta.join(' \u00b7 ');
+
+                if (data.file_url) {
+                    docDownloadBtn.href = data.file_url;
+                    docDownloadBtn.setAttribute('download', data.title);
+                }
+                if (data.source_url) {
+                    docExternalBtn.href = data.source_url;
+                    docExternalBtn.style.display = 'inline-flex';
+                }
+
+                if (data.is_pdf && data.file_url) {
+                    return docLoadPdf(data.file_url).then(function() {
+                        docLoadingEl.style.display = 'none';
+                        docShowCitedPassage(data.content_html, chunkIndex);
+                    }).catch(function() {
+                        docLoadingEl.style.display = 'none';
+                        docLoadText(data.content_html);
+                        docHighlightChunk(chunkIndex);
+                    });
+                } else {
+                    docLoadingEl.style.display = 'none';
+                    docLoadText(data.content_html);
+                    docHighlightChunk(chunkIndex);
+                }
+            })
+            .catch(function(err) {
+                docLoadingEl.style.display = 'none';
+                docTitleEl.textContent = '{% trans "Erreur" %}';
+                docErrorEl.textContent = err.message;
+                docErrorEl.style.display = 'block';
+            });
+    });
+    // ── System Prompt Configuration ──
+    var SAVE_PROMPT_URL = '{% url "chat-save-system-prompt" %}';
+    var DEFAULT_SYSTEM_PROMPT = "{{ default_system_prompt|escapejs }}";
+    var customSystemPrompt = "{{ custom_system_prompt|escapejs }}";
+
+    var spModal = new bootstrap.Modal(document.getElementById('systemPromptModal'));
+    var spEditor = document.getElementById('spEditor');
+    var spCharCount = document.getElementById('spCharCount');
+    var spContextStatus = document.getElementById('spContextStatus');
+    var spSaveBtn = document.getElementById('spSaveBtn');
+    var spResetBtn = document.getElementById('spResetBtn');
+    var spInsertContext = document.getElementById('spInsertContext');
+    var spToast = document.getElementById('spToast');
+
+    var PILL_HTML = '<span class="sp-pill sp-pill--context" contenteditable="false" data-var="context">' +
+        '<svg viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
+        '{context}</span>';
+
+    function spTextToDom(text) {
+        // Convert template text with {context} to DOM with pill spans
+        var parts = text.split(/(\{context\})/g);
+        var html = '';
+        for (var i = 0; i < parts.length; i++) {
+            if (parts[i] === '{context}') {
+                html += PILL_HTML;
+            } else {
+                html += escapeHtml(parts[i]).replace(/\n/g, '<br>');
+            }
+        }
+        return html;
+    }
+
+    function spDomToText() {
+        // Walk child nodes to serialize editor content back to template string
+        var result = '';
+        function walk(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                result += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                if (node.classList && node.classList.contains('sp-pill')) {
+                    var varName = node.getAttribute('data-var');
+                    result += '{' + varName + '}';
+                } else if (node.tagName === 'BR') {
+                    result += '\n';
+                } else {
+                    // For div/p blocks that the browser may create
+                    if (node.tagName === 'DIV' && node.previousSibling) {
+                        result += '\n';
+                    }
+                    for (var c = node.firstChild; c; c = c.nextSibling) {
+                        walk(c);
+                    }
+                }
+            }
+        }
+        for (var c = spEditor.firstChild; c; c = c.nextSibling) {
+            walk(c);
+        }
+        return result;
+    }
+
+    function spCountPills() {
+        return spEditor.querySelectorAll('.sp-pill[data-var="context"]').length;
+    }
+
+    function spUpdateStatus() {
+        var text = spDomToText();
+        var len = text.replace(/\{context\}/g, '').length;
+        spCharCount.textContent = len + ' {% trans "caractères" %}';
+
+        var hasContext = spCountPills() > 0;
+        if (hasContext) {
+            spContextStatus.className = 'sp-has-context sp-has-context--ok';
+            spContextStatus.innerHTML = '<svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> {% trans "{context} présent" %}';
+            spSaveBtn.disabled = false;
+        } else {
+            spContextStatus.className = 'sp-has-context sp-has-context--missing';
+            spContextStatus.innerHTML = '<svg viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> {% trans "{context} manquant" %}';
+            spSaveBtn.disabled = true;
+        }
+    }
+
+    function spLoadPrompt(text) {
+        spEditor.innerHTML = spTextToDom(text);
+        spUpdateStatus();
+    }
+
+    // Count how many pills a range fragment contains
+    function spCountPillsInFragment(frag) {
+        if (!frag.querySelectorAll) return 0;
+        return frag.querySelectorAll('.sp-pill[data-var="context"]').length;
+    }
+
+    // Would deleting these pills leave at least one?
+    function spCanDeletePills(pillsToRemove) {
+        return spCountPills() - pillsToRemove >= 1;
+    }
+
+    // Prevent deletion of the LAST pill via keyboard
+    spEditor.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+            var sel = window.getSelection();
+            if (!sel.rangeCount) return;
+            var range = sel.getRangeAt(0);
+
+            // Selection spans content — check how many pills it contains
+            if (!range.collapsed) {
+                var frag = range.cloneContents();
+                var pillsInSelection = spCountPillsInFragment(frag);
+                if (pillsInSelection > 0 && !spCanDeletePills(pillsInSelection)) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+
+            // Caret (collapsed) — check adjacent node
+            if (range.collapsed) {
+                var node = range.startContainer;
+                var offset = range.startOffset;
+
+                if (e.key === 'Backspace') {
+                    var prev = null;
+                    if (node.nodeType === Node.TEXT_NODE && offset === 0) {
+                        prev = node.previousSibling;
+                    } else if (node.nodeType === Node.ELEMENT_NODE && offset > 0) {
+                        prev = node.childNodes[offset - 1];
+                    }
+                    if (prev && prev.classList && prev.classList.contains('sp-pill') && !spCanDeletePills(1)) {
+                        e.preventDefault();
+                        return;
+                    }
+                } else if (e.key === 'Delete') {
+                    var next = null;
+                    if (node.nodeType === Node.TEXT_NODE && offset === node.textContent.length) {
+                        next = node.nextSibling;
+                    } else if (node.nodeType === Node.ELEMENT_NODE && offset < node.childNodes.length) {
+                        next = node.childNodes[offset];
+                    }
+                    if (next && next.classList && next.classList.contains('sp-pill') && !spCanDeletePills(1)) {
+                        e.preventDefault();
+                        return;
+                    }
+                }
+            }
+        }
+    });
+
+    // Also protect the last pill from cut and beforeinput
+    spEditor.addEventListener('beforeinput', function(e) {
+        if (e.inputType === 'deleteContentBackward' || e.inputType === 'deleteContentForward' ||
+            e.inputType === 'deleteByCut' || e.inputType === 'deleteByDrag') {
+            var sel = window.getSelection();
+            if (sel.rangeCount) {
+                var range = sel.getRangeAt(0);
+                if (!range.collapsed) {
+                    var frag = range.cloneContents();
+                    var pillsInSelection = spCountPillsInFragment(frag);
+                    if (pillsInSelection > 0 && !spCanDeletePills(pillsInSelection)) {
+                        e.preventDefault();
+                        return;
+                    }
+                }
+            }
+        }
+    });
+
+    // Re-check after any input
+    spEditor.addEventListener('input', function() {
+        // Safety: if a pill was somehow removed, we can't undo it,
+        // but we update the status to reflect the state
+        spUpdateStatus();
+    });
+
+    // Insert {context} pill at cursor position
+    spInsertContext.addEventListener('click', function() {
+        spEditor.focus();
+        var sel = window.getSelection();
+        if (!sel.rangeCount) {
+            // If no selection, append at end
+            spEditor.innerHTML += PILL_HTML;
+        } else {
+            var range = sel.getRangeAt(0);
+            range.deleteContents();
+            var tmp = document.createElement('span');
+            tmp.innerHTML = PILL_HTML;
+            var pill = tmp.firstChild;
+            range.insertNode(pill);
+            // Move cursor after the pill
+            range.setStartAfter(pill);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        spUpdateStatus();
+    });
+
+    // Open modal from conv menu
+    document.getElementById('convMenuPrompt').addEventListener('click', function() {
+        convMenu.classList.remove('open');
+        openSystemPromptModal();
+    });
+
+    // Open modal from toolbar prompt buttons
+    document.querySelectorAll('.toolbar-btn--prompt').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openSystemPromptModal();
+        });
+    });
+
+    function syncPromptBtnUI() {
+        document.querySelectorAll('.toolbar-btn--prompt').forEach(function(btn) {
+            btn.classList.toggle('has-custom', !!customSystemPrompt);
+        });
+    }
+    syncPromptBtnUI();
+
+    function openSystemPromptModal() {
+        var promptToLoad = customSystemPrompt || DEFAULT_SYSTEM_PROMPT;
+        spLoadPrompt(promptToLoad);
+        spModal.show();
+    }
+
+    // Reset to default
+    spResetBtn.addEventListener('click', function() {
+        spLoadPrompt(DEFAULT_SYSTEM_PROMPT);
+    });
+
+    // Save
+    spSaveBtn.addEventListener('click', function() {
+        var text = spDomToText();
+        if (text.indexOf('{context}') === -1) return;
+
+        spSaveBtn.disabled = true;
+        spSaveBtn.textContent = '{% trans "Enregistrement..." %}';
+
+        // If text matches default, save empty string (use default)
+        var toSave = (text.trim() === DEFAULT_SYSTEM_PROMPT.trim()) ? '' : text;
+
+        fetch(SAVE_PROMPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify({ system_prompt: toSave }),
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            spSaveBtn.textContent = '{% trans "Enregistrer" %}';
+            spSaveBtn.disabled = false;
+            if (data.error) {
+                showSpToast(data.error, true);
+            } else {
+                customSystemPrompt = toSave;
+                syncPromptBtnUI();
+                spModal.hide();
+                showSpToast('{% trans "Prompt système enregistré" %}');
+            }
+        })
+        .catch(function() {
+            spSaveBtn.textContent = '{% trans "Enregistrer" %}';
+            spSaveBtn.disabled = false;
+            showSpToast('{% trans "Erreur de connexion" %}', true);
+        });
+    });
+
+    function showSpToast(msg, isError) {
+        spToast.textContent = msg;
+        spToast.style.borderColor = isError ? '#ef4444' : 'var(--ds-grey-500)';
+        spToast.classList.add('show');
+        setTimeout(function() { spToast.classList.remove('show'); }, 2500);
+    }
+
+    // ── Auto-restore conversation from URL hash on page load ──
+    var hashConvId = getConvHash();
+    if (hashConvId && historyList.querySelector('[data-conversation-id="' + hashConvId + '"]')) {
+        loadConversation(hashConvId);
+    }
+
+})();
+</script>
+{% endblock %}

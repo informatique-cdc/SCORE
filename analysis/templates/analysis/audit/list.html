@@ -1,0 +1,87 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Audit RAG — DocuScore{% endblock %}
+{% block nav_analysis %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Audit Qualité RAG</h2>
+        <p class="text-muted mb-0">Évaluation automatique de la qualité de votre base documentaire sur 6 axes (sans LLM).</p>
+    </div>
+    <form method="post" action="{% url 'audit-run' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+            <svg style="width:14px;height:14px;margin-right:4px" viewBox="0 0 12 12" fill="none"><path d="M3 2l7 4-7 4V2z" fill="currentColor"/></svg>
+            Lancer un audit
+        </button>
+    </form>
+</div>
+
+{% if jobs %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Statut</th>
+                    <th>Progression</th>
+                    <th>Score</th>
+                    <th>Note</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for job in jobs %}
+                <tr>
+                    <td>{{ job.created_at|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        {% if job.status == "completed" %}
+                            <span class="badge bg-success">Terminé</span>
+                        {% elif job.status == "running" %}
+                            <span class="badge bg-primary">En cours</span>
+                        {% elif job.status == "queued" %}
+                            <span class="badge bg-secondary">En attente</span>
+                        {% elif job.status == "failed" %}
+                            <span class="badge bg-danger">Échoué</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="progress" style="height:6px;width:100px;">
+                            <div class="progress-bar {% if job.status == 'completed' %}bg-success{% elif job.status == 'failed' %}bg-danger{% endif %}"
+                                 style="width:{{ job.progress_pct }}%"></div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if job.overall_score is not None %}
+                            <strong>{{ job.overall_score|floatformat:0 }}/100</strong>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if job.overall_grade %}
+                            <span class="docuscore-pill active docuscore-{{ job.overall_grade }}" style="width:32px;height:32px;font-size:16px;">{{ job.overall_grade }}</span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'audit-detail' pk=job.id %}" class="btn btn-sm btn-outline-light">Voir</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card p-5 text-center">
+    <p class="text-muted mb-3">Aucun audit réalisé. Lancez votre premier audit pour évaluer la qualité RAG de votre base.</p>
+    <form method="post" action="{% url 'audit-run' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Lancer un audit</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

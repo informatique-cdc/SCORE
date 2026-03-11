@@ -1,0 +1,50 @@
+{% load i18n %}
+<turbo-frame id="dashboard-latest-analysis">
+<div data-controller="auto-refresh"
+     data-auto-refresh-url-value="{% url 'dashboard-latest-analysis-partial' %}"
+     data-auto-refresh-frame-value="dashboard-latest-analysis"
+     data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{% trans "Dernière analyse" %}</strong>
+        {% if can_run_analysis %}
+        <form method="post" action="{% url 'analysis-run' %}" data-turbo-frame="_top">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-primary" {% if not membership.can_edit %}disabled{% endif %}>{% trans "Lancer l'analyse" %}</button>
+        </form>
+        {% elif analysis_block_reason == "no_changes" %}
+        <span class="text-muted" style="font-size:12px;">{% trans "Synchronisez vos connecteurs pour lancer une nouvelle analyse." %}</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if latest_analysis %}
+        <div class="d-flex justify-content-between mb-2">
+            <span>{% trans "Statut" %} : <strong>{{ latest_analysis.get_status_display }}</strong></span>
+            <span>{% trans "Phase" %} : {{ latest_analysis.get_current_phase_display }}</span>
+        </div>
+        {% if latest_analysis.status == "running" %}
+        <div class="progress mb-3">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: {{ latest_analysis.progress_pct }}%">
+                {{ latest_analysis.progress_pct }}%
+            </div>
+        </div>
+        {% endif %}
+        {% if latest_analysis.status == "completed" %}
+        {% with linked_audit=latest_analysis.audit_jobs.first %}
+        {% if linked_audit and linked_audit.overall_grade %}
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="text-muted">{% trans "Audit RAG" %} :</span>
+            <span class="docuscore-pill active docuscore-{{ linked_audit.overall_grade }}" style="width:24px;height:24px;font-size:12px;">{{ linked_audit.overall_grade }}</span>
+            <strong>{{ linked_audit.overall_score|floatformat:0 }}/100</strong>
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% endif %}
+        <a href="{% url 'analysis-detail' latest_analysis.pk %}" class="btn btn-sm btn-outline-primary" data-turbo-frame="_top">{% trans "Voir les résultats" %}</a>
+        {% else %}
+        <p class="text-muted">{% trans "Aucune analyse effectuée. Configurez des connecteurs et ingérez des documents d'abord." %}</p>
+        {% endif %}
+    </div>
+</div>
+</div>
+</turbo-frame>

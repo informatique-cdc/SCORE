@@ -1,0 +1,332 @@
+{% load i18n %}
+<turbo-frame id="connector-cards">
+<div data-controller="auto-refresh"
+     data-auto-refresh-url-value="{% url 'connector-cards-partial' %}"
+     data-auto-refresh-frame-value="connector-cards"
+     data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+
+<!-- Header: search + button -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">{% trans "Connecteurs" %}</h2>
+        <span class="text-muted" style="font-size:13px;">{% trans "Sources de donn&eacute;es de votre projet" %}</span>
+    </div>
+    {% if membership.can_edit %}
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#conn-create-modal">{% trans "Nouveau connecteur" %}</button>
+    {% endif %}
+</div>
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="conn-search-wrap">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="conn-search" id="conn-filter" placeholder="{% trans "Filtrer par nom ou type" %}" autocomplete="off">
+    </div>
+</div>
+
+{% if connectors %}
+<!-- Connector table -->
+<table class="conn-table" id="conn-table">
+    <thead>
+        <tr>
+            <th>{% trans "Type" %}</th>
+            <th>{% trans "Nom" %}</th>
+            <th>{% trans "Derni&egrave;re synchro" %}</th>
+            <th>{% trans "Documents" %}</th>
+            <th>{% trans "Statut" %}</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for conn in connectors %}
+        <tr data-href="{% url 'connector-detail' conn.pk %}"
+            data-search="{{ conn.name|lower }} {{ conn.get_connector_type_display|lower }}">
+            <td>
+                <div class="conn-type-cell">
+                    <div class="conn-type-icon {{ conn.connector_type }}">
+                        {% if conn.connector_type == 'sharepoint' %}
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                        {% elif conn.connector_type == 'confluence' %}
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        {% else %}
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        {% endif %}
+                    </div>
+                    <span class="conn-type-name">{{ conn.get_connector_type_display }}</span>
+                </div>
+            </td>
+            <td>
+                <span style="font-weight:500;">{{ conn.name }}</span>
+            </td>
+            <td>
+                {% if conn.last_sync_at %}
+                <div class="conn-sync-ago">{{ conn.last_sync_at|timesince }}</div>
+                <div class="conn-sync-status">
+                    {% if conn.last_sync_status == 'success' %}{% trans "Succ&egrave;s" %}{% elif conn.last_sync_status == 'failed' %}{% trans "Erreur" %}{% else %}{{ conn.last_sync_status }}{% endif %}
+                </div>
+                {% else %}
+                <span class="conn-sync-ago" style="color:var(--ds-text-muted);">{% trans "Jamais" %}</span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="conn-doc-count">{{ conn.doc_count }} {% trans "document(s)" %}</span>
+            </td>
+            <td>
+                <span class="conn-status-dot {% if conn.enabled %}active{% else %}inactive{% endif %}"></span>
+                <span style="font-size:12px;">{% if conn.enabled %}{% trans "Actif" %}{% else %}{% trans "D&eacute;sactiv&eacute;" %}{% endif %}</span>
+            </td>
+            <td class="text-end" style="width:40px;">
+                <div class="dropdown">
+                    <button class="conn-menu-btn" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'connector-detail' conn.pk %}" data-turbo-frame="_top">{% trans "D&eacute;tails" %}</a></li>
+                        {% if membership.can_edit %}
+                        <li>
+                            <form method="post" action="{% url 'connector-sync' conn.pk %}" data-turbo-frame="_top">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item" onclick="event.stopPropagation()">{% trans "Synchroniser" %}</button>
+                            </form>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="post" action="{% url 'connector-delete' conn.pk %}" data-turbo-frame="_top"
+                                  data-confirm-title="{% trans "Supprimer le connecteur" %}"
+                                  data-confirm-message="{% trans "Supprimer" %} {{ conn.name }} {% trans "et tous ses documents ?" %}"
+                                  data-confirm-action="{% trans "Supprimer" %}">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger" onclick="event.stopPropagation();">
+                                    {% trans "Supprimer" %}
+                                </button>
+                            </form>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% else %}
+<!-- Empty state -->
+<div class="conn-empty">
+    <svg class="conn-empty-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+    <p class="conn-empty-text">{% trans "Aucun connecteur configur&eacute; pour ce projet." %}</p>
+    {% if membership.can_edit %}
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#conn-create-modal">{% trans "Ajouter un connecteur" %}</button>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if membership.can_edit %}
+<!-- Create new connector section -->
+<div class="conn-create-section">
+    <div class="conn-create-title">{% trans "Ajouter un connecteur" %}</div>
+    <div class="conn-create-desc">{% trans "Connectez une source de donn&eacute;es pour indexer vos documents dans le projet." %}</div>
+    <div class="conn-type-grid">
+        {% for val, label in connector_types %}
+        <a href="javascript:void(0)" class="conn-type-card" data-open-modal="{{ val }}">
+            <div class="conn-type-icon {{ val }}">
+                {% if val == 'sharepoint' %}
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                {% elif val == 'confluence' %}
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                {% else %}
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                {% endif %}
+            </div>
+            <div>
+                <div class="conn-type-card-name">{{ label }}</div>
+                <div class="conn-type-card-desc">
+                    {% if val == 'sharepoint' %}{% trans "Biblioth&egrave;ques SharePoint Online" %}{% elif val == 'confluence' %}{% trans "Espaces Confluence Cloud" %}{% else %}{% trans "Fichiers locaux ou URL" %}{% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+</div>
+</turbo-frame>
+
+<!-- ═══ CREATE CONNECTOR MODAL ═══ -->
+{% if membership.can_edit %}
+<div class="modal fade" id="conn-create-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- Close -->
+            <button type="button" class="cf-close" data-bs-dismiss="modal" aria-label="{% trans "Fermer" %}">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+
+            <!-- Icons: connector type ⇄ DocuScore -->
+            <div class="cf-icons">
+                <div class="cf-icon-box" id="cf-type-icon">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                </div>
+                <div class="cf-arrow">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+                </div>
+                <div class="cf-icon-box docuscore">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
+                </div>
+            </div>
+
+            <!-- Title -->
+            <div class="cf-title" id="cf-title">{% trans "Connecter SharePoint &agrave; DocuScore" %}</div>
+            <div class="cf-subtitle">{% trans "Configurez les param&egrave;tres de connexion pour indexer automatiquement vos documents dans DocuScore." %}</div>
+
+            <form method="post" action="{% url 'connector-create' %}">
+                {% csrf_token %}
+
+                <!-- Name -->
+                <div class="cf-group">
+                    <label for="cf-name" class="cf-label">{% trans "Nom du connecteur" %}</label>
+                    <input type="text" name="name" id="cf-name" class="cf-input" placeholder="{% trans "Ex. Documents RH" %}" required>
+                </div>
+
+                <!-- Type selector -->
+                <div class="cf-group">
+                    <label for="cf-connector-type" class="cf-label">{% trans "Type de source" %}</label>
+                    <select name="connector_type" id="cf-connector-type" class="cf-select">
+                        {% for val, label in connector_types %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- SharePoint config -->
+                <div id="cf-config-sharepoint" class="cf-connector-config">
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "URL du site" %}</label>
+                        <input type="text" name="config_site_url" class="cf-input" placeholder="your-site.sharepoint.com">
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "ID du lecteur (optionnel)" %}</label>
+                        <input type="text" name="config_drive_id" class="cf-input">
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Chemin du dossier" %}</label>
+                        <input type="text" name="config_folder_path" class="cf-input" value="/" placeholder="/">
+                    </div>
+                </div>
+
+                <!-- Confluence config -->
+                <div id="cf-config-confluence" class="cf-connector-config" style="display:none">
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "URL Confluence" %}</label>
+                        <input type="url" name="config_url" class="cf-input" placeholder="https://your-org.atlassian.net">
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Cl&eacute; d'espace" %}</label>
+                        <input type="text" name="config_space_key" class="cf-input">
+                    </div>
+                </div>
+
+                <!-- Generic config -->
+                <div id="cf-config-generic" class="cf-connector-config" style="display:none">
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Type de source" %}</label>
+                        <select name="config_source_type" class="cf-select">
+                            <option value="filesystem">{% trans "Syst&egrave;me de fichiers local" %}</option>
+                            <option value="http">{% trans "URL HTTP/HTTPS" %}</option>
+                        </select>
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Chemin de base / URL" %}</label>
+                        <input type="text" name="config_base_path" class="cf-input" placeholder="/path/to/docs ou https://...">
+                    </div>
+                </div>
+
+                <!-- Credential -->
+                <div class="cf-group">
+                    <label for="cf-credential-ref" class="cf-label">{% trans "R&eacute;f&eacute;rence d'authentification" %}</label>
+                    <input type="text" name="credential_ref" id="cf-credential-ref" class="cf-input" placeholder="{% trans "ex. SHAREPOINT_CLIENT_SECRET" %}">
+                    <div class="cf-hint">{% trans "Nom de la variable d'environnement contenant la cl&eacute; API ou le secret." %}</div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="cf-submit">
+                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    {% trans "Connecter" %}
+                </button>
+            </form>
+
+            <hr class="cf-divider">
+
+            <div class="cf-footer">
+                {% trans "En cr&eacute;ant ce connecteur, vous autorisez DocuScore &agrave; acc&eacute;der et indexer les documents de la source configur&eacute;e. Vous pouvez le d&eacute;sactiver &agrave; tout moment depuis la page Connecteurs." %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+(function() {
+    /* Row click navigation */
+    document.querySelectorAll('#conn-table tbody tr[data-href]').forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            if (e.target.closest('.dropdown, button, a, form')) return;
+            window.location.href = row.dataset.href;
+        });
+    });
+
+    /* Filter */
+    var input = document.getElementById('conn-filter');
+    if (input) {
+        input.addEventListener('input', function() {
+            var q = this.value.toLowerCase();
+            document.querySelectorAll('#conn-table tbody tr').forEach(function(row) {
+                var text = row.dataset.search || '';
+                row.style.display = text.indexOf(q) !== -1 ? '' : 'none';
+            });
+        });
+    }
+
+    /* ── Modal: dynamic icon / title / config panels ── */
+    var modalEl = document.getElementById('conn-create-modal');
+    if (!modalEl) return;
+
+    var icons = {
+        sharepoint: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
+        confluence: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+        generic: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    };
+    var titles = {
+        sharepoint: 'Connecter SharePoint \u00e0 DocuScore',
+        confluence: 'Connecter Confluence \u00e0 DocuScore',
+        generic: 'Connecter une source \u00e0 DocuScore'
+    };
+
+    var select  = document.getElementById('cf-connector-type');
+    var iconBox = document.getElementById('cf-type-icon');
+    var titleEl = document.getElementById('cf-title');
+
+    function updateModal(type) {
+        iconBox.className = 'cf-icon-box ' + (type || 'generic');
+        iconBox.innerHTML = icons[type] || icons.generic;
+        titleEl.textContent = titles[type] || titles.generic;
+        modalEl.querySelectorAll('.cf-connector-config').forEach(function(el) { el.style.display = 'none'; });
+        var target = document.getElementById('cf-config-' + type);
+        if (target) target.style.display = 'block';
+    }
+
+    select.addEventListener('change', function() { updateModal(this.value); });
+    updateModal(select.value);
+
+    /* Type cards open modal with pre-selected type */
+    document.querySelectorAll('[data-open-modal]').forEach(function(card) {
+        card.addEventListener('click', function() {
+            var type = card.dataset.openModal;
+            select.value = type;
+            updateModal(type);
+            var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        });
+    });
+})();
+</script>
