@@ -23,6 +23,7 @@ Built with Django, SQLite + sqlite-vec, Celery, OpenAI/Azure OpenAI, and spaCy.
 - [SCORE Scoring](#score-scoring)
 - [Tests](#tests)
 - [Dependencies](#dependencies)
+- [Documentation](#documentation)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -51,8 +52,8 @@ Built with Django, SQLite + sqlite-vec, Celery, OpenAI/Azure OpenAI, and spaCy.
 
 - **Web server**: Django 5.1, serves the dashboard, chat interface, and triggers async jobs.
 - **Task queue**: Celery workers run ingestion, analysis, and audit pipelines.
-- **Primary database**: SQLite via Django ORM (`db.sqlite3`) for all relational data.
-- **Vector database**: Separate SQLite file (`vec.sqlite3`) with the sqlite-vec extension for KNN embedding search.
+- **Primary database**: SQLite via Django ORM (`data/db.sqlite3`) for all relational data.
+- **Vector database**: Separate SQLite file (`data/vec.sqlite3`) with the sqlite-vec extension for KNN embedding search.
 - **LLM**: Unified client supporting OpenAI, Azure OpenAI, and Azure Mistral for embeddings, chat completions, and JSON-mode structured output. Supports fallback models on rate-limit errors.
 - **Semantic graph**: spaCy-based concept extraction with NetworkX graph and FAISS index for knowledge-map visualizations.
 
@@ -68,22 +69,30 @@ score/
 │   │                          #   ClusterMembership, GapReport, HallucinationReport,
 │   │                          #   TreeNode, PipelineTrace, PhaseTrace, TraceEvent
 │   ├── duplicates.py          #   Multi-signal duplicate detection + LLM verification
+│   ├── claims.py              #   Claims extraction from document chunks
 │   ├── contradictions.py      #   Claims-based contradiction & staleness detection
 │   ├── clustering.py          #   HDBSCAN/KMeans topic clustering + tree building
 │   ├── gaps.py                #   QG/RAG coverage, orphan, stale, and adjacent gap detection
 │   ├── hallucination.py       #   RAG hallucination risk detection (acronyms, jargon, hedging)
+│   ├── semantic_graph.py      #   Project-level semantic graph builder
 │   ├── constants.py           #   Shared analysis constants
 │   ├── pipeline.py            #   Pipeline orchestration (analysis + audit phases)
+│   ├── presenters.py          #   Data presenters for views
+│   ├── trace.py               #   Pipeline tracing helpers (PhaseEventBuffer)
 │   ├── tasks.py               #   Celery tasks: run_analysis, run_audit
 │   ├── audit/                 #   RAG quality audit (6 axes, no LLM)
 │   │   ├── base.py            #     BaseAuditAxis ABC
+│   │   ├── runner.py          #     Audit runner + AXIS_ORDER registry
 │   │   ├── hygiene.py         #     Corpus hygiene: near-duplicates, boilerplate, language mix
 │   │   ├── structure_rag.py   #     RAG structure: chunk size, info density, readability
 │   │   ├── coverage.py        #     Semantic coverage: topic diversity, outliers
 │   │   ├── coherence.py       #     Internal coherence: terminology consistency
-│   │   └── ...                #     Retrievability, governance axes
-│   ├── views.py               #   Analysis list, detail, sub-reports, JSON APIs
+│   │   ├── retrievability.py  #     Retrievability: embedding quality, search relevance
+│   │   └── governance.py      #     Governance: metadata, ownership, freshness
+│   ├── views.py               #   Analysis list, detail, sub-reports, resolve/batch-resolve
 │   ├── views_audit.py         #   Audit list, detail, per-axis reports
+│   ├── views_json.py          #   JSON API endpoints for D3.js visualizations
+│   ├── views_reports.py       #   Report-specific view helpers
 │   ├── urls.py
 │   └── templates/analysis/    #   list, detail, duplicates, contradictions, clusters,
 │                              #   gaps, hallucinations, tree, knowledge-map, trace, audit
@@ -102,24 +111,30 @@ score/
 │   ├── generic.py             #   Filesystem + HTTP connector
 │   ├── sharepoint.py          #   SharePoint Online connector (optional dep)
 │   ├── confluence.py          #   Confluence connector (optional dep)
-│   ├── views.py               #   CRUD + sync trigger
+│   ├── views.py               #   CRUD + sync trigger + document content/file endpoints
 │   ├── urls.py
 │   └── templates/connectors/  #   list, create, detail
 │
 ├── dashboard/                 # Main web UI
+│   ├── models.py              #   Dashboard-specific models
+│   ├── admin.py               #   Admin registration
 │   ├── views.py               #   Home view with stats, scoring, and recent jobs
 │   ├── scoring.py             #   Re-exports from score.scoring (backward compat)
+│   ├── urls.py
 │   └── templates/dashboard/   #   base.html (Bootstrap 5 + D3.js layout), home.html, login.html
 │
-├── score/                 # Django project root
+├── score/                     # Django project root
 │   ├── settings.py            #   Settings (reads .env + config.yaml), security hardening
 │   ├── urls.py                #   Root URL router
 │   ├── celery.py              #   Celery app configuration
 │   ├── scoring.py             #   SCORE 0-100 scoring with A-E grades (7 dimensions)
 │   ├── utils.py               #   Shared utilities (JSON parsing, etc.)
-│   ├── middleware.py          #   Content Security Policy middleware
+│   ├── middleware.py           #   Content Security Policy middleware
 │   ├── health.py              #   Health check endpoint
-│   └── wsgi.py
+│   ├── issues.py              #   Issue tracking helpers
+│   ├── ratelimit.py           #   Rate-limiting utilities
+│   ├── asgi.py                #   ASGI entry point
+│   └── wsgi.py                #   WSGI entry point
 │
 ├── ingestion/                 # Document ingestion pipeline
 │   ├── models.py              #   Document, DocumentChunk, IngestionJob
@@ -127,17 +142,19 @@ score/
 │   ├── extraction.py          #   Text extraction (HTML, PDF, DOCX, PPTX, Markdown)
 │   ├── chunking.py            #   Heading-aware and fixed-token chunking
 │   ├── hashing.py             #   Content normalization + SHA-256 hashing
-│   ├── tasks.py               #   Celery task: run_ingestion
-│   ├── views.py
-│   └── urls.py
+│   └── tasks.py               #   Celery task: run_ingestion
 │
 ├── llm/                       # LLM abstraction layer
 │   ├── client.py              #   LLMClient (OpenAI + Azure + Azure Mistral), embed, chat,
 │   │                          #   rate limiting, fallback models, separate embedding endpoint
-│   ├── prompts.py             #   All LLM prompt templates
+│   ├── prompts.py             #   LLM prompt templates (French)
+│   ├── prompts_en.py          #   LLM prompt templates (English)
+│   ├── prompts_rag.py         #   RAG-specific prompts (French)
+│   ├── prompts_rag_en.py      #   RAG-specific prompts (English)
 │   └── prompt_loader.py       #   Dynamic prompt loading
 │
 ├── nsg/                       # Semantic graph (concept extraction + knowledge map)
+│   ├── cli.py                 #   CLI entry point for standalone graph operations
 │   ├── concepts.py            #   spaCy-based concept extraction + text chunking
 │   ├── graph.py               #   NetworkX semantic graph building
 │   ├── index.py               #   FAISS vector index for concept search
@@ -154,12 +171,17 @@ score/
 │
 ├── tenants/                   # Multi-tenant system
 │   ├── models.py              #   Tenant, TenantMembership, TenantScopedModel (abstract)
+│   ├── adapters.py            #   allauth account adapter (tenant-aware)
+│   ├── context_processors.py  #   Template context: current tenant, projects
 │   ├── middleware.py           #   TenantMiddleware (resolves current tenant per request)
-│   ├── views.py               #   Tenant selection and settings
+│   ├── views.py               #   Tenant selection, settings, projects, user management
 │   ├── urls.py
+│   ├── templatetags/          #   Custom template tags
+│   │   └── tenant_tags.py     #     Tenant-related template filters
 │   └── templates/tenants/     #   select, settings
 │
 ├── vectorstore/               # Vector embedding storage
+│   ├── models.py              #   Vectorstore Django models
 │   └── store.py               #   VectorStore class (sqlite-vec), upsert, search, KNN
 │
 ├── scripts/
@@ -171,21 +193,32 @@ score/
 │   └── nsg/                   #   Semantic graph tests
 │
 ├── docs/                      # Documentation
-│   ├── audit.md               #   Audit system documentation
-│   └── stack-and-algorithms.md#   Technical stack and algorithm details
+│   ├── SCORE_FORMULA.md       #   Scoring formula, 7 dimensions, edge cases
+│   ├── INGESTION_AND_ANALYSIS.md  # Ingestion pipeline + analysis methods
+│   ├── stack-and-algorithms.md    # Technical stack and algorithms (French)
+│   └── deployment.md          #   Production deployment guide (Docker, PostgreSQL, nginx)
+│
+├── data/                      # Runtime data (created at runtime, gitignored)
+│   ├── db.sqlite3             #   Django database
+│   └── vec.sqlite3            #   Vector database
+│
+├── locale/                    # Internationalization
+│   ├── en/                    #   English translations
+│   └── fr/                    #   French translations
 │
 ├── config.yaml                # Analysis, audit, and LLM configuration
 ├── requirements.txt           # Python dependencies
 ├── pyproject.toml             # Project metadata, pytest and ruff config
 ├── Dockerfile                 # Multi-stage Docker build with health check
+├── docker-compose.yml         # Docker Compose for full-stack deployment
 ├── .env.example               # Environment variable template
+├── .dockerignore              # Docker build exclusions
+├── .gitignore                 # Git exclusions
 ├── CHANGELOG.md               # Version history
 ├── CONTRIBUTING.md            # Contribution guidelines
 ├── SECURITY.md                # Security policy
 ├── LICENSE                    # Apache 2.0
-├── manage.py
-├── db.sqlite3                 # Django database (created at runtime)
-└── vec.sqlite3                # Vector database (created at runtime)
+└── manage.py
 ```
 
 ---
@@ -439,18 +472,19 @@ Triggered from the analysis page. Runs all analysis phases sequentially, with op
 AnalysisJob (QUEUED)
      │
      ├─ Phase 1: DuplicateDetector.run()          ┐
-     ├─ Phase 2: ClaimsExtractor.extract_all()     ├─ run in parallel
-     ├─ Phase 3: Semantic graph building           ┘
-     ├─ Phase 4: ContradictionDetector.run()
-     ├─ Phase 5: TopicClusterEngine.run()
-     ├─ Phase 6: GapDetector.run()
-     ├─ Phase 7: HallucinationDetector.run()
-     ├─ Phase 8: Tree building
+     ├─ Phase 2: ClaimsExtractor.extract_all()     ┘ run in parallel
+     ├─ Phase 3: Semantic graph building (optional)
+     ├─ Phase 4: TopicClusterEngine.run()
+     ├─ Phase 5: GapDetector.run()
+     ├─ Phase 6: Tree building
+     ├─ Phase 7: ContradictionDetector.run()
+     ├─ Phase 8: HallucinationDetector.run()
      │
      ├─ (if audit enabled)
-     ├─ Audit: Hygiene → Structure → Coverage →
-     │         Coherence → Retrievability → Governance
-     │
+     ├─ Audit: 6 axes run in parallel ──────────┐
+     │   Hygiene, Structure, Coverage,           │
+     │   Coherence, Retrievability, Governance   │
+     │                                           ┘
      ▼
 AnalysisJob (COMPLETED / FAILED)
 ```
@@ -476,6 +510,7 @@ Configuration is controlled by `CELERY_BROKER_BACKEND` in `.env`. Result backend
 
 | App          | Purpose                                                          |
 |--------------|------------------------------------------------------------------|
+| `score`      | Django project root: settings, scoring engine, CSP middleware, health check, rate limiting, utilities |
 | `tenants`    | Multi-tenant system: Tenant, Membership, role-based access       |
 | `connectors` | Document source connectors with registry pattern                 |
 | `ingestion`  | Ingestion pipeline: fetch, extract, chunk, embed, store          |
@@ -553,60 +588,86 @@ Tenant isolation is enforced via post-filtering on metadata tables after KNN ret
 
 ### Dashboard & Auth
 
-| Path                                    | View                    | Description                      |
-|-----------------------------------------|-------------------------|----------------------------------|
-| `/`                                     | redirect                | Redirects to `/dashboard/`       |
-| `/dashboard/`                           | dashboard.home          | Stats, SCORE grade, quick links |
-| `/healthz/`                             | healthz                 | Health check (for Docker/LB)     |
-| `/auth/login/`                          | allauth LoginView       | Login page                       |
-| `/auth/logout/`                         | allauth LogoutView      | Logout                           |
-| `/admin/`                               | Django Admin            | Admin interface                  |
+| Path                                    | View                        | Description                      |
+|-----------------------------------------|-----------------------------|----------------------------------|
+| `/`                                     | redirect                    | Redirects to `/dashboard/`       |
+| `/dashboard/`                           | home                        | Stats, SCORE grade, quick links  |
+| `/dashboard/_stats/`                    | stats_partial               | HTMX partial: dashboard stats    |
+| `/dashboard/_latest-analysis/`          | latest_analysis_partial     | HTMX partial: latest analysis    |
+| `/dashboard/_recent-jobs/`              | recent_jobs_partial         | HTMX partial: recent jobs        |
+| `/dashboard/_score-detail/`             | score_detail_json           | Score breakdown (JSON API)       |
+| `/dashboard/feedback/`                  | submit_feedback             | Submit user feedback (POST)      |
+| `/healthz/`                             | healthz                     | Health check (for Docker/LB)     |
+| `/auth/login/`                          | allauth LoginView           | Login page                       |
+| `/auth/logout/`                         | allauth LogoutView          | Logout                           |
+| `/admin/`                               | Django Admin                | Admin interface                  |
 
 ### Connectors
 
-| Path                                    | View                    | Description                      |
-|-----------------------------------------|-------------------------|----------------------------------|
-| `/connectors/`                          | connector_list          | List all connectors              |
-| `/connectors/create/`                   | connector_create        | Add a new connector              |
-| `/connectors/<uuid>/`                   | connector_detail        | Connector details + job history  |
-| `/connectors/<uuid>/sync/`             | connector_sync          | Trigger ingestion (POST)         |
+| Path                                              | View                          | Description                          |
+|----------------------------------------------------|-------------------------------|--------------------------------------|
+| `/connectors/`                                     | connector_list                | List all connectors                  |
+| `/connectors/create/`                              | connector_create              | Add a new connector                  |
+| `/connectors/_cards/`                              | connector_cards_partial       | HTMX partial: connector cards        |
+| `/connectors/<uuid>/`                              | connector_detail              | Connector details + job history      |
+| `/connectors/<uuid>/sync/`                         | connector_sync                | Trigger ingestion (POST)             |
+| `/connectors/<uuid>/delete/`                       | connector_delete              | Delete connector (POST)              |
+| `/connectors/<uuid>/_jobs/`                        | connector_jobs_partial        | HTMX partial: job list               |
+| `/connectors/<uuid>/_live/`                        | connector_detail_live_partial | HTMX partial: live connector status  |
+| `/connectors/<uuid>/documents/<uuid>/content/`     | document_content              | View document content                |
+| `/connectors/<uuid>/documents/<uuid>/file/`        | document_file                 | Download original document file      |
 
 ### Analysis
 
-| Path                                    | View                    | Description                      |
-|-----------------------------------------|-------------------------|----------------------------------|
-| `/analysis/`                            | analysis_list           | Analysis job history             |
-| `/analysis/run/`                        | analysis_run            | Start new analysis (POST)        |
-| `/analysis/<uuid>/`                     | analysis_detail         | Analysis results overview        |
-| `/analysis/<uuid>/retry/`              | analysis_retry          | Retry failed analysis            |
-| `/analysis/<uuid>/cancel/`             | analysis_cancel         | Cancel running analysis          |
-| `/analysis/<uuid>/delete/`             | analysis_delete         | Delete analysis job              |
-| `/analysis/<uuid>/duplicates/`          | duplicates_report       | Duplicate pairs with scores      |
-| `/analysis/<uuid>/contradictions/`      | contradictions_report   | Contradiction pairs + resolution |
-| `/analysis/<uuid>/clusters/`            | clusters_view           | Topic cluster visualization      |
-| `/analysis/<uuid>/gaps/`                | gaps_report             | Coverage gap reports + resolution |
-| `/analysis/<uuid>/hallucinations/`      | hallucination_report    | Hallucination risk items + resolution |
-| `/analysis/<uuid>/tree/`                | tree_view               | Hierarchical document taxonomy   |
-| `/analysis/<uuid>/knowledge-map/`       | knowledge_map_view      | Semantic concept graph (D3.js)   |
-| `/analysis/<uuid>/trace/`               | trace_view              | Pipeline execution trace         |
-| `/analysis/<uuid>/audit/`               | analysis_audit_overview | Audit results overview           |
-| `/analysis/<uuid>/api/clusters/`        | clusters_json           | Cluster data (JSON API)          |
-| `/analysis/<uuid>/api/tree/`            | tree_json               | Tree data (JSON API)             |
-| `/analysis/<uuid>/api/concept-graph/`   | concept_graph_json      | Concept graph data (JSON API)    |
+| Path                                               | View                        | Description                            |
+|----------------------------------------------------|-----------------------------|----------------------------------------|
+| `/analysis/`                                       | analysis_list               | Analysis job history                   |
+| `/analysis/run/`                                   | analysis_run                | Start new analysis (POST)              |
+| `/analysis/_jobs/`                                 | analysis_jobs_partial       | HTMX partial: jobs list                |
+| `/analysis/<uuid>/`                                | analysis_detail             | Analysis results overview              |
+| `/analysis/<uuid>/retry/`                          | analysis_retry              | Retry failed analysis                  |
+| `/analysis/<uuid>/cancel/`                         | analysis_cancel             | Cancel running analysis                |
+| `/analysis/<uuid>/delete/`                         | analysis_delete             | Delete analysis job                    |
+| `/analysis/<uuid>/duplicates/`                     | duplicates_report           | Duplicate pairs with scores            |
+| `/analysis/<uuid>/contradictions/`                 | contradictions_report       | Contradiction pairs + resolution       |
+| `/analysis/<uuid>/contradictions/<uuid>/resolve/`  | contradiction_resolve       | Resolve single contradiction (POST)    |
+| `/analysis/<uuid>/contradictions/batch-resolve/`   | contradiction_batch_resolve | Batch-resolve contradictions (POST)    |
+| `/analysis/<uuid>/clusters/`                       | clusters_view               | Topic cluster visualization            |
+| `/analysis/<uuid>/gaps/`                           | gaps_report                 | Coverage gap reports + resolution      |
+| `/analysis/<uuid>/gaps/<uuid>/resolve/`            | gap_resolve                 | Resolve single gap (POST)              |
+| `/analysis/<uuid>/gaps/batch-resolve/`             | gap_batch_resolve           | Batch-resolve gaps (POST)              |
+| `/analysis/<uuid>/hallucinations/`                 | hallucination_report        | Hallucination risk items + resolution  |
+| `/analysis/<uuid>/hallucinations/<uuid>/resolve/`  | hallucination_resolve       | Resolve single hallucination (POST)    |
+| `/analysis/<uuid>/hallucinations/batch-resolve/`   | hallucination_batch_resolve | Batch-resolve hallucinations (POST)    |
+| `/analysis/<uuid>/tree/`                           | tree_view                   | Hierarchical document taxonomy         |
+| `/analysis/<uuid>/knowledge-map/`                  | knowledge_map_view          | Semantic concept graph (D3.js)         |
+| `/analysis/<uuid>/trace/`                          | trace_view                  | Pipeline execution trace               |
+| `/analysis/<uuid>/audit/`                          | analysis_audit_overview     | Audit results overview                 |
+| `/analysis/<uuid>/_progress/`                      | analysis_progress_partial   | HTMX partial: progress bar             |
+| `/analysis/<uuid>/_progress_full/`                 | analysis_progress_full_partial | HTMX partial: full progress         |
+| `/analysis/<uuid>/_results/`                       | analysis_results_partial    | HTMX partial: results summary          |
+| `/analysis/<uuid>/api/clusters/`                   | clusters_json               | Cluster data (JSON API)                |
+| `/analysis/<uuid>/api/tree/`                       | tree_json                   | Tree data (JSON API)                   |
+| `/analysis/<uuid>/api/concept-graph/`              | concept_graph_json          | Concept graph data (JSON API)          |
+| `/analysis/<uuid>/api/concept-graph/query/`        | concept_graph_query         | Concept graph query (JSON API)         |
 
 ### Audit (standalone)
 
-| Path                                    | View                    | Description                      |
-|-----------------------------------------|-------------------------|----------------------------------|
-| `/analysis/audit/`                      | audit_list              | Audit job history                |
-| `/analysis/audit/run/`                  | audit_run               | Start standalone audit (POST)    |
-| `/analysis/audit/<uuid>/`              | audit_detail            | Audit results overview           |
-| `/analysis/audit/<uuid>/hygiene/`      | audit_hygiene           | Hygiene axis details             |
-| `/analysis/audit/<uuid>/structure/`    | audit_structure         | Structure axis details           |
-| `/analysis/audit/<uuid>/coverage/`     | audit_coverage          | Coverage axis details            |
-| `/analysis/audit/<uuid>/coherence/`    | audit_coherence         | Coherence axis details           |
-| `/analysis/audit/<uuid>/retrievability/`| audit_retrievability   | Retrievability axis details      |
-| `/analysis/audit/<uuid>/governance/`   | audit_governance        | Governance axis details          |
+| Path                                         | View                  | Description                      |
+|----------------------------------------------|-----------------------|----------------------------------|
+| `/analysis/audit/`                           | audit_list            | Audit job history                |
+| `/analysis/audit/run/`                       | audit_run             | Start standalone audit (POST)    |
+| `/analysis/audit/<uuid>/`                    | audit_detail          | Audit results overview           |
+| `/analysis/audit/<uuid>/retry/`              | audit_retry           | Retry failed audit               |
+| `/analysis/audit/<uuid>/delete/`             | audit_delete          | Delete audit job                 |
+| `/analysis/audit/<uuid>/hygiene/`            | audit_hygiene         | Hygiene axis details             |
+| `/analysis/audit/<uuid>/structure/`          | audit_structure       | Structure axis details           |
+| `/analysis/audit/<uuid>/coverage/`           | audit_coverage        | Coverage axis details            |
+| `/analysis/audit/<uuid>/coherence/`          | audit_coherence       | Coherence axis details           |
+| `/analysis/audit/<uuid>/retrievability/`     | audit_retrievability  | Retrievability axis details      |
+| `/analysis/audit/<uuid>/governance/`         | audit_governance      | Governance axis details          |
+| `/analysis/audit/<uuid>/_progress/`          | audit_progress_partial| HTMX partial: audit progress     |
+| `/analysis/audit/<uuid>/api/<axis>/`         | api_audit_axis        | Per-axis data (JSON API)         |
 
 ### Chat
 
@@ -632,10 +693,17 @@ Tenant isolation is enforced via post-filtering on metadata tables after KNN ret
 
 ### Tenants
 
-| Path                                    | View                    | Description                      |
-|-----------------------------------------|-------------------------|----------------------------------|
-| `/tenants/select/`                      | tenant_select           | Switch active tenant             |
-| `/tenants/settings/`                    | tenant_settings         | Tenant name + member management  |
+| Path                                    | View                    | Description                        |
+|-----------------------------------------|-------------------------|------------------------------------|
+| `/tenants/select/`                      | tenant_select           | Switch active tenant               |
+| `/tenants/create/`                      | tenant_create           | Create new tenant                  |
+| `/tenants/settings/`                    | settings_page           | Tenant name + member management    |
+| `/tenants/projects/`                    | project_list            | List tenant projects               |
+| `/tenants/projects/create/`             | project_create          | Create new project                 |
+| `/tenants/projects/<uuid>/delete/`      | project_delete          | Delete a project (POST)            |
+| `/tenants/users/invite/`               | user_invite             | Invite user to tenant (POST)       |
+| `/tenants/users/<uuid>/role/`          | user_role_update        | Update user role (POST)            |
+| `/tenants/users/<uuid>/remove/`        | user_remove             | Remove user from tenant (POST)     |
 
 ---
 
@@ -699,11 +767,24 @@ The test suite covers all major modules: analysis views, audit views, chat, chun
 
 **PDF Export:** xhtml2pdf
 
-**HTTP:** httpx, requests
+**HTTP:** httpx
 
 **Optional Connectors:** msal + office365-rest-python-client (SharePoint), atlassian-python-api (Confluence)
 
 See `requirements.txt` for the full list with version constraints.
+
+---
+
+## Documentation
+
+Detailed documentation lives in the `docs/` folder:
+
+| Document | Description |
+|----------|-------------|
+| [SCORE_FORMULA.md](docs/SCORE_FORMULA.md) | Scoring formula, 7 dimensions, all edge cases |
+| [INGESTION_AND_ANALYSIS.md](docs/INGESTION_AND_ANALYSIS.md) | Ingestion pipeline + analysis methods |
+| [stack-and-algorithms.md](docs/stack-and-algorithms.md) | Technical stack and algorithms (French) |
+| [deployment.md](docs/deployment.md) | Production deployment guide (Docker, PostgreSQL, nginx) |
 
 ---
 

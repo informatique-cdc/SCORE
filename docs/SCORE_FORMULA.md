@@ -480,7 +480,7 @@ governance_score = 0.30 × completeness_score
 
 ## Implementation
 
-Source: `dashboard/scoring.py`
+Source: `score/scoring.py`
 
 The `compute_score(project)` function returns:
 ```python
