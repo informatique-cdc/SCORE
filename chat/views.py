@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
+from django.conf import settings
+
 from score.ratelimit import ratelimit
 from score.utils import parse_json_body
 from ingestion.models import Document
@@ -49,6 +51,16 @@ def chat_home(request):
         .exists()
     )
 
+    # Active chat model name for UI display
+    llm_config = settings.LLM_CONFIG
+    provider = llm_config.get("provider", "openai")
+    if provider == "azure":
+        chat_model_name = llm_config.get("azure", {}).get("chat_deployment", "")
+    elif provider == "azure_mistral":
+        chat_model_name = llm_config.get("azure_mistral", {}).get("chat_model", "")
+    else:
+        chat_model_name = llm_config.get("openai", {}).get("chat_model", "")
+
     return render(
         request,
         "chat/home.html",
@@ -57,6 +69,7 @@ def chat_home(request):
             "default_system_prompt": get_prompt("CHAT_QA_SYSTEM"),
             "custom_system_prompt": custom_system_prompt,
             "has_documents": has_documents,
+            "chat_model_name": chat_model_name,
         },
     )
 

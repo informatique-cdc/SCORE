@@ -332,9 +332,9 @@
         line-height: 1;
         margin-left: -1px;
     }
-    .toolbar-btn .mistral-logo {
-        width: 18px;
-        height: 14px;
+    .toolbar-btn .model-icon {
+        width: 16px;
+        height: 16px;
         flex-shrink: 0;
     }
 
@@ -888,7 +888,7 @@
     }
     .model-option:hover { background: var(--chat-toolbar-hover); }
     .model-option.active { border-color: var(--chat-chatbox-text); }
-    .model-option .mistral-logo { width: 18px; height: 14px; }
+    .model-option .model-icon { width: 16px; height: 16px; }
     .toolbar-btn--model { gap: 5px; }
     .toolbar-btn--model .model-label { pointer-events: none; }
 
@@ -1364,11 +1364,10 @@
                         </div>
                     </div>
                     <div class="model-dropdown-wrap">
-                        <button class="toolbar-btn toolbar-btn--model" type="button">
-                            <svg class="mistral-logo" viewBox="0 0 190 135"><rect x="27" y="0" width="27" height="27" fill="#FFD800"/><rect x="136" y="0" width="27" height="27" fill="#FFD800"/><rect x="27" y="27" width="54" height="27" fill="#FFAF00"/><rect x="109" y="27" width="54" height="27" fill="#FFAF00"/><rect x="27" y="54" width="136" height="27" fill="#FF8205"/><rect x="27" y="81" width="27" height="27" fill="#FA500F"/><rect x="81" y="81" width="27" height="27" fill="#FA500F"/><rect x="136" y="81" width="27" height="27" fill="#FA500F"/><rect x="0" y="108" width="81" height="27" fill="#E10500"/><rect x="109" y="108" width="81" height="27" fill="#E10500"/></svg>
-                            <span class="model-label">Medium</span>
+                        <button class="toolbar-btn toolbar-btn--model" type="button" title="{% trans "Modèle LLM actif" %}">
+                            <svg class="model-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M5 6.5a1 1 0 011-1h0a1 1 0 011 1v0a1 1 0 01-.4.8L5.5 8.2a1 1 0 00-.5.8V10"/><circle cx="5.5" cy="11.5" r=".5" fill="currentColor" stroke="none"/><path d="M10 6.5a1 1 0 011-1h0a1 1 0 011 1v0a1 1 0 01-.4.8l-1.1.9a1 1 0 00-.5.8V10"/><circle cx="10.5" cy="11.5" r=".5" fill="currentColor" stroke="none"/></svg>
+                            <span class="model-label">{{ chat_model_name }}</span>
                         </button>
-                        <div class="model-dropdown"></div>
                     </div>
                     <button class="toolbar-btn toolbar-btn--prompt" type="button" title="{% trans "Prompt système" %}">
                         <svg viewBox="0 0 12 12" fill="none"><path d="M1.5 2h9v8h-9V2z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5l1.5 1L4 7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
@@ -1436,11 +1435,10 @@
                             </div>
                         </div>
                         <div class="model-dropdown-wrap">
-                            <button class="toolbar-btn toolbar-btn--model" type="button">
-                                <svg class="mistral-logo" viewBox="0 0 190 135"><rect x="27" y="0" width="27" height="27" fill="#FFD800"/><rect x="136" y="0" width="27" height="27" fill="#FFD800"/><rect x="27" y="27" width="54" height="27" fill="#FFAF00"/><rect x="109" y="27" width="54" height="27" fill="#FFAF00"/><rect x="27" y="54" width="136" height="27" fill="#FF8205"/><rect x="27" y="81" width="27" height="27" fill="#FA500F"/><rect x="81" y="81" width="27" height="27" fill="#FA500F"/><rect x="136" y="81" width="27" height="27" fill="#FA500F"/><rect x="0" y="108" width="81" height="27" fill="#E10500"/><rect x="109" y="108" width="81" height="27" fill="#E10500"/></svg>
-                                <span class="model-label">Medium</span>
+                            <button class="toolbar-btn toolbar-btn--model" type="button" title="{% trans "Modèle LLM actif" %}">
+                                <svg class="model-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M5 6.5a1 1 0 011-1h0a1 1 0 011 1v0a1 1 0 01-.4.8L5.5 8.2a1 1 0 00-.5.8V10"/><circle cx="5.5" cy="11.5" r=".5" fill="currentColor" stroke="none"/><path d="M10 6.5a1 1 0 011-1h0a1 1 0 011 1v0a1 1 0 01-.4.8l-1.1.9a1 1 0 00-.5.8V10"/><circle cx="10.5" cy="11.5" r=".5" fill="currentColor" stroke="none"/></svg>
+                                <span class="model-label">{{ chat_model_name }}</span>
                             </button>
-                            <div class="model-dropdown"></div>
                         </div>
                         <button class="toolbar-btn toolbar-btn--prompt" type="button" title="{% trans "Prompt système" %}">
                             <svg viewBox="0 0 12 12" fill="none"><path d="M1.5 2h9v8h-9V2z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5l1.5 1L4 7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
@@ -2017,7 +2015,6 @@
     document.querySelectorAll('.toolbar-btn--tools').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
-            document.querySelectorAll('.model-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
             var dropdown = this.nextElementSibling;
             var isOpen = dropdown.classList.contains('open');
             // Close all dropdowns first
@@ -2034,11 +2031,6 @@
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.tools-dropdown-wrap')) {
             document.querySelectorAll('.tools-dropdown.open').forEach(function(d) {
-                d.classList.remove('open');
-            });
-        }
-        if (!e.target.closest('.model-dropdown-wrap')) {
-            document.querySelectorAll('.model-dropdown.open').forEach(function(d) {
                 d.classList.remove('open');
             });
         }
@@ -2097,7 +2089,7 @@
         if (!contextBarItems) return;
         contextBarItems.innerHTML = '';
         var toolIds = Object.keys(activeTools);
-        if (toolIds.length === 0 && selectedModel === 'medium') {
+        if (toolIds.length === 0) {
             contextBarItems.innerHTML = '<span class="context-bar-empty">{% trans "Aucun outil actif" %}</span>';
             return;
         }
@@ -2113,108 +2105,11 @@
             item.innerHTML = (TOOL_ICONS[toolId] || TOOL_ICON_SVG_DEFAULT) + ' ' + escapeHtml(TOOL_LABELS[toolId] || toolId);
             contextBarItems.appendChild(item);
         });
-        // Show model if non-default
-        if (selectedModel !== 'medium') {
-            if (toolIds.length > 0) {
-                var sep = document.createElement('span');
-                sep.className = 'context-bar-sep';
-                contextBarItems.appendChild(sep);
-            }
-            var modelName = '';
-            MODEL_CATEGORIES.forEach(function(cat) {
-                cat.models.forEach(function(m) { if (m.id === selectedModel) modelName = m.name; });
-            });
-            var item = document.createElement('span');
-            item.className = 'context-bar-item';
-            item.innerHTML = MISTRAL_SVG_SMALL + ' ' + escapeHtml(modelName);
-            contextBarItems.appendChild(item);
-        }
     }
 
-    // ── Model selector dropdown ──
-    var MISTRAL_SVG = '<svg class="mistral-logo" viewBox="0 0 190 135"><rect x="27" y="0" width="27" height="27" fill="#FFD800"/><rect x="136" y="0" width="27" height="27" fill="#FFD800"/><rect x="27" y="27" width="54" height="27" fill="#FFAF00"/><rect x="109" y="27" width="54" height="27" fill="#FFAF00"/><rect x="27" y="54" width="136" height="27" fill="#FF8205"/><rect x="27" y="81" width="27" height="27" fill="#FA500F"/><rect x="81" y="81" width="27" height="27" fill="#FA500F"/><rect x="136" y="81" width="27" height="27" fill="#FA500F"/><rect x="0" y="108" width="81" height="27" fill="#E10500"/><rect x="109" y="108" width="81" height="27" fill="#E10500"/></svg>';
-    var MISTRAL_SVG_SMALL = '<svg style="width:14px;height:14px;" viewBox="0 0 190 135"><rect x="27" y="0" width="27" height="27" fill="#FFD800"/><rect x="136" y="0" width="27" height="27" fill="#FFD800"/><rect x="27" y="27" width="54" height="27" fill="#FFAF00"/><rect x="109" y="27" width="54" height="27" fill="#FFAF00"/><rect x="27" y="54" width="136" height="27" fill="#FF8205"/><rect x="27" y="81" width="27" height="27" fill="#FA500F"/><rect x="81" y="81" width="27" height="27" fill="#FA500F"/><rect x="136" y="81" width="27" height="27" fill="#FA500F"/><rect x="0" y="108" width="81" height="27" fill="#E10500"/><rect x="109" y="108" width="81" height="27" fill="#E10500"/></svg>';
-    var MODEL_CATEGORIES = [
-        { label: '{% trans "Textuel" %}', models: [
-            { id: 'medium', name: 'Medium' },
-            { id: 'large', name: 'Large' },
-        ]},
-        { label: '{% trans "Codage" %}', models: [
-            { id: 'codestral', name: 'Codestral' },
-        ]},
-        { label: '{% trans "Raisonnement" %}', models: [
-            { id: 'magistral', name: 'Magistral' },
-        ]},
-    ];
-    var selectedModel = 'medium';
-
-    function buildModelDropdown(container) {
-        container.innerHTML = '';
-        MODEL_CATEGORIES.forEach(function(cat) {
-            var row = document.createElement('div');
-            row.className = 'model-category';
-            var label = document.createElement('span');
-            label.className = 'model-category-label';
-            label.textContent = cat.label + ' :';
-            row.appendChild(label);
-            var opts = document.createElement('div');
-            opts.className = 'model-category-options';
-            cat.models.forEach(function(m) {
-                var btn = document.createElement('button');
-                btn.className = 'model-option' + (m.id === selectedModel ? ' active' : '');
-                btn.type = 'button';
-                btn.setAttribute('data-model', m.id);
-                btn.innerHTML = MISTRAL_SVG + ' ' + m.name;
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    selectedModel = m.id;
-                    syncModelUI();
-                    document.querySelectorAll('.model-dropdown.open').forEach(function(d) {
-                        d.classList.remove('open');
-                    });
-                });
-                opts.appendChild(btn);
-            });
-            row.appendChild(opts);
-            container.appendChild(row);
-        });
-    }
-
-    function syncModelUI() {
-        var name = '';
-        MODEL_CATEGORIES.forEach(function(cat) {
-            cat.models.forEach(function(m) {
-                if (m.id === selectedModel) name = m.name;
-            });
-        });
-        document.querySelectorAll('.model-label').forEach(function(el) {
-            el.textContent = name;
-        });
-        document.querySelectorAll('.model-option').forEach(function(opt) {
-            opt.classList.toggle('active', opt.getAttribute('data-model') === selectedModel);
-        });
-        syncContextBar();
-    }
-
-    // Build dropdowns on init
-    document.querySelectorAll('.model-dropdown').forEach(buildModelDropdown);
-
-    // Toggle model dropdown
-    document.querySelectorAll('.toolbar-btn--model').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            document.querySelectorAll('.tools-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
-            var dropdown = this.nextElementSibling;
-            var isOpen = dropdown.classList.contains('open');
-            document.querySelectorAll('.model-dropdown.open').forEach(function(d) {
-                d.classList.remove('open');
-            });
-            if (!isOpen) {
-                buildModelDropdown(dropdown);
-                dropdown.classList.add('open');
-            }
-        });
-    });
+    // ── Model display (read-only, shows configured model) ──
+    // Model selector will become interactive when multi-model support is added.
+    // For now, the button just shows the active model name from config.yaml.
 
     // ── Conversation menu dropdown ──
     var convMenuWrap = document.getElementById('convMenuWrap');
