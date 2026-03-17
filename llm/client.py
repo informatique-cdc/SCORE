@@ -99,7 +99,10 @@ class LLMClient:
                 )
         else:
             openai_cfg = config["openai"]
-            self._client = OpenAI(api_key=openai_cfg["api_key"])
+            client_kwargs: dict[str, str] = {"api_key": openai_cfg["api_key"]}
+            if openai_cfg.get("base_url"):
+                client_kwargs["base_url"] = openai_cfg["base_url"]
+            self._client = OpenAI(**client_kwargs)
             self._embed_client = self._client
             self._chat_model = openai_cfg["chat_model"]
             self._embed_model = openai_cfg["embedding_model"]
