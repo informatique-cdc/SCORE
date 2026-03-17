@@ -75,6 +75,21 @@ python_files = ["tests/*.py", "tests/**/*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 
+[tool.setuptools.packages.find]
+include = [
+    "score*",
+    "analysis*",
+    "chat*",
+    "connectors*",
+    "dashboard*",
+    "ingestion*",
+    "llm*",
+    "nsg*",
+    "reports*",
+    "tenants*",
+    "vectorstore*",
+]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100
