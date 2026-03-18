@@ -226,6 +226,7 @@ LLM_CONFIG = {
     "provider": LLM_PROVIDER,
     "openai": {
         "api_key": env("OPENAI_API_KEY", default=""),
+        "base_url": env("OPENAI_BASE_URL", default=""),
         "chat_model": _llm_yaml.get("chat_model", "gpt-4o"),
         "embedding_model": _llm_yaml.get("embedding_model", "text-embedding-3-small"),
         "embedding_dimensions": _llm_yaml.get("embedding_dimensions", 1536),

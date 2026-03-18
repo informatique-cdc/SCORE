@@ -99,7 +99,10 @@ class LLMClient:
                 )
         else:
             openai_cfg = config["openai"]
-            self._client = OpenAI(api_key=openai_cfg["api_key"])
+            client_kwargs: dict[str, str] = {"api_key": openai_cfg["api_key"]}
+            if openai_cfg.get("base_url"):
+                client_kwargs["base_url"] = openai_cfg["base_url"]
+            self._client = OpenAI(**client_kwargs)
             self._embed_client = self._client
             self._chat_model = openai_cfg["chat_model"]
             self._embed_model = openai_cfg["embedding_model"]
@@ -331,8 +334,8 @@ class LLMClient:
             batch = texts[i : i + self._batch_size]
 
             kwargs = {"model": self._embed_model, "input": batch}
-            # OpenAI and Azure OpenAI support dimensions param for text-embedding-3-* models
-            if self._embed_dimensions:
+            # Only send dimensions for models that support it (text-embedding-3-*)
+            if self._embed_dimensions and self._embed_model.startswith("text-embedding-"):
                 kwargs["dimensions"] = self._embed_dimensions
 
             response = self._call_with_retry(self._embed_client.embeddings.create, **kwargs)
