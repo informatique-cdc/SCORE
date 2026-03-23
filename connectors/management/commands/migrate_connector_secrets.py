@@ -61,9 +61,11 @@ class Command(BaseCommand):
 
         total = connectors.count()
         if total == 0:
-            self.stdout.write(self.style.SUCCESS(
-                "Nothing to migrate: no connectors with credential_ref and empty encrypted_secret."
-            ))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "Nothing to migrate: no connectors with credential_ref and empty encrypted_secret."
+                )
+            )
             return
 
         self.stdout.write(f"Found {total} connector(s) to migrate.\n")
@@ -104,16 +106,19 @@ class Command(BaseCommand):
 
         self.stdout.write("")
         if apply:
-            self.stdout.write(self.style.SUCCESS(
-                f"Done. Migrated: {migrated}, Skipped: {skipped}, Errors: {errors}"
-            ))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Done. Migrated: {migrated}, Skipped: {skipped}, Errors: {errors}"
+                )
+            )
             if migrated > 0 and not clear_ref:
-                self.stdout.write(self.style.NOTICE(
-                    "Tip: re-run with --clear-ref to remove credential_ref values "
-                    "once you've verified the encrypted secrets work correctly."
-                ))
+                self.stdout.write(
+                    self.style.NOTICE(
+                        "Tip: re-run with --clear-ref to remove credential_ref values "
+                        "once you've verified the encrypted secrets work correctly."
+                    )
+                )
         else:
             self.stdout.write(
-                f"Would migrate: {migrated}, Would skip: {skipped}\n"
-                "Pass --apply to execute."
+                f"Would migrate: {migrated}, Would skip: {skipped}\nPass --apply to execute."
             )

@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('connectors', '0002_add_project'),
+        ("connectors", "0002_add_project"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='connectorconfig',
-            name='encrypted_secret',
-            field=models.TextField(blank=True, default='', help_text='Fernet-encrypted secret (set via set_secret, read via get_secret)'),
+            model_name="connectorconfig",
+            name="encrypted_secret",
+            field=models.TextField(
+                blank=True,
+                default="",
+                help_text="Fernet-encrypted secret (set via set_secret, read via get_secret)",
+            ),
         ),
     ]
