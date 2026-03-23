@@ -23,7 +23,7 @@ class ConfluenceConnector(BaseConnector):
         self._url = config.get("url", os.environ.get("CONFLUENCE_URL", ""))
         self._space_key = config.get("space_key", "")
         self._username = config.get("username", os.environ.get("CONFLUENCE_USERNAME", ""))
-        self._api_token = os.environ.get(credential, os.environ.get("CONFLUENCE_API_TOKEN", ""))
+        self._api_token = credential or os.environ.get("CONFLUENCE_API_TOKEN", "")
         self._client = None
 
     def _get_client(self):

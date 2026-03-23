@@ -26,7 +26,7 @@ class SharePointConnector(BaseConnector):
         self._folder_path = config.get("folder_path", "/")
         self._client_id = config.get("client_id", os.environ.get("SHAREPOINT_CLIENT_ID", ""))
         self._tenant_id = config.get("tenant_id", os.environ.get("SHAREPOINT_TENANT_ID", ""))
-        self._client_secret = os.environ.get(credential, "") if credential else ""
+        self._client_secret = credential or ""
         self._access_token: str | None = None
 
     def _authenticate(self):
