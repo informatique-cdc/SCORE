@@ -47,6 +47,8 @@
                         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
                         {% elif conn.connector_type == 'confluence' %}
                         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        {% elif conn.connector_type == 'elasticsearch' %}
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>
                         {% else %}
                         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         {% endif %}
@@ -133,6 +135,8 @@
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
                 {% elif val == 'confluence' %}
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                {% elif val == 'elasticsearch' %}
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>
                 {% else %}
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 {% endif %}
@@ -140,7 +144,7 @@
             <div>
                 <div class="conn-type-card-name">{{ label }}</div>
                 <div class="conn-type-card-desc">
-                    {% if val == 'sharepoint' %}{% trans "Biblioth&egrave;ques SharePoint Online" %}{% elif val == 'confluence' %}{% trans "Espaces Confluence Cloud" %}{% else %}{% trans "Fichiers locaux ou URL" %}{% endif %}
+                    {% if val == 'sharepoint' %}{% trans "Biblioth&egrave;ques SharePoint Online" %}{% elif val == 'confluence' %}{% trans "Espaces Confluence Cloud" %}{% elif val == 'elasticsearch' %}{% trans "Index Elasticsearch" %}{% else %}{% trans "Fichiers locaux ou URL" %}{% endif %}
                 </div>
             </div>
         </a>
@@ -226,6 +230,51 @@
                     </div>
                 </div>
 
+                <!-- Elasticsearch config -->
+                <div id="cf-config-elasticsearch" class="cf-connector-config" style="display:none">
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "H&ocirc;te(s) Elasticsearch" %}</label>
+                        <input type="text" name="config_hosts" class="cf-input" placeholder="https://localhost:9200">
+                        <div class="cf-hint">{% trans "URL(s) s&eacute;par&eacute;es par des virgules. Laisser vide si Cloud ID est renseign&eacute;." %}</div>
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Cloud ID (optionnel)" %}</label>
+                        <input type="text" name="config_cloud_id" class="cf-input" placeholder="{% trans "deployment:dXMtY2Vud..." %}">
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Index" %}</label>
+                        <input type="text" name="config_index" class="cf-input" placeholder="{% trans "ex. documents, articles-*" %}" required>
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "M&eacute;thode d'authentification" %}</label>
+                        <select name="config_auth_method" class="cf-select">
+                            <option value="api_key">{% trans "Cl&eacute; API" %}</option>
+                            <option value="basic_auth">{% trans "Utilisateur / Mot de passe" %}</option>
+                            <option value="bearer_token">{% trans "Bearer Token" %}</option>
+                        </select>
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Utilisateur (basic_auth uniquement)" %}</label>
+                        <input type="text" name="config_username" class="cf-input" placeholder="elastic">
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Champ contenu" %}</label>
+                        <input type="text" name="config_content_field" class="cf-input" placeholder="content" value="content">
+                        <div class="cf-hint">{% trans "Nom du champ contenant le texte principal du document." %}</div>
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "Champ titre" %}</label>
+                        <input type="text" name="config_title_field" class="cf-input" placeholder="title" value="title">
+                    </div>
+                    <div class="cf-group">
+                        <label class="cf-label">{% trans "V&eacute;rifier les certificats TLS" %}</label>
+                        <select name="config_verify_certs" class="cf-select">
+                            <option value="true" selected>{% trans "Oui" %}</option>
+                            <option value="false">{% trans "Non" %}</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Generic config -->
                 <div id="cf-config-generic" class="cf-connector-config" style="display:none">
                     <div class="cf-group">
@@ -294,11 +343,13 @@
     var icons = {
         sharepoint: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
         confluence: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+        elasticsearch: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>',
         generic: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
     };
     var titles = {
         sharepoint: 'Connecter SharePoint \u00e0 SCORE',
         confluence: 'Connecter Confluence \u00e0 SCORE',
+        elasticsearch: 'Connecter Elasticsearch \u00e0 SCORE',
         generic: 'Connecter une source \u00e0 SCORE'
     };
 
