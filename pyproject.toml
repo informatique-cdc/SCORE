@@ -68,6 +68,9 @@ sharepoint = [
 confluence = [
     "atlassian-python-api>=3.41",
 ]
+elasticsearch = [
+    "elasticsearch>=8.0",
+]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "score.settings"
