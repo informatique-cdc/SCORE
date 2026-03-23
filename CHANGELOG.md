@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `connectors/crypto.py` module with `encrypt_secret()` / `decrypt_secret()` utilities
 - `encrypted_secret` field on `ConnectorConfig` model with `set_secret()` / `get_secret()` methods
 - Password input field in connector creation form (both standalone page and modal)
+- `migrate_connector_secrets` management command to migrate existing env-var-based credentials into encrypted secrets
 - `cryptography>=42.0` dependency
 - Apache 2.0 LICENSE file
 - `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`

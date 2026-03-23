@@ -47,3 +47,24 @@ Connector credentials (API keys, client secrets) can be stored encrypted in the 
 - **Tenant isolation:** Each tenant's secrets are encrypted with a different derived key — a secret encrypted for tenant A cannot be decrypted by tenant B
 - **Graceful fallback:** Connectors with only a `credential_ref` (env var name) continue working without encryption
 - **Failure mode:** Decryption errors return an empty string and log a warning — the application does not crash
+- **Migration:** Use `python manage.py migrate_connector_secrets --apply` to encrypt existing env-var-based credentials (see below)
+
+### Migrating Existing Credentials
+
+If you already have connectors configured with `credential_ref` pointing to environment variables, use the management command to encrypt them:
+
+```bash
+# 1. Set FIELD_ENCRYPTION_KEY in .env (or rely on SECRET_KEY fallback)
+# 2. Ensure the env vars referenced by credential_ref are set
+
+# Dry run — preview what would be migrated
+python manage.py migrate_connector_secrets
+
+# Apply — encrypt env var values into encrypted_secret
+python manage.py migrate_connector_secrets --apply
+
+# Optional: clear credential_ref after verifying encryption works
+python manage.py migrate_connector_secrets --apply --clear-ref
+```
+
+The command is safe to run multiple times — it skips connectors that already have an `encrypted_secret` value.

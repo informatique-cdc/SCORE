@@ -51,6 +51,36 @@ The sample data script creates default users with weak passwords. **Change these
 python manage.py createsuperuser
 ```
 
+## Migrating Connector Secrets (Upgrading from Pre-Encryption Versions)
+
+If you are upgrading from a version that used `credential_ref` (env var names) for connector credentials, follow these steps after deploying the new code:
+
+```bash
+# 1. Run the schema migration to add the encrypted_secret column
+python manage.py migrate
+
+# 2. Generate and set FIELD_ENCRYPTION_KEY in .env
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Add the output to .env as FIELD_ENCRYPTION_KEY=<generated-key>
+
+# 3. Ensure the env vars referenced by your connectors are still set
+
+# 4. Preview what will be migrated (dry run)
+python manage.py migrate_connector_secrets
+
+# 5. Encrypt the credentials
+python manage.py migrate_connector_secrets --apply
+
+# 6. Verify connectors still work (trigger a sync)
+
+# 7. Optionally remove env var references (secrets are now in the DB)
+python manage.py migrate_connector_secrets --apply --clear-ref
+```
+
+**Important:** Back up your database before running the migration. The `FIELD_ENCRYPTION_KEY` (or `SECRET_KEY` if no dedicated key is set) is required to decrypt secrets — if you lose it, encrypted credentials cannot be recovered.
+
+---
+
 ## Database Considerations
 
 ### SQLite (Default)
