@@ -2,9 +2,10 @@ services:
   web:
     build: .
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:${PORT:-8000}"
     env_file: .env
     environment:
+      - PORT=${PORT:-8000}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_BROKER_BACKEND=redis
     volumes:
