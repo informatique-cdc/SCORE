@@ -32,6 +32,7 @@ if _config_path.exists():
         APP_CONFIG = yaml.safe_load(f) or {}
 
 SECRET_KEY = env("SECRET_KEY")
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY", default="")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
