@@ -196,9 +196,13 @@ AZURE_MISTRAL_DEPLOYMENT_NAME=...
 # Rate limits
 LLM_REQUESTS_PER_MINUTE=60
 EMBEDDING_BATCH_SIZE=100
+
+# Field encryption (connector secrets)
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+FIELD_ENCRYPTION_KEY=
 ```
 
-> **Security**: In production (`DEBUG=False`), Django will refuse to start if `SECRET_KEY` is set to a placeholder value.
+> **Security**: In production (`DEBUG=False`), Django will refuse to start if `SECRET_KEY` is set to a placeholder value. A dedicated `FIELD_ENCRYPTION_KEY` is recommended for encrypting connector secrets (falls back to `SECRET_KEY` if not set).
 
 For analysis tuning via `config.yaml`, see [docs/configuration.md](docs/configuration.md).
 
@@ -255,7 +259,7 @@ The test suite covers all major modules: analysis views, audit views, chat, chun
 
 ## Dependencies
 
-**Core:** Django 5.1, Celery 5.4, sqlite-vec 0.1.6, OpenAI SDK, tiktoken, django-allauth, whitenoise, gunicorn
+**Core:** Django 5.1, Celery 5.4, sqlite-vec 0.1.6, OpenAI SDK, tiktoken, django-allauth, cryptography (Fernet encryption), whitenoise, gunicorn
 
 **ML/Analysis:** scikit-learn, HDBSCAN, datasketch (MinHash), numpy, NLTK, langid, rank-bm25
 

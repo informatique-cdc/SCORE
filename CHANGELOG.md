@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Per-tenant encrypted connector secrets: users can now enter API keys/secrets directly in the connector creation UI, stored encrypted in the DB using Fernet with HKDF-derived per-tenant keys
+- `FIELD_ENCRYPTION_KEY` setting for dedicated encryption key (falls back to `SECRET_KEY`)
+- `connectors/crypto.py` module with `encrypt_secret()` / `decrypt_secret()` utilities
+- `encrypted_secret` field on `ConnectorConfig` model with `set_secret()` / `get_secret()` methods
+- Password input field in connector creation form (both standalone page and modal)
+- `cryptography>=42.0` dependency
 - Apache 2.0 LICENSE file
 - `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`
 - `SECRET_KEY` startup validation (refuses to start with placeholder key in production)

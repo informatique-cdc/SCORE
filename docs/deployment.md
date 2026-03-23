@@ -27,6 +27,7 @@ docker-compose up -d
 | Variable | Description |
 |----------|-------------|
 | `SECRET_KEY` | Cryptographically random key (see above) |
+| `FIELD_ENCRYPTION_KEY` | Key for encrypting connector secrets (falls back to `SECRET_KEY`). Generate with: `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
 | `DEBUG` | **Must be `False` in production** |
 | `ALLOWED_HOSTS` | Comma-separated list of your domain(s) |
 | `LLM_PROVIDER` | `openai`, `azure`, or `azure_mistral` |
