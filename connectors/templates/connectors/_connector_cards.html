@@ -241,11 +241,18 @@
                     </div>
                 </div>
 
-                <!-- Credential -->
+                <!-- Secret value (encrypted in DB) -->
                 <div class="cf-group">
-                    <label for="cf-credential-ref" class="cf-label">{% trans "R&eacute;f&eacute;rence d'authentification" %}</label>
+                    <label for="cf-secret-value" class="cf-label">{% trans "Cl&eacute; API / Secret" %}</label>
+                    <input type="password" name="secret_value" id="cf-secret-value" class="cf-input" placeholder="{% trans "Valeur du secret (stock&eacute;e chiffr&eacute;e)" %}" autocomplete="new-password">
+                    <div class="cf-hint">{% trans "La valeur sera chiffr&eacute;e avant stockage. Laissez vide pour utiliser une variable d'environnement." %}</div>
+                </div>
+
+                <!-- Credential ref (env var fallback) -->
+                <div class="cf-group">
+                    <label for="cf-credential-ref" class="cf-label">{% trans "Variable d'environnement (optionnel)" %}</label>
                     <input type="text" name="credential_ref" id="cf-credential-ref" class="cf-input" placeholder="{% trans "ex. SHAREPOINT_CLIENT_SECRET" %}">
-                    <div class="cf-hint">{% trans "Nom de la variable d'environnement contenant la cl&eacute; API ou le secret." %}</div>
+                    <div class="cf-hint">{% trans "Utilis&eacute;e uniquement si aucun secret n'est saisi ci-dessus." %}</div>
                 </div>
 
                 <!-- Submit -->
