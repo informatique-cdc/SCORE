@@ -4,15 +4,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('connectors', '0002_add_project'),
+        ("connectors", "0002_add_project"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='connectorconfig',
-            name='connector_type',
-            field=models.CharField(choices=[('sharepoint', 'SharePoint'), ('confluence', 'Confluence'), ('elasticsearch', 'Elasticsearch'), ('generic', 'Générique (Fichier/HTTP)')], max_length=20),
+            model_name="connectorconfig",
+            name="connector_type",
+            field=models.CharField(
+                choices=[
+                    ("sharepoint", "SharePoint"),
+                    ("confluence", "Confluence"),
+                    ("elasticsearch", "Elasticsearch"),
+                    ("generic", "Générique (Fichier/HTTP)"),
+                ],
+                max_length=20,
+            ),
         ),
     ]
