@@ -168,6 +168,55 @@
     }
     .cf-footer-link:hover { text-decoration: underline; }
     .cf-footer-link svg { width: 14px; height: 14px; }
+
+    /* Security banner (inline) */
+    .sec-banner-inline {
+        position: relative;
+        background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.02) 100%);
+        border: 1px solid rgba(16,185,129,0.18);
+        border-left: 3px solid #10b981;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 18px;
+        overflow: hidden;
+    }
+    .sec-banner-inline::before {
+        content: '';
+        position: absolute;
+        top: -30px; right: -30px;
+        width: 80px; height: 80px;
+        background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .sec-inline-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        position: relative;
+    }
+    .sec-inline-icon {
+        flex-shrink: 0;
+        width: 28px; height: 28px;
+        border-radius: 7px;
+        background: rgba(16,185,129,0.12);
+        display: flex; align-items: center; justify-content: center;
+        color: #10b981;
+        transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .sec-banner-inline:hover .sec-inline-icon { transform: scale(1.08) rotate(-3deg); }
+    .sec-inline-icon svg { width: 14px; height: 14px; }
+    .sec-inline-body { flex: 1; min-width: 0; }
+    .sec-inline-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ds-grey-100);
+        margin-bottom: 1px;
+    }
+    .sec-inline-text {
+        font-size: 11px;
+        color: var(--ds-text-muted);
+        line-height: 1.45;
+    }
 </style>
 {% endblock %}
 
@@ -258,11 +307,31 @@
                 </div>
             </div>
 
-            <!-- Credential -->
+            <!-- Security banner -->
+            <div class="sec-banner-inline">
+                <div class="sec-inline-row">
+                    <div class="sec-inline-icon">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="sec-inline-body">
+                        <div class="sec-inline-title">{% trans "Chiffrement de bout en bout" %}</div>
+                        <div class="sec-inline-text">{% trans "Votre secret sera chiffr&eacute; avec une cl&eacute; propre &agrave; votre organisation (Fernet + HKDF). Il ne sera jamais stock&eacute; en clair dans la base de donn&eacute;es." %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Secret value (encrypted in DB) -->
             <div class="cf-group">
-                <label for="credential_ref" class="cf-label">{% trans "R&eacute;f&eacute;rence d'authentification" %}</label>
+                <label for="secret_value" class="cf-label">{% trans "Cl&eacute; API / Secret" %}</label>
+                <input type="password" name="secret_value" id="secret_value" class="cf-input" placeholder="{% trans "Valeur du secret (stock&eacute;e chiffr&eacute;e)" %}" autocomplete="new-password">
+                <div class="cf-hint">{% trans "La valeur sera chiffr&eacute;e avant stockage. Laissez vide pour utiliser une variable d'environnement." %}</div>
+            </div>
+
+            <!-- Credential ref (env var fallback) -->
+            <div class="cf-group">
+                <label for="credential_ref" class="cf-label">{% trans "Variable d'environnement (optionnel)" %}</label>
                 <input type="text" name="credential_ref" id="credential_ref" class="cf-input" placeholder="{% trans "ex. SHAREPOINT_CLIENT_SECRET" %}">
-                <div class="cf-hint">{% trans "Nom de la variable d'environnement contenant la cl&eacute; API ou le secret." %}</div>
+                <div class="cf-hint">{% trans "Utilis&eacute;e uniquement si aucun secret n'est saisi ci-dessus." %}</div>
             </div>
 
             <!-- Submit -->

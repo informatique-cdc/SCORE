@@ -72,7 +72,7 @@ def connector_create(request):
         return redirect("connector-list")
 
     if request.method == "POST":
-        ConnectorConfig.objects.create(
+        connector = ConnectorConfig.objects.create(
             tenant=request.tenant,
             project=request.project,
             name=request.POST["name"],
@@ -84,6 +84,10 @@ def connector_create(request):
             },
             credential_ref=request.POST.get("credential_ref", ""),
         )
+        secret_value = request.POST.get("secret_value", "")
+        if secret_value:
+            connector.set_secret(secret_value)
+            connector.save()
         return redirect("connector-list")
 
     return render(

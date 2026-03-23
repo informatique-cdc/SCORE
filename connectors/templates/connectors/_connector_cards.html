@@ -23,6 +23,35 @@
     </div>
 </div>
 
+<!-- Security banner -->
+<div class="sec-banner">
+    <div class="sec-banner-row">
+        <div class="sec-banner-icon">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="sec-banner-body">
+            <div class="sec-banner-title">{% trans "Vos secrets sont chiffr&eacute;s de bout en bout" %}</div>
+            <div class="sec-banner-text">
+                {% trans "Les cl&eacute;s API et secrets saisis dans SCORE sont chiffr&eacute;s avec une cl&eacute; unique par organisation. Ils ne sont jamais stock&eacute;s en clair." %}
+                <button type="button" class="sec-banner-toggle" aria-expanded="false" onclick="var d=this.closest('.sec-banner').querySelector('.sec-banner-details');var open=d.dataset.open!=='true';d.dataset.open=open;this.setAttribute('aria-expanded',open);">
+                    {% trans "En savoir plus" %}
+                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+            </div>
+            <div class="sec-banner-details" data-open="false">
+                <div class="sec-banner-details-inner">
+                    <div class="sec-banner-grid">
+                        <div class="sec-banner-item"><span class="sec-banner-dot"></span>{% trans "Chiffrement Fernet (AES-128-CBC + HMAC)" %}</div>
+                        <div class="sec-banner-item"><span class="sec-banner-dot"></span>{% trans "Cl&eacute; d&eacute;riv&eacute;e par tenant via HKDF-SHA256" %}</div>
+                        <div class="sec-banner-item"><span class="sec-banner-dot"></span>{% trans "Isolation cryptographique entre organisations" %}</div>
+                        <div class="sec-banner-item"><span class="sec-banner-dot"></span>{% trans "Compatible avec les variables d'environnement existantes" %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if connectors %}
 <!-- Connector table -->
 <table class="conn-table" id="conn-table">
@@ -241,11 +270,31 @@
                     </div>
                 </div>
 
-                <!-- Credential -->
+                <!-- Security banner -->
+                <div class="sec-banner-inline">
+                    <div class="sec-inline-row">
+                        <div class="sec-inline-icon">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div class="sec-inline-body">
+                            <div class="sec-inline-title">{% trans "Chiffrement de bout en bout" %}</div>
+                            <div class="sec-inline-text">{% trans "Votre secret sera chiffr&eacute; avec une cl&eacute; propre &agrave; votre organisation (Fernet + HKDF). Il ne sera jamais stock&eacute; en clair dans la base de donn&eacute;es." %}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secret value (encrypted in DB) -->
                 <div class="cf-group">
-                    <label for="cf-credential-ref" class="cf-label">{% trans "R&eacute;f&eacute;rence d'authentification" %}</label>
+                    <label for="cf-secret-value" class="cf-label">{% trans "Cl&eacute; API / Secret" %}</label>
+                    <input type="password" name="secret_value" id="cf-secret-value" class="cf-input" placeholder="{% trans "Valeur du secret (stock&eacute;e chiffr&eacute;e)" %}" autocomplete="new-password">
+                    <div class="cf-hint">{% trans "La valeur sera chiffr&eacute;e avant stockage. Laissez vide pour utiliser une variable d'environnement." %}</div>
+                </div>
+
+                <!-- Credential ref (env var fallback) -->
+                <div class="cf-group">
+                    <label for="cf-credential-ref" class="cf-label">{% trans "Variable d'environnement (optionnel)" %}</label>
                     <input type="text" name="credential_ref" id="cf-credential-ref" class="cf-input" placeholder="{% trans "ex. SHAREPOINT_CLIENT_SECRET" %}">
-                    <div class="cf-hint">{% trans "Nom de la variable d'environnement contenant la cl&eacute; API ou le secret." %}</div>
+                    <div class="cf-hint">{% trans "Utilis&eacute;e uniquement si aucun secret n'est saisi ci-dessus." %}</div>
                 </div>
 
                 <!-- Submit -->
