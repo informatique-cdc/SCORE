@@ -55,8 +55,8 @@ INSTALLED_APPS = [
     # Auth
     "allauth",
     "allauth.account",
-    # "allauth.socialaccount",
-    # "allauth.socialaccount.providers.microsoft",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.microsoft",
     # Celery
     "django_celery_results",
     "django_celery_beat",
@@ -150,6 +150,29 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "/auth/login/"
 ACCOUNT_ADAPTER = "tenants.adapters.ScoreAccountAdapter"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# --- Azure AD SSO (allauth social) ---
+AZURE_CLIENT_ID = env("AZURE_CLIENT_ID", default="")
+AZURE_CLIENT_SECRET = env("AZURE_CLIENT_SECRET", default="")
+AZURE_TENANT_ID = env("AZURE_TENANT_ID", default="")
+
+SOCIALACCOUNT_PROVIDERS = {
+    "microsoft": {
+        "APPS": [
+            {
+                "client_id": AZURE_CLIENT_ID,
+                "secret": AZURE_CLIENT_SECRET,
+                "settings": {
+                    "tenant": AZURE_TENANT_ID or "common",
+                },
+            },
+        ],
+    },
+}
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
 
 # --- Session security ---
 SESSION_COOKIE_AGE = 3600 * 8  # 8 hours

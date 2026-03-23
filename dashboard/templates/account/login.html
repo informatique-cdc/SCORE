@@ -1,9 +1,23 @@
 {% extends "account/base_auth.html" %}
-{% load i18n %}
+{% load i18n socialaccount %}
 {% block title %}{% trans "Connexion" %} - SCORE{% endblock %}
 {% block subtitle %}{% trans "Connectez-vous à votre compte" %}{% endblock %}
 
 {% block content %}
+{% get_providers as socialaccount_providers %}
+
+{% if socialaccount_providers %}
+<a href="{% provider_login_url 'microsoft' %}" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+    {% trans "Se connecter avec Microsoft" %}
+</a>
+<div class="d-flex align-items-center my-3">
+    <hr class="flex-grow-1" style="border-color: var(--ds-grey-500);">
+    <span class="px-3 text-muted" style="font-size: 13px;">{% trans "ou" %}</span>
+    <hr class="flex-grow-1" style="border-color: var(--ds-grey-500);">
+</div>
+{% endif %}
+
 {% if form.errors %}
 <div class="alert alert-danger">{% trans "Identifiants invalides. Veuillez réessayer." %}</div>
 {% endif %}
