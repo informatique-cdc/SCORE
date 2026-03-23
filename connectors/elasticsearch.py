@@ -23,7 +23,7 @@ Credential: API key, password, or bearer token (via get_secret / credential_ref)
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from .base import BaseConnector, RawDocument, register_connector
 
@@ -42,7 +42,7 @@ def _parse_datetime(value) -> datetime | None:
     if isinstance(value, (int, float)):
         # Epoch millis (Elasticsearch default for date fields)
         try:
-            return datetime.utcfromtimestamp(value / 1000)
+            return datetime.fromtimestamp(value / 1000, tz=UTC)
         except (ValueError, OSError):
             return None
     if isinstance(value, str):
