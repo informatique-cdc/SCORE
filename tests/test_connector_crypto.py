@@ -1,6 +1,5 @@
 """Tests for per-tenant connector secret encryption."""
 
-import os
 import uuid
 
 import pytest
