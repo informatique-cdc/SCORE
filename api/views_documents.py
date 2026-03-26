@@ -130,17 +130,21 @@ def _create_document(request):
             for chunk_obj, embedding in zip(chunk_objects, embeddings):
                 vec_store.upsert(
                     chunk_id=str(chunk_obj.id),
-                    embedding=embedding,
                     tenant_id=tenant.slug,
-                    document_id=str(doc.id),
-                    doc_type=content_type,
-                    source_type="api",
+                    vector=embedding,
+                    metadata={
+                        "document_id": str(doc.id),
+                        "doc_type": content_type,
+                        "source_type": "api",
+                    },
                     project_id=str(project.id),
                 )
                 chunk_obj.has_embedding = True
             DocumentChunk.objects.bulk_update(chunk_objects, ["has_embedding"])
         doc.status = Document.Status.READY
-    except Exception:
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Embedding failed for doc %s: %s", doc.id, exc)
         doc.status = Document.Status.INGESTED
 
     doc.save()
