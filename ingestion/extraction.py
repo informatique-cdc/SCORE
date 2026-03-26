@@ -145,7 +145,7 @@ def _extract_docx(content: bytes) -> ExtractedText:
         if not text:
             continue
 
-        style_name = (para.style.name or "").lower()
+        style_name = ((para.style.name if para.style else "") or "").lower()
         if "heading" in style_name:
             # Extract heading level from style name (e.g., "Heading 2")
             level_match = re.search(r"(\d+)", style_name)
