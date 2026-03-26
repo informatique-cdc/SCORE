@@ -64,7 +64,7 @@ class TenantMiddleware:
 
             # Resolve project
             self._resolve_project(request, membership.tenant)
-        elif not request.path.startswith(("/auth/", "/admin/", "/tenants/")):
+        elif not request.path.startswith(("/auth/", "/admin/", "/tenants/", "/api/")):
             return redirect(reverse("tenant-select"))
 
         return self.get_response(request)
@@ -100,5 +100,5 @@ class TenantMiddleware:
         if project_membership:
             request.project = project_membership.project
             request.project_membership = project_membership
-        elif not request.path.startswith(("/auth/", "/admin/", "/tenants/")):
+        elif not request.path.startswith(("/auth/", "/admin/", "/tenants/", "/api/")):
             return redirect(reverse("project-list"))

@@ -117,3 +117,29 @@ class TestRequireApiTokenDecorator:
         request = factory.get("/api/v1/test/", HTTP_AUTHORIZATION=f"Bearer {raw_token}")
         response = dummy_view(request)
         assert response.status_code == 200
+
+
+class TestTokenCreateEndpoint:
+    def test_create_token_as_admin(self, client, api_tenant, api_project, api_user):
+        api_user.is_superuser = True
+        api_user.save()
+        client.force_login(api_user)
+        response = client.post(
+            "/api/v1/tokens/",
+            data=json.dumps({"name": "my-token", "project_id": str(api_project.id)}),
+            content_type="application/json",
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert "token" in data
+        assert data["token"].startswith("score_")
+        assert data["name"] == "my-token"
+
+    def test_create_token_non_admin(self, client, api_user):
+        client.force_login(api_user)
+        response = client.post(
+            "/api/v1/tokens/",
+            data=json.dumps({"name": "my-token", "project_id": "fake"}),
+            content_type="application/json",
+        )
+        assert response.status_code == 403
