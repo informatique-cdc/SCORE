@@ -47,3 +47,73 @@ class TestAPITokenModel:
         found = APIToken.objects.filter(key_hash=key_hash, is_active=True).first()
         assert found is not None
         assert found.name == "lookup-token"
+
+
+import json
+from django.test import RequestFactory
+from django.http import JsonResponse
+from api.auth import authenticate_token, require_api_token
+
+
+class TestTokenAuth:
+    def test_valid_token(self, api_tenant, api_project, api_user):
+        raw_token = "score_valid_token"
+        APIToken.objects.create(
+            key_hash=hashlib.sha256(raw_token.encode()).hexdigest(),
+            user=api_user,
+            tenant=api_tenant,
+            project=api_project,
+            name="valid",
+        )
+        result = authenticate_token(raw_token)
+        assert result is not None
+        assert result["user"] == api_user
+        assert result["tenant"] == api_tenant
+        assert result["project"] == api_project
+
+    def test_invalid_token(self, db):
+        result = authenticate_token("nonexistent")
+        assert result is None
+
+    def test_inactive_token(self, api_tenant, api_project, api_user):
+        raw_token = "score_inactive"
+        APIToken.objects.create(
+            key_hash=hashlib.sha256(raw_token.encode()).hexdigest(),
+            user=api_user,
+            tenant=api_tenant,
+            project=api_project,
+            name="inactive",
+            is_active=False,
+        )
+        result = authenticate_token(raw_token)
+        assert result is None
+
+
+class TestRequireApiTokenDecorator:
+    def test_missing_header(self):
+        @require_api_token
+        def dummy_view(request):
+            return JsonResponse({"ok": True})
+
+        factory = RequestFactory()
+        request = factory.get("/api/v1/test/")
+        response = dummy_view(request)
+        assert response.status_code == 401
+
+    def test_valid_header(self, api_tenant, api_project, api_user):
+        @require_api_token
+        def dummy_view(request):
+            return JsonResponse({"user": request.api_user.username})
+
+        raw_token = "score_decorator_test"
+        APIToken.objects.create(
+            key_hash=hashlib.sha256(raw_token.encode()).hexdigest(),
+            user=api_user,
+            tenant=api_tenant,
+            project=api_project,
+            name="decorator-test",
+        )
+        factory = RequestFactory()
+        request = factory.get("/api/v1/test/", HTTP_AUTHORIZATION=f"Bearer {raw_token}")
+        response = dummy_view(request)
+        assert response.status_code == 200
