@@ -35,7 +35,7 @@ Complete technical reference for SCORE's document ingestion pipeline and all ana
 The ingestion pipeline transforms raw documents from external sources into chunked, embedded, and searchable content. It is implemented in `ingestion/pipeline.py` as the `IngestionPipeline` class and executed asynchronously via the Celery task `run_ingestion`.
 
 ```
-  Source (filesystem, HTTP, SharePoint, Confluence)
+  Source (filesystem, HTTP, SharePoint, Confluence, Elasticsearch)
     │
     ▼
   ┌──────────────────────────────────────────────────┐
@@ -170,11 +170,48 @@ class RawDocument:
 
 #### Available Connectors
 
-| Type         | Module                   | Dependencies              |
-|--------------|--------------------------|---------------------------|
-| `generic`    | `connectors/generic.py`  | (built-in)                |
-| `sharepoint` | `connectors/sharepoint.py`| msal, office365-rest-python-client |
-| `confluence` | `connectors/confluence.py`| atlassian-python-api      |
+| Type            | Module                        | Dependencies              |
+|-----------------|-------------------------------|---------------------------|
+| `generic`       | `connectors/generic.py`       | (built-in)                |
+| `sharepoint`    | `connectors/sharepoint.py`    | msal, office365-rest-python-client |
+| `confluence`    | `connectors/confluence.py`    | atlassian-python-api      |
+| `elasticsearch` | `connectors/elasticsearch.py` | elasticsearch>=8.0        |
+
+#### Elasticsearch Connector
+
+**Module:** `connectors/elasticsearch.py`
+
+Connects to an Elasticsearch cluster and retrieves documents from a specified index.
+
+**Authentication methods:**
+- `api_key` (default) — Elasticsearch API key
+- `basic_auth` — username + password tuple
+- `bearer_token` — OAuth2 / service account bearer token
+- Elastic Cloud via `cloud_id` (compatible with any auth method)
+
+**Pagination:** Uses Point in Time (PIT) + `search_after` for memory-efficient, consistent reads. Falls back to `helpers.scan()` (scroll API) for older Elasticsearch versions that don't support PIT.
+
+**Config keys:**
+
+| Key              | Default       | Description                                         |
+|------------------|---------------|-----------------------------------------------------|
+| `hosts`          | (required\*)  | Elasticsearch URL(s), comma-separated               |
+| `cloud_id`       | —             | Elastic Cloud deployment ID (alternative to `hosts`) |
+| `index`          | (required)    | Index name or pattern                               |
+| `auth_method`    | `api_key`     | `api_key`, `basic_auth`, or `bearer_token`          |
+| `username`       | —             | Username for `basic_auth`                           |
+| `verify_certs`   | `true`        | Whether to verify TLS certificates                  |
+| `ca_certs`       | —             | Path to CA bundle for TLS                           |
+| `content_field`  | `content`     | Document field containing the main text             |
+| `title_field`    | `title`       | Document field containing the title                 |
+| `author_field`   | `author`      | Document field containing the author                |
+| `date_field`     | `updated_at`  | Document field containing the modification date     |
+| `query`          | `match_all`   | Elasticsearch Query DSL (JSON) to filter documents  |
+| `batch_size`     | `500`         | Documents per search_after page                     |
+
+\* Either `hosts` or `cloud_id` is required.
+
+**Install:** `pip install elasticsearch>=8.0` or `pip install score[elasticsearch]`
 
 ---
 

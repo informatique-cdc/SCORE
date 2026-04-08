@@ -7,7 +7,9 @@ from unittest.mock import MagicMock
 import pytest
 from django.utils import timezone
 
-from analysis.gaps import GapDetector
+pytest.importorskip("openai", reason="openai not installed")
+
+from analysis.gaps import GapDetector  # noqa: E402
 from analysis.models import ClusterMembership, GapReport, TopicCluster
 from tests.conftest import make_chunk, make_document, make_llm_response, random_embedding
 

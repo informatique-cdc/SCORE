@@ -62,6 +62,7 @@ authority_rules:
   source_weights:
     sharepoint: 1.0
     confluence: 0.9
+    elasticsearch: 0.8
     generic: 0.5
   recency_bias: true
 ```
@@ -154,4 +155,4 @@ Weights for the 6 RAG audit axes. Must sum to 1.0.
 | `source_weights` | dict | see below | Trust weights per connector source type |
 | `recency_bias` | bool | `true` | Whether more recent documents are preferred in conflict resolution |
 
-Default source weights: SharePoint `1.0`, Confluence `0.9`, generic `0.5`.
+Default source weights: SharePoint `1.0`, Confluence `0.9`, Elasticsearch `0.8`, generic `0.5`.

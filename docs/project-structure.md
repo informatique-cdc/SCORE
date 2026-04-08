@@ -51,6 +51,7 @@ score/
 │   ├── generic.py             #   Filesystem + HTTP connector
 │   ├── sharepoint.py          #   SharePoint Online connector (optional dep)
 │   ├── confluence.py          #   Confluence connector (optional dep)
+│   ├── elasticsearch.py       #   Elasticsearch connector (optional dep)
 │   ├── views.py               #   CRUD + sync trigger + document content/file endpoints
 │   ├── urls.py
 │   └── templates/connectors/  #   list, create, detail

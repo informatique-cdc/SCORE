@@ -22,6 +22,7 @@ class ConnectorConfig(ProjectScopedModel):
     class ConnectorType(models.TextChoices):
         SHAREPOINT = "sharepoint", _("SharePoint")
         CONFLUENCE = "confluence", _("Confluence")
+        ELASTICSEARCH = "elasticsearch", _("Elasticsearch")
         GENERIC = "generic", _("Générique (Fichier/HTTP)")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

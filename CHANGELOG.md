@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Elasticsearch connector** — connect to Elasticsearch clusters and ingest documents
+  - API key, basic auth, bearer token, and Elastic Cloud (`cloud_id`) authentication
+  - PIT + `search_after` pagination with automatic fallback to `helpers.scan()` for older ES versions
+  - Configurable field mapping (`content_field`, `title_field`, `author_field`, `date_field`)
+  - Custom Elasticsearch Query DSL filter support
+  - TLS certificate verification control
+  - HTML content auto-detection
+  - Fallback content extraction when configured content field is missing
+  - 35 unit tests covering all connector functionality
 - Per-tenant encrypted connector secrets: users can now enter API keys/secrets directly in the connector creation UI, stored encrypted in the DB using Fernet with HKDF-derived per-tenant keys
 - `FIELD_ENCRYPTION_KEY` setting for dedicated encryption key (falls back to `SECRET_KEY`)
 - `connectors/crypto.py` module with `encrypt_secret()` / `decrypt_secret()` utilities
@@ -46,6 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SCORE 0-100 scoring with A-E letter grades
 - PDF report generation with radar charts
 - RAG chat interface
-- SharePoint and Confluence connectors
+- SharePoint, Confluence, and Elasticsearch connectors
 - Docker deployment support
 - French and English internationalization
