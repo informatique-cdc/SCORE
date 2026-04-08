@@ -126,6 +126,16 @@ class BaseConnector(ABC):
 
 Connectors are registered via the `@register_connector("name")` decorator and instantiated at runtime by `get_connector(connector_type, config, credential)`.
 
+#### Credential Handling
+
+The `credential` parameter passed to connectors is the **decrypted secret value**, resolved by `ConnectorConfig.get_secret()` at pipeline init time. The resolution order is:
+
+1. **Encrypted secret** — if `encrypted_secret` is set on the model, it is decrypted using the per-tenant Fernet key (derived via HKDF from `FIELD_ENCRYPTION_KEY` + tenant UUID)
+2. **Environment variable fallback** — if no encrypted secret exists, `credential_ref` is treated as an env var name and looked up via `os.environ.get()`
+3. **Empty string** — if neither is available
+
+This means connectors receive the actual secret directly and do not need to perform env var lookups themselves. See `connectors/crypto.py` for the encryption implementation.
+
 #### `RawDocument` Dataclass
 
 The output of `fetch_document()`:

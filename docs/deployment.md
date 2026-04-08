@@ -27,6 +27,7 @@ docker-compose up -d
 | Variable | Description |
 |----------|-------------|
 | `SECRET_KEY` | Cryptographically random key (see above) |
+| `FIELD_ENCRYPTION_KEY` | Key for encrypting connector secrets (falls back to `SECRET_KEY`). Generate with: `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
 | `DEBUG` | **Must be `False` in production** |
 | `ALLOWED_HOSTS` | Comma-separated list of your domain(s) |
 | `LLM_PROVIDER` | `openai`, `azure`, or `azure_mistral` |
@@ -49,6 +50,36 @@ The sample data script creates default users with weak passwords. **Change these
 # Create a proper admin user instead
 python manage.py createsuperuser
 ```
+
+## Migrating Connector Secrets (Upgrading from Pre-Encryption Versions)
+
+If you are upgrading from a version that used `credential_ref` (env var names) for connector credentials, follow these steps after deploying the new code:
+
+```bash
+# 1. Run the schema migration to add the encrypted_secret column
+python manage.py migrate
+
+# 2. Generate and set FIELD_ENCRYPTION_KEY in .env
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Add the output to .env as FIELD_ENCRYPTION_KEY=<generated-key>
+
+# 3. Ensure the env vars referenced by your connectors are still set
+
+# 4. Preview what will be migrated (dry run)
+python manage.py migrate_connector_secrets
+
+# 5. Encrypt the credentials
+python manage.py migrate_connector_secrets --apply
+
+# 6. Verify connectors still work (trigger a sync)
+
+# 7. Optionally remove env var references (secrets are now in the DB)
+python manage.py migrate_connector_secrets --apply --clear-ref
+```
+
+**Important:** Back up your database before running the migration. The `FIELD_ENCRYPTION_KEY` (or `SECRET_KEY` if no dedicated key is set) is required to decrypt secrets — if you lose it, encrypted credentials cannot be recovered.
+
+---
 
 ## Database Considerations
 
