@@ -2,8 +2,10 @@
 
 import pytest
 
-from nsg.config import NSGConfig
-from nsg.graph import NeuralSemanticGraph
+pytest.importorskip("networkx", reason="networkx not installed")
+
+from nsg.config import NSGConfig  # noqa: E402
+from nsg.graph import NeuralSemanticGraph  # noqa: E402
 
 
 @pytest.fixture

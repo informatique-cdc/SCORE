@@ -2,8 +2,11 @@
 
 from unittest.mock import patch
 
+import pytest
 
-from llm.client import LLMClient, LLMResponse, get_llm_client
+pytest.importorskip("openai", reason="openai not installed")
+
+from llm.client import LLMClient, LLMResponse, get_llm_client  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
