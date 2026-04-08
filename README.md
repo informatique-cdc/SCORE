@@ -271,7 +271,7 @@ The test suite covers all major modules: analysis views, audit views, chat, chun
 
 **HTTP:** httpx
 
-**Optional Connectors:** msal + office365-rest-python-client (SharePoint), atlassian-python-api (Confluence)
+**Optional Connectors:** msal + office365-rest-python-client (SharePoint), atlassian-python-api (Confluence), elasticsearch>=8.0 (Elasticsearch)
 
 See `requirements.txt` for the full list with version constraints.
 

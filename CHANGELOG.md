@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Password input field in connector creation form (both standalone page and modal)
 - `migrate_connector_secrets` management command to migrate existing env-var-based credentials into encrypted secrets
 - `cryptography>=42.0` dependency
+- **Elasticsearch connector** — connect to Elasticsearch clusters and ingest documents
+  - API key, basic auth, bearer token, and Elastic Cloud (`cloud_id`) authentication
+  - PIT + `search_after` pagination with automatic fallback to `helpers.scan()` for older ES versions
+  - Configurable field mapping (`content_field`, `title_field`, `author_field`, `date_field`)
+  - Custom Elasticsearch Query DSL filter support
+  - TLS certificate verification control
+  - HTML content auto-detection
+  - Fallback content extraction when configured content field is missing
+  - 35 unit tests covering all connector functionality
 - Apache 2.0 LICENSE file
 - `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`
 - `SECRET_KEY` startup validation (refuses to start with placeholder key in production)

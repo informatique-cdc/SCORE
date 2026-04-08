@@ -62,6 +62,7 @@ whitenoise>=6.7
 # msal>=1.28
 # office365-rest-python-client>=2.5
 # atlassian-python-api>=3.41
+# elasticsearch>=8.0
 
 # --- Dev ---
 # pytest>=8.0
