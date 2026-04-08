@@ -2,7 +2,9 @@
 
 import pytest
 
-from ingestion.chunking import chunk_document, count_tokens, Chunk
+pytest.importorskip("tiktoken", reason="tiktoken not installed")
+
+from ingestion.chunking import chunk_document, count_tokens, Chunk  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

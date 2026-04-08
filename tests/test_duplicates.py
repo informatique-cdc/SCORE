@@ -3,8 +3,9 @@
 import pytest
 from unittest.mock import MagicMock
 
+pytest.importorskip("datasketch", reason="datasketch not installed")
 
-from analysis.duplicates import DuplicateDetector
+from analysis.duplicates import DuplicateDetector  # noqa: E402
 
 
 class TestMetadataSimilarity:

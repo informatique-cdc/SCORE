@@ -3,7 +3,9 @@
 import numpy as np
 import pytest
 
-from vectorstore.store import VectorStore
+pytest.importorskip("sqlite_vec", reason="sqlite-vec not installed")
+
+from vectorstore.store import VectorStore  # noqa: E402
 
 
 @pytest.fixture

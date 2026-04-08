@@ -6,7 +6,9 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from analysis.clustering import TopicClusterEngine
+pytest.importorskip("openai", reason="openai not installed")
+
+from analysis.clustering import TopicClusterEngine  # noqa: E402
 from analysis.models import ClusterMembership, TopicCluster, TreeNode
 from tests.conftest import make_chunk, make_document, make_llm_response
 

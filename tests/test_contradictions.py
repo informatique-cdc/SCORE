@@ -8,7 +8,9 @@ import numpy as np
 import pytest
 from django.utils import timezone
 
-from analysis.contradictions import ContradictionDetector
+pytest.importorskip("openai", reason="openai not installed")
+
+from analysis.contradictions import ContradictionDetector  # noqa: E402
 from analysis.models import Claim
 from tests.conftest import make_chunk, make_document, make_llm_response, random_embedding
 

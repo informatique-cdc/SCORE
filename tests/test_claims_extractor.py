@@ -5,7 +5,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from analysis.claims import ClaimsExtractor
+pytest.importorskip("openai", reason="openai not installed")
+
+from analysis.claims import ClaimsExtractor  # noqa: E402
 from analysis.models import Claim
 from tests.conftest import make_chunk, make_document, make_llm_response
 

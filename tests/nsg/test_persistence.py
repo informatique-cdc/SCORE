@@ -2,9 +2,11 @@
 
 import pytest
 
-from nsg.config import NSGConfig
-from nsg.graph import NeuralSemanticGraph
-from nsg import persistence
+pytest.importorskip("networkx", reason="networkx not installed")
+
+from nsg.config import NSGConfig  # noqa: E402
+from nsg.graph import NeuralSemanticGraph  # noqa: E402
+from nsg import persistence  # noqa: E402
 
 
 SAMPLE_TEXT = (
