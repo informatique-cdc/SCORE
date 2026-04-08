@@ -76,7 +76,7 @@ Configuration is controlled by `CELERY_BROKER_BACKEND` in `.env`. Result backend
 |--------------|------------------------------------------------------------------|
 | `score`      | Django project root: settings, scoring engine, CSP middleware, health check, rate limiting, utilities |
 | `tenants`    | Multi-tenant system: Tenant, Membership, role-based access       |
-| `connectors` | Document source connectors with registry pattern                 |
+| `connectors` | Document source connectors with registry pattern, per-tenant encrypted secrets |
 | `ingestion`  | Ingestion pipeline: fetch, extract, chunk, embed, store          |
 | `vectorstore`| sqlite-vec vector storage, KNN search, tenant-scoped queries     |
 | `analysis`   | Duplicate, contradiction, clustering, gap, hallucination detection + RAG audit |
@@ -97,7 +97,7 @@ Configuration is controlled by `CELERY_BROKER_BACKEND` in `.env`. Result backend
 - `TenantMembership` — tenant, user, role (admin/editor/viewer)
 
 **Connectors:**
-- `ConnectorConfig` — tenant, name, connector_type (sharepoint/confluence/generic), config (JSON), credential_ref, schedule_cron, last_sync_at/status
+- `ConnectorConfig` — tenant, name, connector_type (sharepoint/confluence/generic), config (JSON), credential_ref, encrypted_secret (Fernet-encrypted, per-tenant key), schedule_cron, last_sync_at/status
 
 **Ingestion:**
 - `Document` — tenant, connector, source_id, title, author, doc_type, content_hash, source_version, version_number, status (PENDING → INGESTED → READY / ERROR / DELETED), word_count, chunk_count
@@ -279,6 +279,7 @@ Tenant isolation is enforced via post-filtering on metadata tables after KNN ret
 - All data models inherit from `TenantScopedModel` (or `ProjectScopedModel`), which adds a foreign key to `Tenant` and a custom manager that filters by the current tenant.
 - Roles: **admin** (full access + settings), **editor** (create/sync connectors, run analysis), **viewer** (read-only dashboards and reports).
 - **Content Security Policy** middleware adds CSP headers to all responses.
+- **Connector secrets**: Per-tenant encryption using HKDF-derived Fernet keys. Secrets entered in the UI are encrypted before storage; `get_secret()` decrypts at sync time or falls back to env var lookup via `credential_ref`.
 - **Production hardening**: HSTS, SSL redirect, secure cookies, full password validators, `SECRET_KEY` validation.
 
 ---

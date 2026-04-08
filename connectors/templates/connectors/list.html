@@ -193,6 +193,158 @@
         margin-bottom: 16px;
     }
 
+    /* ── Security banner ── */
+    .sec-banner {
+        position: relative;
+        background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.02) 100%);
+        border: 1px solid rgba(16,185,129,0.18);
+        border-left: 3px solid #10b981;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    .sec-banner::before {
+        content: '';
+        position: absolute;
+        top: -40px; right: -40px;
+        width: 120px; height: 120px;
+        background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .sec-banner-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        position: relative;
+    }
+    .sec-banner-icon {
+        flex-shrink: 0;
+        width: 34px; height: 34px;
+        border-radius: 8px;
+        background: rgba(16,185,129,0.12);
+        display: flex; align-items: center; justify-content: center;
+        color: #10b981;
+        transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .sec-banner:hover .sec-banner-icon { transform: scale(1.08) rotate(-3deg); }
+    .sec-banner-icon svg { width: 18px; height: 18px; }
+    .sec-banner-body { flex: 1; min-width: 0; }
+    .sec-banner-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ds-grey-100);
+        margin-bottom: 2px;
+        letter-spacing: 0.01em;
+    }
+    .sec-banner-text {
+        font-size: 12px;
+        color: var(--ds-text-muted);
+        line-height: 1.5;
+    }
+    .sec-banner-toggle {
+        background: none; border: none; padding: 0;
+        color: #10b981;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex; align-items: center; gap: 4px;
+        transition: color 0.15s;
+    }
+    .sec-banner-toggle:hover { color: #34d399; }
+    .sec-banner-toggle svg {
+        width: 12px; height: 12px;
+        transition: transform 0.25s ease;
+    }
+    .sec-banner-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+    .sec-banner-details {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.3s ease, margin-top 0.3s ease;
+        margin-top: 0;
+    }
+    .sec-banner-details[data-open="true"] {
+        grid-template-rows: 1fr;
+        margin-top: 10px;
+    }
+    .sec-banner-details-inner {
+        overflow: hidden;
+    }
+    .sec-banner-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 16px;
+        padding: 10px 12px;
+        background: rgba(16,185,129,0.04);
+        border: 1px solid rgba(16,185,129,0.10);
+        border-radius: 8px;
+    }
+    @media (max-width: 640px) { .sec-banner-grid { grid-template-columns: 1fr; } }
+    .sec-banner-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11.5px;
+        color: var(--ds-text-muted);
+        line-height: 1.4;
+    }
+    .sec-banner-dot {
+        flex-shrink: 0;
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        background: #10b981;
+        opacity: 0.7;
+    }
+
+    /* ── Security banner (inline — modal) ── */
+    .sec-banner-inline {
+        position: relative;
+        background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.02) 100%);
+        border: 1px solid rgba(16,185,129,0.18);
+        border-left: 3px solid #10b981;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 18px;
+        overflow: hidden;
+    }
+    .sec-banner-inline::before {
+        content: '';
+        position: absolute;
+        top: -30px; right: -30px;
+        width: 80px; height: 80px;
+        background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .sec-inline-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        position: relative;
+    }
+    .sec-inline-icon {
+        flex-shrink: 0;
+        width: 28px; height: 28px;
+        border-radius: 7px;
+        background: rgba(16,185,129,0.12);
+        display: flex; align-items: center; justify-content: center;
+        color: #10b981;
+        transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .sec-banner-inline:hover .sec-inline-icon { transform: scale(1.08) rotate(-3deg); }
+    .sec-inline-icon svg { width: 14px; height: 14px; }
+    .sec-inline-body { flex: 1; min-width: 0; }
+    .sec-inline-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ds-grey-100);
+        margin-bottom: 1px;
+    }
+    .sec-inline-text {
+        font-size: 11px;
+        color: var(--ds-text-muted);
+        line-height: 1.45;
+    }
+
     /* ── Create modal ── */
     #conn-create-modal .modal-dialog {
         max-width: 520px;
