@@ -4,11 +4,9 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('connectors', '0003_add_elasticsearch_connector_type'),
-        ('connectors', '0003_add_encrypted_secret'),
+        ("connectors", "0003_add_elasticsearch_connector_type"),
+        ("connectors", "0003_add_encrypted_secret"),
     ]
 
-    operations = [
-    ]
+    operations = []
