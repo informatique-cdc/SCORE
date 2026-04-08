@@ -37,7 +37,7 @@ class IngestionPipeline:
         self.connector: BaseConnector = get_connector(
             self.connector_config.connector_type,
             self.connector_config.config,
-            self.connector_config.credential_ref,
+            self.connector_config.get_secret(),
         )
         self.llm = get_llm_client()
         self.vec_store = get_vector_store()

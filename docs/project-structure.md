@@ -45,8 +45,9 @@ score/
 │   └── templates/chat/        #   home (chat UI)
 │
 ├── connectors/                # Document source connectors
-│   ├── models.py              #   ConnectorConfig
+│   ├── models.py              #   ConnectorConfig (with encrypted_secret, set/get_secret)
 │   ├── base.py                #   BaseConnector ABC, RawDocument, connector registry
+│   ├── crypto.py              #   Per-tenant Fernet encryption (HKDF key derivation)
 │   ├── generic.py             #   Filesystem + HTTP connector
 │   ├── sharepoint.py          #   SharePoint Online connector (optional dep)
 │   ├── confluence.py          #   Confluence connector (optional dep)

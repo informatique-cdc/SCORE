@@ -5,11 +5,15 @@ Each connector defines how to reach a document source (SharePoint, Confluence, e
 and stores credentials securely.
 """
 
+import logging
+import os
 import uuid
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from tenants.models import ProjectScopedModel
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectorConfig(ProjectScopedModel):
@@ -37,6 +41,12 @@ class ConnectorConfig(ProjectScopedModel):
         blank=True,
         help_text="Reference to credential store (env var name or secret manager path)",
     )
+    # Encrypted secret — per-tenant Fernet-encrypted credential value
+    encrypted_secret = models.TextField(
+        blank=True,
+        default="",
+        help_text="Fernet-encrypted secret (set via set_secret, read via get_secret)",
+    )
 
     schedule_cron = models.CharField(
         max_length=100,
@@ -55,3 +65,24 @@ class ConnectorConfig(ProjectScopedModel):
 
     def __str__(self):
         return f"{self.name} ({self.connector_type})"
+
+    def set_secret(self, plain_text: str) -> None:
+        """Encrypt and store a secret value for this connector's tenant."""
+        from connectors.crypto import encrypt_secret
+
+        self.encrypted_secret = encrypt_secret(plain_text, str(self.tenant_id))
+
+    def get_secret(self) -> str:
+        """Return the decrypted secret, falling back to credential_ref env var lookup."""
+        if self.encrypted_secret:
+            from connectors.crypto import decrypt_secret
+
+            decrypted = decrypt_secret(self.encrypted_secret, str(self.tenant_id))
+            if decrypted:
+                return decrypted
+
+        # Fallback: treat credential_ref as an env var name
+        if self.credential_ref:
+            return os.environ.get(self.credential_ref, "")
+
+        return ""
