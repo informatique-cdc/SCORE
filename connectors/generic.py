@@ -148,9 +148,7 @@ class GenericConnector(BaseConnector):
         resp.raise_for_status()
 
         if not resp.content:
-            raise ValueError(
-                f"Empty response from {source_id} (HTTP {resp.status_code})"
-            )
+            raise ValueError(f"Empty response from {source_id} (HTTP {resp.status_code})")
 
         content_type = resp.headers.get("content-type", "").split(";")[0].strip()
         etag = resp.headers.get("etag", "")

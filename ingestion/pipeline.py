@@ -89,11 +89,14 @@ class IngestionPipeline:
                     logger.error("Error processing document %s: %s", source_id, e)
                     self._stats["errors"] += 1
                     # Record the document with ERROR status
-                    if source_id and not Document.objects.filter(
-                        project=self.project,
-                        connector=self.connector_config,
-                        source_id=source_id,
-                    ).exists():
+                    if (
+                        source_id
+                        and not Document.objects.filter(
+                            project=self.project,
+                            connector=self.connector_config,
+                            source_id=source_id,
+                        ).exists()
+                    ):
                         Document.objects.create(
                             tenant=self.tenant,
                             project=self.project,
