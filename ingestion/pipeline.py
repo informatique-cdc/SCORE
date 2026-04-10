@@ -85,8 +85,25 @@ class IngestionPipeline:
                 try:
                     self._process_document(doc_info)
                 except Exception as e:
-                    logger.error("Error processing document %s: %s", doc_info.get("source_id"), e)
+                    source_id = doc_info.get("source_id", "")
+                    logger.error("Error processing document %s: %s", source_id, e)
                     self._stats["errors"] += 1
+                    # Record the document with ERROR status
+                    if source_id and not Document.objects.filter(
+                        project=self.project,
+                        connector=self.connector_config,
+                        source_id=source_id,
+                    ).exists():
+                        Document.objects.create(
+                            tenant=self.tenant,
+                            project=self.project,
+                            connector=self.connector_config,
+                            source_id=source_id,
+                            title=doc_info.get("title", source_id),
+                            source_url=doc_info.get("source_url", ""),
+                            status=Document.Status.ERROR,
+                            error_message=str(e)[:1000],
+                        )
 
                 # Update progress
                 self.job.processed_documents = i + 1 + len(deleted_ids)
@@ -136,6 +153,25 @@ class IngestionPipeline:
         extracted = extract_text(raw_doc.content, raw_doc.content_type)
         if not extracted.text:
             logger.warning("Empty text extraction for source_id=%s", source_id)
+            # Record the document with ERROR status so the user can see what happened
+            existing = Document.objects.filter(
+                project=self.project,
+                connector=self.connector_config,
+                source_id=source_id,
+            ).first()
+            if not existing:
+                Document.objects.create(
+                    tenant=self.tenant,
+                    project=self.project,
+                    connector=self.connector_config,
+                    source_id=source_id,
+                    title=raw_doc.title or doc_info.get("title", ""),
+                    source_url=raw_doc.source_url,
+                    doc_type=raw_doc.doc_type or doc_info.get("content_type", ""),
+                    status=Document.Status.ERROR,
+                    error_message="Text extraction returned empty content",
+                )
+            self._stats["errors"] += 1
             return
 
         # Hash for change detection
