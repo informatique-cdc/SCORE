@@ -53,6 +53,7 @@
     .cf-icon-box.confluence { background: rgba(13,202,240,0.12); color: #22d3ee; }
     .cf-icon-box.elasticsearch { background: rgba(254,210,48,0.12); color: #fed230; }
     .cf-icon-box.generic { background: rgba(108,113,126,0.12); color: #9ca3af; }
+    .cf-icon-box.zipupload { background: rgba(168,85,247,0.12); color: #a855f7; }
     .cf-icon-box.score-icon { background: rgba(13,110,253,0.12); color: #0d6efd; }
     .cf-arrow { color: var(--ds-text-muted); }
     .cf-arrow svg { width: 20px; height: 20px; }
@@ -96,6 +97,19 @@
         border-color: #0d6efd;
     }
     .cf-input::placeholder { color: var(--ds-text-muted); }
+    .cf-input:invalid:not(:placeholder-shown) {
+        border-color: #dc3545;
+    }
+    .cf-error {
+        font-size: 11px;
+        color: #dc3545;
+        margin-top: 4px;
+        display: none;
+    }
+    .cf-input:invalid:not(:placeholder-shown) + .cf-error,
+    .was-validated .cf-input:invalid + .cf-error {
+        display: block;
+    }
     .cf-hint {
         font-size: 11px;
         color: var(--ds-text-muted);
@@ -246,13 +260,15 @@
         <div class="cf-title" id="cf-title">{% trans "Connecter SharePoint &agrave; SCORE" %}</div>
         <div class="cf-subtitle">{% trans "Configurez les param&egrave;tres de connexion pour indexer automatiquement vos documents dans SCORE." %}</div>
 
-        <form method="post">
+        {% if error %}<div class="alert alert-danger" style="font-size:13px;border-radius:10px;margin-bottom:18px;">{{ error }}</div>{% endif %}
+        <form method="post" id="create-form" enctype="multipart/form-data" data-turbo="false">
             {% csrf_token %}
 
             <!-- Name -->
             <div class="cf-group">
                 <label for="name" class="cf-label">{% trans "Nom du connecteur" %}</label>
                 <input type="text" name="name" id="name" class="cf-input" placeholder="{% trans "Ex. Documents RH" %}" required>
+                <div class="cf-error">{% trans "Veuillez saisir un nom pour le connecteur." %}</div>
             </div>
 
             <!-- Type selector -->
@@ -354,6 +370,15 @@
                 </div>
             </div>
 
+            <!-- Zip Upload config -->
+            <div id="config-zipupload" class="connector-config" style="display:none">
+                <div class="cf-group">
+                    <label class="cf-label">{% trans "Fichier ZIP" %}</label>
+                    <input type="file" name="zip_file" class="cf-input" accept=".zip,application/zip">
+                    <div class="cf-hint">{% trans "S&eacute;lectionnez une archive ZIP contenant vos documents." %}</div>
+                </div>
+            </div>
+
             <!-- Security banner -->
             <div class="sec-banner-inline">
                 <div class="sec-inline-row">
@@ -409,19 +434,22 @@
         sharepoint: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
         confluence: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
         elasticsearch: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>',
-        generic: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+        generic: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        zipupload: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
     };
     var classes = {
         sharepoint: 'sharepoint',
         confluence: 'confluence',
         elasticsearch: 'elasticsearch',
-        generic: 'generic'
+        generic: 'generic',
+        zipupload: 'zipupload'
     };
     var titles = {
         sharepoint: 'Connecter SharePoint \u00e0 SCORE',
         confluence: 'Connecter Confluence \u00e0 SCORE',
         elasticsearch: 'Connecter Elasticsearch \u00e0 SCORE',
-        generic: 'Connecter une source \u00e0 SCORE'
+        generic: 'Connecter une source \u00e0 SCORE',
+        zipupload: 'Importer un fichier ZIP dans SCORE'
     };
 
     var select = document.getElementById('connector_type');
@@ -434,13 +462,33 @@
         iconBox.innerHTML = icons[type] || icons.generic;
         /* Title */
         titleEl.textContent = titles[type] || titles.generic;
-        /* Config panels */
-        document.querySelectorAll('.connector-config').forEach(function(el) { el.style.display = 'none'; });
+        /* Config panels – hide all, disable their required fields */
+        document.querySelectorAll('.connector-config').forEach(function(el) {
+            el.style.display = 'none';
+            el.querySelectorAll('[required]').forEach(function(inp) { inp.disabled = true; });
+        });
         var target = document.getElementById('config-' + type);
-        if (target) target.style.display = 'block';
+        if (target) {
+            target.style.display = 'block';
+            target.querySelectorAll('[disabled]').forEach(function(inp) { inp.disabled = false; });
+        }
     }
 
     select.addEventListener('change', function() { update(this.value); });
+
+    /* Form validation feedback */
+    var form = document.getElementById('create-form');
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            form.classList.add('was-validated');
+            var firstInvalid = form.querySelector(':invalid:not(fieldset)');
+            if (firstInvalid) {
+                firstInvalid.focus();
+                firstInvalid.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+        }
+    });
 
     /* Init from query param or default */
     var params = new URLSearchParams(window.location.search);
