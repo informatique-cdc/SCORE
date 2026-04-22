@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "reports",
     "dashboard",
     "chat",
+    "api",
 ]
 
 SITE_ID = 1
