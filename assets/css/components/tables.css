@@ -1,0 +1,243 @@
+@layer components {
+  /* Les tableaux larges défilent horizontalement ; la grille est portée par
+     .sc-tr, chaque page définit ses colonnes via --sc-cols. */
+  .sc-table {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-18);
+    overflow-x: auto;
+  }
+
+  .sc-thead {
+    display: grid;
+    grid-template-columns: var(--sc-cols);
+    gap: 12px;
+    padding: 12px 20px;
+    background: var(--color-surface-100);
+    border-bottom: 1px solid var(--color-line);
+    font-size: var(--text-10p5);
+    letter-spacing: var(--tracking-thead);
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+  }
+
+  .sc-thead--soft {
+    background: var(--color-surface-50);
+    border-bottom-color: var(--color-surface-200);
+  }
+
+  .sc-trow {
+    border-bottom: 1px solid var(--color-surface-100);
+    animation: rise 0.4s ease both;
+  }
+
+  .sc-trow.is-open {
+    background: var(--color-warm-row);
+  }
+
+  .sc-tr {
+    display: grid;
+    grid-template-columns: var(--sc-cols);
+    gap: 12px;
+    padding: 14px 20px;
+    align-items: center;
+  }
+
+  .sc-trow:hover > .sc-tr {
+    background: var(--color-surface-50);
+  }
+
+  .sc-trow.is-open:hover > .sc-tr {
+    background: transparent;
+  }
+
+  .sc-td-primary {
+    font-size: var(--text-12p5);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-td-meta {
+    font-size: var(--text-11);
+    color: var(--color-ink-400);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-td-num {
+    font-size: var(--text-12);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--color-ink-500);
+  }
+
+  /* ── Piste de score fine, sous une valeur chiffrée ── */
+  .sc-score-cell {
+    text-align: right;
+  }
+
+  .sc-score-value {
+    font-size: var(--text-12p5);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-score-track {
+    height: 4px;
+    border-radius: var(--radius-4);
+    background: var(--color-surface-200);
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .sc-score-fill {
+    height: 100%;
+    width: var(--sc-fill, 0%);
+    transition: width 0.9s var(--ease-expo);
+  }
+
+  /* ── Panneau de preuve dépliable ── */
+  .sc-evidence-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 9px;
+    border-radius: var(--radius-9);
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+    color: var(--color-ink-700);
+    font-family: inherit;
+    font-size: var(--text-11p5);
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .sc-evidence-toggle:hover {
+    border-color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .sc-evidence-toggle.is-open {
+    background: var(--color-ok-bg-warm);
+    border-color: var(--color-ok-line);
+    color: var(--color-ok-ink);
+  }
+
+  /* Reste visible quand le tableau défile horizontalement. */
+  .sc-evidence-wrap {
+    position: sticky;
+    left: 0;
+    padding: 0 20px 18px;
+  }
+
+  .sc-evidence {
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-14);
+    overflow: hidden;
+    background: var(--color-surface);
+    animation: rise 0.3s ease both;
+  }
+
+  .sc-evidence-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+    background: var(--color-surface-100);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .sc-evidence-legend {
+    width: 11px;
+    height: 11px;
+    border-radius: var(--radius-xs);
+    background: var(--color-mark-bg);
+    border: 1px solid var(--color-mark-line);
+    flex: 0 0 auto;
+  }
+
+  /* Le filet d'1px entre les colonnes fait office de séparateur. */
+  .sc-evidence-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1px;
+    background: var(--color-surface-200);
+  }
+
+  .sc-evidence-cell {
+    padding: 18px 20px;
+    background: var(--color-surface);
+  }
+
+  .sc-evidence-chip {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-5);
+    background: var(--color-ink);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: var(--text-10);
+    font-weight: 600;
+    flex: 0 0 auto;
+  }
+
+  .sc-evidence-chip--b {
+    background: var(--color-ink-500);
+  }
+
+  /* 26px = largeur de la pastille + son écart, pour aligner sous le titre. */
+  .sc-evidence-loc {
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+    margin: 0 0 11px 26px;
+  }
+
+  .sc-excerpt {
+    font-size: var(--text-14p5);
+    line-height: var(--leading-excerpt);
+    color: var(--color-ink-700);
+    text-wrap: pretty;
+    margin: 0;
+  }
+
+  /* Anneau en box-shadow plutôt qu'en bordure : pas de décalage de ligne. */
+  .sc-excerpt mark {
+    background: var(--color-mark-bg);
+    color: var(--color-ink);
+    padding: 1px 3px;
+    border-radius: var(--radius-xs);
+    box-shadow: 0 0 0 1px var(--color-mark-line);
+  }
+
+  .sc-evidence-foot {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 13px 18px;
+    border-top: 1px solid var(--color-surface-200);
+  }
+
+  /* ── Pistes de progression génériques ── */
+  .sc-track {
+    border-radius: var(--radius-6);
+    background: var(--color-surface-200);
+    overflow: hidden;
+  }
+
+  .sc-track-fill {
+    height: 100%;
+    width: var(--sc-fill, 0%);
+    border-radius: var(--radius-6);
+    transition: width 0.9s var(--ease-expo);
+  }
+
+  .sc-track--live .sc-track-fill {
+    transition: width 0.6s linear;
+  }
+}

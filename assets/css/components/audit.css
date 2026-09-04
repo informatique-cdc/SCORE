@@ -1,0 +1,200 @@
+@layer components {
+  /* Composants des écrans d'audit, de clusters et de trace. */
+
+  /* ── Tuile de métrique brute (compte, moyenne, ratio) ── */
+  .sc-stat {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-14);
+    padding: 14px 16px;
+  }
+
+  .sc-stat-value {
+    font-family: var(--font-display);
+    font-size: var(--text-22);
+    font-weight: 600;
+    letter-spacing: var(--tracking-metric);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--leading-flat);
+  }
+
+  .sc-stat-label {
+    margin-top: 5px;
+    font-size: var(--text-11p5);
+    color: var(--color-ink-700);
+  }
+
+  .sc-stat-hint {
+    margin-top: 5px;
+    font-size: var(--text-11);
+    line-height: var(--leading-snug);
+    color: var(--color-ink-500);
+    text-wrap: pretty;
+  }
+
+  /* ── Surcouches d'un graphe : légende et contrôles flottants ── */
+  .sc-viz-legend {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 10;
+    min-width: 150px;
+    max-width: 220px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 10px 12px;
+    border-radius: var(--radius-12);
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-legend);
+    font-size: var(--text-11);
+    color: var(--color-ink-700);
+  }
+
+  .sc-viz-legend-title {
+    font-size: var(--text-10);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+    margin-bottom: 6px;
+  }
+
+  .sc-viz-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+  }
+
+  .sc-viz-legend-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-viz-legend-sep {
+    height: 1px;
+    background: var(--color-line);
+    margin: 7px 0;
+  }
+
+  /* Pastille de série : la couleur vient de la donnée, jamais de la feuille. */
+  .sc-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    background: var(--sc-dot, var(--color-ink-400));
+  }
+
+  .sc-dot--gap {
+    border-radius: 2px;
+    transform: rotate(45deg);
+  }
+
+  /* Extrémités de l'échelle de degré de la carte des concepts, et concept semé. */
+  .sc-dot--degree-low {
+    background: var(--color-info-ink);
+  }
+
+  .sc-dot--degree-high {
+    background: var(--color-score-d);
+  }
+
+  .sc-dot--seed {
+    background: var(--color-accent);
+  }
+
+  /* Pastille de légende ronde, remplie par une classe .sc-fill--*. */
+  .sc-legend-swatch--round {
+    border-radius: 50%;
+  }
+
+  .sc-viz-tools {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Message affiché à la place d'un graphe (données absentes, erreur réseau). */
+  .sc-viz-note {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    text-align: center;
+    font-size: var(--text-12);
+    color: var(--color-ink-500);
+  }
+
+  .sc-viz-note--error {
+    color: var(--color-danger-ink);
+  }
+
+  /* Libellé posé sur une part de camembert : la part est toujours une teinte
+     saturée de la palette, le blanc reste donc lisible dans les deux thèmes. */
+  .sc-arc-label {
+    fill: #fff;
+    font-size: var(--text-10p5);
+    font-weight: 600;
+  }
+
+  /* Le donut ECharts affiche son score via .sc-donut-center posé au-dessus du
+     canvas : la surcouche doit laisser passer le survol des parts. */
+  .sc-donut-center--overlay {
+    pointer-events: none;
+  }
+
+  /* Pastille de topic : la teinte vient du graphe, posée en --sc-dot par le script. */
+  .sc-tag--topic {
+    background: var(--sc-dot, var(--color-surface-100));
+    color: #fff;
+  }
+
+  /* ── Grille clé/valeur d'un repli de phase ── */
+  .sc-kv {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px 20px;
+    margin: 0;
+  }
+
+  .sc-kv dt {
+    font-size: var(--text-10p5);
+    letter-spacing: var(--tracking-thead);
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+  }
+
+  .sc-kv dd {
+    margin: 3px 0 0;
+    font-size: var(--text-12p5);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Message d'erreur au fil du texte ── */
+  .sc-inline-error {
+    padding: 9px 11px;
+    border-radius: var(--radius-9);
+    border-left: 3px solid var(--color-score-e);
+    background: var(--color-danger-bg);
+    color: var(--color-danger-ink);
+    font-size: var(--text-11p5);
+    overflow-wrap: anywhere;
+  }
+
+  /* ── Extrait de code brut (ligne boilerplate, requête) ── */
+  .sc-code {
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    font-size: var(--text-11p5);
+    background: var(--color-surface-100);
+    border-radius: var(--radius-5);
+    padding: 2px 6px;
+    overflow-wrap: anywhere;
+  }
+}

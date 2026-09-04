@@ -1,454 +1,161 @@
 {% load i18n %}
-<turbo-frame id="connector-cards">
-<div data-controller="auto-refresh"
+{# target="_top" : la frame ne sert qu'au rafraîchissement auto, les liens qu'elle contient doivent en sortir. #}
+<turbo-frame id="connector-cards" target="_top">
+<div class="flex flex-col gap-3.5"
+     data-controller="auto-refresh"
      data-auto-refresh-url-value="{% url 'connector-cards-partial' %}"
      data-auto-refresh-frame-value="connector-cards"
      data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
 
-<!-- Header: search + button -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-0">{% trans "Connecteurs" %}</h2>
-        <span class="text-muted" style="font-size:13px;">{% trans "Sources de donn&eacute;es de votre projet" %}</span>
-    </div>
-    {% if membership.can_edit %}
-    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#conn-create-modal">{% trans "Nouveau connecteur" %}</button>
-    {% endif %}
-</div>
-
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <div class="conn-search-wrap">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" class="conn-search" id="conn-filter" placeholder="{% trans "Filtrer par nom ou type" %}" autocomplete="off">
-    </div>
-</div>
-
-<!-- Security banner -->
-<div class="sec-banner">
-    <div class="sec-banner-row">
-        <div class="sec-banner-icon">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="sc-search">
+            <svg class="sc-search-icon" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7.5L10.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <input type="text" id="conn-filter" class="sc-input sc-input--search"
+                   placeholder="{% trans "Filtrer par nom ou par type" %}"
+                   aria-label="{% trans "Filtrer par nom ou par type" %}" autocomplete="off">
         </div>
-        <div class="sec-banner-body">
-            <div class="sec-banner-title">{% trans "Vos secrets sont chiffr&eacute;s de bout en bout" %}</div>
-            <div class="sec-banner-text">
-                {% trans "Les cl&eacute;s API et secrets saisis dans SCORE sont chiffr&eacute;s avec une cl&eacute; unique par organisation. Ils ne sont jamais stock&eacute;s en clair." %}
-                <button type="button" class="sec-banner-toggle" aria-expanded="false" onclick="var d=this.closest('.sec-banner').querySelector('.sec-banner-details');var open=d.dataset.open!=='true';d.dataset.open=open;this.setAttribute('aria-expanded',open);">
+        <div class="flex-1"></div>
+        {% if connectors %}
+        <span class="text-12 text-ink-500 num" data-conn-count>{{ connectors|length }} / {{ connectors|length }}</span>
+        {% endif %}
+    </div>
+
+    <div class="sc-card">
+        <div class="flex items-start gap-3">
+            <span class="sc-conn-shield">
+                <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <div class="min-w-0 flex-1">
+                <div class="text-13 font-semibold">{% trans "Vos secrets sont chiffrés au repos" %}</div>
+                <p class="mt-0.5 text-12 leading-normal text-ink-500 pretty">
+                    {% trans "Les clés API et secrets saisis dans SCORE sont chiffrés avec une clé unique par organisation. Ils ne sont jamais stockés en clair." %}
+                </p>
+                <button type="button" class="sc-btn sc-btn--link mt-1.5" data-disclosure="connSecurity" aria-expanded="false">
                     {% trans "En savoir plus" %}
-                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
             </div>
-            <div class="sec-banner-details" data-open="false">
-                <div class="sec-banner-details-inner">
-                    <div class="sec-banner-grid">
-                        <div class="sec-banner-item"><span class="sec-banner-dot"></span>{% trans "Chiffrement Fernet (AES-128-CBC + HMAC)" %}</div>
-                        <div class="sec-banner-item"><span class="sec-banner-dot"></span>{% trans "Cl&eacute; d&eacute;riv&eacute;e par tenant via HKDF-SHA256" %}</div>
-                        <div class="sec-banner-item"><span class="sec-banner-dot"></span>{% trans "Isolation cryptographique entre organisations" %}</div>
-                        <div class="sec-banner-item"><span class="sec-banner-dot"></span>{% trans "Compatible avec les variables d'environnement existantes" %}</div>
-                    </div>
-                </div>
+        </div>
+        <div class="mt-3" data-disclosure-panel="connSecurity" hidden>
+            <div class="sc-conn-facts">
+                <span class="sc-conn-fact">{% trans "Chiffrement Fernet (AES-128-CBC + HMAC)" %}</span>
+                <span class="sc-conn-fact">{% trans "Clé dérivée par organisation via HKDF-SHA256" %}</span>
+                <span class="sc-conn-fact">{% trans "Isolation cryptographique entre organisations" %}</span>
+                <span class="sc-conn-fact">{% trans "Compatible avec les variables d'environnement existantes" %}</span>
             </div>
         </div>
     </div>
-</div>
 
-{% if connectors %}
-<!-- Connector table -->
-<table class="conn-table" id="conn-table">
-    <thead>
-        <tr>
-            <th>{% trans "Type" %}</th>
-            <th>{% trans "Nom" %}</th>
-            <th>{% trans "Derni&egrave;re synchro" %}</th>
-            <th>{% trans "Documents" %}</th>
-            <th>{% trans "Statut" %}</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
+    {% if connectors %}
+    <div class="sc-conn-grid">
         {% for conn in connectors %}
-        <tr data-href="{% url 'connector-detail' conn.pk %}"
-            data-search="{{ conn.name|lower }} {{ conn.get_connector_type_display|lower }}">
-            <td>
-                <div class="conn-type-cell">
-                    <div class="conn-type-icon {{ conn.connector_type }}">
-                        {% if conn.connector_type == 'sharepoint' %}
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                        {% elif conn.connector_type == 'confluence' %}
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                        {% elif conn.connector_type == 'elasticsearch' %}
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>
-                        {% elif conn.connector_type == 'zipupload' %}
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        {% else %}
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        {% endif %}
+        <article class="sc-card sc-conn-card" data-conn-card
+                 data-conn-search="{{ conn.name|lower }} {{ conn.get_connector_type_display|lower }}">
+            <div class="sc-conn-head">
+                <span class="sc-conn-badge sc-conn-badge--{{ conn.connector_type }}">{{ conn.connector_type|slice:":2"|upper }}</span>
+                <div class="min-w-0 flex-1">
+                    <a class="sc-conn-name cell-truncate" href="{% url 'connector-detail' conn.pk %}">{{ conn.name }}</a>
+                    <div class="sc-conn-type cell-truncate">{{ conn.get_connector_type_display }}</div>
+                </div>
+                {% if membership.can_edit %}
+                <div class="sc-dropdown sc-conn-menu" data-dropdown>
+                    <button type="button" class="sc-icon-btn" data-dropdown-toggle aria-label="{% trans "Actions" %}">⋯</button>
+                    <div class="sc-dropdown-menu sc-dropdown-menu--down">
+                        <a class="sc-dropdown-item" href="{% url 'connector-detail' conn.pk %}">{% trans "Détails" %}</a>
+                        <form method="post" action="{% url 'connector-sync' conn.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="sc-dropdown-item">{% trans "Synchroniser" %}</button>
+                        </form>
+                        <div class="sc-dropdown-sep"></div>
+                        <form method="post" action="{% url 'connector-delete' conn.pk %}"
+                              data-confirm-title="{% trans "Supprimer le connecteur" %}"
+                              data-confirm-message="{% blocktrans with name=conn.name %}Supprimer « {{ name }} » et tous ses documents ?{% endblocktrans %}"
+                              data-confirm-action="{% trans "Supprimer" %}">
+                            {% csrf_token %}
+                            <button type="submit" class="sc-dropdown-item text-danger-ink">{% trans "Supprimer" %}</button>
+                        </form>
                     </div>
-                    <span class="conn-type-name">{{ conn.get_connector_type_display }}</span>
                 </div>
-            </td>
-            <td>
-                <span style="font-weight:500;">{{ conn.name }}</span>
-            </td>
-            <td>
+                {% endif %}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="sc-tag {% if conn.enabled %}sc-tag--ok{% else %}sc-tag--danger{% endif %}">{% if conn.enabled %}{% trans "Actif" %}{% else %}{% trans "Désactivé" %}{% endif %}</span>
+                {% if conn.last_sync_status == 'failed' %}
+                <span class="sc-tag sc-tag--danger">{% trans "Dernière synchro en échec" %}</span>
+                {% elif conn.last_sync_status == 'success' %}
+                <span class="sc-tag sc-tag--outline">{% trans "Synchro réussie" %}</span>
+                {% elif conn.last_sync_status %}
+                <span class="sc-tag sc-tag--outline">{{ conn.last_sync_status }}</span>
+                {% endif %}
+            </div>
+
+            <div class="sc-conn-figures">
+                <div>
+                    <div class="sc-metric">{{ conn.doc_count }}</div>
+                    <div class="sc-conn-figure-label">{% trans "Documents" %}</div>
+                </div>
+                <div>
+                    <div class="sc-metric {% if conn.pending_count %}sc-ink--c{% else %}text-ink-400{% endif %}">{{ conn.pending_count }}</div>
+                    <div class="sc-conn-figure-label">{% trans "En attente" %}</div>
+                </div>
+                <div>
+                    <div class="sc-metric {% if conn.error_count %}sc-ink--e{% else %}text-ink-400{% endif %}">{{ conn.error_count }}</div>
+                    <div class="sc-conn-figure-label">{% trans "Erreurs" %}</div>
+                </div>
+            </div>
+
+            <div class="sc-conn-sync">
+                <span class="sc-conn-dot {% if conn.last_sync_status == 'failed' %}sc-fill--e{% elif conn.last_sync_at %}sc-fill--a{% else %}sc-fill--none{% endif %}"></span>
                 {% if conn.last_sync_at %}
-                <div class="conn-sync-ago">{{ conn.last_sync_at|timesince }}</div>
-                <div class="conn-sync-status">
-                    {% if conn.last_sync_status == 'success' %}{% trans "Succ&egrave;s" %}{% elif conn.last_sync_status == 'failed' %}{% trans "Erreur" %}{% else %}{{ conn.last_sync_status }}{% endif %}
-                </div>
+                {% blocktrans with ago=conn.last_sync_at|timesince %}Synchronisé il y a {{ ago }}{% endblocktrans %}
                 {% else %}
-                <span class="conn-sync-ago" style="color:var(--ds-text-muted);">{% trans "Jamais" %}</span>
+                {% trans "Jamais synchronisé" %}
                 {% endif %}
-            </td>
-            <td>
-                <span class="conn-doc-count">{{ conn.doc_count }} {% trans "document(s)" %}</span>
-            </td>
-            <td>
-                <span class="conn-status-dot {% if conn.enabled %}active{% else %}inactive{% endif %}"></span>
-                <span style="font-size:12px;">{% if conn.enabled %}{% trans "Actif" %}{% else %}{% trans "D&eacute;sactiv&eacute;" %}{% endif %}</span>
-            </td>
-            <td class="text-end" style="width:40px;">
-                <div class="dropdown">
-                    <button class="conn-menu-btn" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation()">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{% url 'connector-detail' conn.pk %}" data-turbo-frame="_top">{% trans "D&eacute;tails" %}</a></li>
-                        {% if membership.can_edit %}
-                        <li>
-                            <form method="post" action="{% url 'connector-sync' conn.pk %}" data-turbo-frame="_top">
-                                {% csrf_token %}
-                                <button type="submit" class="dropdown-item" onclick="event.stopPropagation()">{% trans "Synchroniser" %}</button>
-                            </form>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form method="post" action="{% url 'connector-delete' conn.pk %}" data-turbo-frame="_top"
-                                  data-confirm-title="{% trans "Supprimer le connecteur" %}"
-                                  data-confirm-message="{% trans "Supprimer" %} {{ conn.name }} {% trans "et tous ses documents ?" %}"
-                                  data-confirm-action="{% trans "Supprimer" %}">
-                                {% csrf_token %}
-                                <button type="submit" class="dropdown-item text-danger" onclick="event.stopPropagation();">
-                                    {% trans "Supprimer" %}
-                                </button>
-                            </form>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </td>
-        </tr>
+            </div>
+        </article>
         {% endfor %}
-    </tbody>
-</table>
 
-{% else %}
-<!-- Empty state -->
-<div class="conn-empty">
-    <svg class="conn-empty-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-    <p class="conn-empty-text">{% trans "Aucun connecteur configur&eacute; pour ce projet." %}</p>
-    {% if membership.can_edit %}
-    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#conn-create-modal">{% trans "Ajouter un connecteur" %}</button>
-    {% endif %}
-</div>
-{% endif %}
-
-{% if membership.can_edit %}
-<!-- Create new connector section -->
-<div class="conn-create-section">
-    <div class="conn-create-title">{% trans "Ajouter un connecteur" %}</div>
-    <div class="conn-create-desc">{% trans "Connectez une source de donn&eacute;es pour indexer vos documents dans le projet." %}</div>
-    <div class="conn-type-grid">
-        {% for val, label in connector_types %}
-        <a href="javascript:void(0)" class="conn-type-card" data-open-modal="{{ val }}">
-            <div class="conn-type-icon {{ val }}">
-                {% if val == 'sharepoint' %}
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                {% elif val == 'confluence' %}
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                {% elif val == 'elasticsearch' %}
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>
-                {% elif val == 'zipupload' %}
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                {% else %}
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                {% endif %}
-            </div>
-            <div>
-                <div class="conn-type-card-name">{{ label }}</div>
-                <div class="conn-type-card-desc">
-                    {% if val == 'sharepoint' %}{% trans "Biblioth&egrave;ques SharePoint Online" %}{% elif val == 'confluence' %}{% trans "Espaces Confluence Cloud" %}{% elif val == 'elasticsearch' %}{% trans "Index Elasticsearch" %}{% elif val == 'zipupload' %}{% trans "Archive ZIP de documents" %}{% else %}{% trans "Fichiers locaux ou URL" %}{% endif %}
-                </div>
-            </div>
+        {% if membership.can_edit %}
+        <a class="sc-empty-tile" href="{% url 'connector-create' %}">
+            <svg class="size-4" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <span class="text-12p5 font-medium">{% trans "Ajouter une source" %}</span>
         </a>
-        {% endfor %}
+        {% endif %}
     </div>
-</div>
-{% endif %}
+    {% else %}
+    <div class="sc-card">
+        <div class="sc-empty">
+            <div class="sc-empty-title">{% trans "Aucune source connectée" %}</div>
+            <div class="sc-empty-detail">{% trans "SCORE n'a rien à analyser tant qu'aucune source n'est branchée. Connectez une bibliothèque SharePoint, un espace Confluence, un index Elasticsearch ou un dossier de fichiers pour indexer vos documents." %}</div>
+            {% if membership.can_edit %}
+            <a href="{% url 'connector-create' %}" class="sc-btn sc-btn--primary mt-1.5">{% trans "Ajouter un connecteur" %}</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if membership.can_edit %}
+    <section class="sc-card">
+        <div class="sc-eyebrow mb-3.5">{% trans "Ajouter une source" %}</div>
+        <div class="sc-conn-types">
+            {% for val, label in connector_types %}
+            <a class="sc-choice" href="{% url 'connector-create' %}?type={{ val }}">
+                <span class="flex items-center gap-2.5">
+                    <span class="sc-conn-badge sc-conn-badge--sm sc-conn-badge--{{ val }}">{{ val|slice:":2"|upper }}</span>
+                    <span class="sc-choice-title">{{ label }}</span>
+                </span>
+                <span class="sc-choice-sub">
+                    {% if val == 'sharepoint' %}{% trans "Bibliothèques SharePoint Online" %}
+                    {% elif val == 'confluence' %}{% trans "Espaces Confluence Cloud" %}
+                    {% elif val == 'elasticsearch' %}{% trans "Index Elasticsearch" %}
+                    {% elif val == 'zipupload' %}{% trans "Archive ZIP de documents" %}
+                    {% else %}{% trans "Fichiers locaux ou URL" %}{% endif %}
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 
 </div>
 </turbo-frame>
-
-<!-- ═══ CREATE CONNECTOR MODAL ═══ -->
-{% if membership.can_edit %}
-<div class="modal fade" id="conn-create-modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <!-- Close -->
-            <button type="button" class="cf-close" data-bs-dismiss="modal" aria-label="{% trans "Fermer" %}">
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-
-            <!-- Icons: connector type ⇄ SCORE -->
-            <div class="cf-icons">
-                <div class="cf-icon-box" id="cf-type-icon">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                </div>
-                <div class="cf-arrow">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
-                </div>
-                <div class="cf-icon-box score-icon">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
-                </div>
-            </div>
-
-            <!-- Title -->
-            <div class="cf-title" id="cf-title">{% trans "Connecter SharePoint &agrave; SCORE" %}</div>
-            <div class="cf-subtitle">{% trans "Configurez les param&egrave;tres de connexion pour indexer automatiquement vos documents dans SCORE." %}</div>
-
-            <form method="post" action="{% url 'connector-create' %}" enctype="multipart/form-data" data-turbo="false">
-                {% csrf_token %}
-
-                <!-- Name -->
-                <div class="cf-group">
-                    <label for="cf-name" class="cf-label">{% trans "Nom du connecteur" %}</label>
-                    <input type="text" name="name" id="cf-name" class="cf-input" placeholder="{% trans "Ex. Documents RH" %}" required>
-                </div>
-
-                <!-- Type selector -->
-                <div class="cf-group">
-                    <label for="cf-connector-type" class="cf-label">{% trans "Type de source" %}</label>
-                    <select name="connector_type" id="cf-connector-type" class="cf-select">
-                        {% for val, label in connector_types %}
-                        <option value="{{ val }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- SharePoint config -->
-                <div id="cf-config-sharepoint" class="cf-connector-config">
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "URL du site" %}</label>
-                        <input type="text" name="config_site_url" class="cf-input" placeholder="your-site.sharepoint.com">
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "ID du lecteur (optionnel)" %}</label>
-                        <input type="text" name="config_drive_id" class="cf-input">
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Chemin du dossier" %}</label>
-                        <input type="text" name="config_folder_path" class="cf-input" value="/" placeholder="/">
-                    </div>
-                </div>
-
-                <!-- Confluence config -->
-                <div id="cf-config-confluence" class="cf-connector-config" style="display:none">
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "URL Confluence" %}</label>
-                        <input type="url" name="config_url" class="cf-input" placeholder="https://your-org.atlassian.net">
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Cl&eacute; d'espace" %}</label>
-                        <input type="text" name="config_space_key" class="cf-input">
-                    </div>
-                </div>
-
-                <!-- Elasticsearch config -->
-                <div id="cf-config-elasticsearch" class="cf-connector-config" style="display:none">
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "H&ocirc;te(s) Elasticsearch" %}</label>
-                        <input type="text" name="config_hosts" class="cf-input" placeholder="https://localhost:9200">
-                        <div class="cf-hint">{% trans "URL(s) s&eacute;par&eacute;es par des virgules. Laisser vide si Cloud ID est renseign&eacute;." %}</div>
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Cloud ID (optionnel)" %}</label>
-                        <input type="text" name="config_cloud_id" class="cf-input" placeholder="{% trans "deployment:dXMtY2Vud..." %}">
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Index" %}</label>
-                        <input type="text" name="config_index" class="cf-input" placeholder="{% trans "ex. documents, articles-*" %}" required>
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "M&eacute;thode d'authentification" %}</label>
-                        <select name="config_auth_method" class="cf-select">
-                            <option value="api_key">{% trans "Cl&eacute; API" %}</option>
-                            <option value="basic_auth">{% trans "Utilisateur / Mot de passe" %}</option>
-                            <option value="bearer_token">{% trans "Bearer Token" %}</option>
-                        </select>
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Utilisateur (basic_auth uniquement)" %}</label>
-                        <input type="text" name="config_username" class="cf-input" placeholder="elastic">
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Champ contenu" %}</label>
-                        <input type="text" name="config_content_field" class="cf-input" placeholder="content" value="content">
-                        <div class="cf-hint">{% trans "Nom du champ contenant le texte principal du document." %}</div>
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Champ titre" %}</label>
-                        <input type="text" name="config_title_field" class="cf-input" placeholder="title" value="title">
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "V&eacute;rifier les certificats TLS" %}</label>
-                        <select name="config_verify_certs" class="cf-select">
-                            <option value="true" selected>{% trans "Oui" %}</option>
-                            <option value="false">{% trans "Non" %}</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Generic config -->
-                <div id="cf-config-generic" class="cf-connector-config" style="display:none">
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Type de source" %}</label>
-                        <select name="config_source_type" class="cf-select">
-                            <option value="filesystem">{% trans "Syst&egrave;me de fichiers local" %}</option>
-                            <option value="http">{% trans "URL HTTP/HTTPS" %}</option>
-                        </select>
-                    </div>
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Chemin de base / URL" %}</label>
-                        <input type="text" name="config_base_path" class="cf-input" placeholder="/path/to/docs ou https://...">
-                    </div>
-                </div>
-
-                <!-- Zip Upload config -->
-                <div id="cf-config-zipupload" class="cf-connector-config" style="display:none">
-                    <div class="cf-group">
-                        <label class="cf-label">{% trans "Fichier ZIP" %}</label>
-                        <input type="file" name="zip_file" class="cf-input" accept=".zip,application/zip">
-                        <div class="cf-hint">{% trans "S&eacute;lectionnez une archive ZIP contenant vos documents." %}</div>
-                    </div>
-                </div>
-
-                <!-- Security banner -->
-                <div class="sec-banner-inline">
-                    <div class="sec-inline-row">
-                        <div class="sec-inline-icon">
-                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </div>
-                        <div class="sec-inline-body">
-                            <div class="sec-inline-title">{% trans "Chiffrement de bout en bout" %}</div>
-                            <div class="sec-inline-text">{% trans "Votre secret sera chiffr&eacute; avec une cl&eacute; propre &agrave; votre organisation (Fernet + HKDF). Il ne sera jamais stock&eacute; en clair dans la base de donn&eacute;es." %}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Secret value (encrypted in DB) -->
-                <div class="cf-group">
-                    <label for="cf-secret-value" class="cf-label">{% trans "Cl&eacute; API / Secret" %}</label>
-                    <input type="password" name="secret_value" id="cf-secret-value" class="cf-input" placeholder="{% trans "Valeur du secret (stock&eacute;e chiffr&eacute;e)" %}" autocomplete="new-password">
-                    <div class="cf-hint">{% trans "La valeur sera chiffr&eacute;e avant stockage. Laissez vide pour utiliser une variable d'environnement." %}</div>
-                </div>
-
-                <!-- Credential ref (env var fallback) -->
-                <div class="cf-group">
-                    <label for="cf-credential-ref" class="cf-label">{% trans "Variable d'environnement (optionnel)" %}</label>
-                    <input type="text" name="credential_ref" id="cf-credential-ref" class="cf-input" placeholder="{% trans "ex. SHAREPOINT_CLIENT_SECRET" %}">
-                    <div class="cf-hint">{% trans "Utilis&eacute;e uniquement si aucun secret n'est saisi ci-dessus." %}</div>
-                </div>
-
-                <!-- Submit -->
-                <button type="submit" class="cf-submit">
-                    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    {% trans "Connecter" %}
-                </button>
-            </form>
-
-            <hr class="cf-divider">
-
-            <div class="cf-footer">
-                {% trans "En cr&eacute;ant ce connecteur, vous autorisez SCORE &agrave; acc&eacute;der et indexer les documents de la source configur&eacute;e. Vous pouvez le d&eacute;sactiver &agrave; tout moment depuis la page Connecteurs." %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<script>
-(function() {
-    /* Row click navigation */
-    document.querySelectorAll('#conn-table tbody tr[data-href]').forEach(function(row) {
-        row.addEventListener('click', function(e) {
-            if (e.target.closest('.dropdown, button, a, form')) return;
-            window.location.href = row.dataset.href;
-        });
-    });
-
-    /* Filter */
-    var input = document.getElementById('conn-filter');
-    if (input) {
-        input.addEventListener('input', function() {
-            var q = this.value.toLowerCase();
-            document.querySelectorAll('#conn-table tbody tr').forEach(function(row) {
-                var text = row.dataset.search || '';
-                row.style.display = text.indexOf(q) !== -1 ? '' : 'none';
-            });
-        });
-    }
-
-    /* ── Modal: dynamic icon / title / config panels ── */
-    var modalEl = document.getElementById('conn-create-modal');
-    if (!modalEl) return;
-
-    var icons = {
-        sharepoint: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
-        confluence: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-        elasticsearch: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>',
-        generic: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
-        zipupload: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
-    };
-    var titles = {
-        sharepoint: 'Connecter SharePoint \u00e0 SCORE',
-        confluence: 'Connecter Confluence \u00e0 SCORE',
-        elasticsearch: 'Connecter Elasticsearch \u00e0 SCORE',
-        generic: 'Connecter une source \u00e0 SCORE',
-        zipupload: 'Importer un fichier ZIP dans SCORE'
-    };
-
-    var select  = document.getElementById('cf-connector-type');
-    var iconBox = document.getElementById('cf-type-icon');
-    var titleEl = document.getElementById('cf-title');
-
-    function updateModal(type) {
-        iconBox.className = 'cf-icon-box ' + (type || 'generic');
-        iconBox.innerHTML = icons[type] || icons.generic;
-        titleEl.textContent = titles[type] || titles.generic;
-        /* Hide all config panels and disable their required fields */
-        modalEl.querySelectorAll('.cf-connector-config').forEach(function(el) {
-            el.style.display = 'none';
-            el.querySelectorAll('[required]').forEach(function(inp) { inp.disabled = true; });
-        });
-        var target = document.getElementById('cf-config-' + type);
-        if (target) {
-            target.style.display = 'block';
-            target.querySelectorAll('[disabled]').forEach(function(inp) { inp.disabled = false; });
-        }
-    }
-
-    select.addEventListener('change', function() { updateModal(this.value); });
-    updateModal(select.value);
-
-    /* Type cards open modal with pre-selected type */
-    document.querySelectorAll('[data-open-modal]').forEach(function(card) {
-        card.addEventListener('click', function() {
-            var type = card.dataset.openModal;
-            select.value = type;
-            updateModal(type);
-            var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-        });
-    });
-})();
-</script>

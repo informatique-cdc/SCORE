@@ -1,0 +1,72 @@
+@layer base {
+  html,
+  body {
+    height: 100%;
+    background: var(--color-page);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--color-accent-hover);
+    text-decoration: underline;
+  }
+
+  ::selection {
+    background: var(--color-ok-line);
+  }
+
+  abbr[title] {
+    text-decoration: none;
+    border-bottom: 1px dotted var(--color-ink-400);
+    cursor: help;
+  }
+
+  [data-scroll]::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  [data-scroll]::-webkit-scrollbar-thumb {
+    background: var(--color-line-300);
+    border-radius: 8px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  /* Les entrées animées sont décoratives : elles ne doivent jamais retenir le contenu. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility pretty {
+  text-wrap: pretty;
+}
+
+/* Tronque en fin de ligne. Le parent flex/grid doit porter min-w-0. */
+@utility cell-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

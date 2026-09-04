@@ -1,26 +1,38 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
+
 {% block title %}{% trans "Nouveau projet" %} - SCORE{% endblock %}
 
+{% block breadcrumbs %}
+    {% if current_tenant %}<span class="sc-crumb">{{ current_tenant.name }}<span class="sc-crumb-sep">/</span></span>{% endif %}
+    <a class="sc-crumb" href="{% url 'project-list' %}">{% trans "Projets" %}<span class="sc-crumb-sep">/</span></a>
+    <span class="sc-crumb is-current">{% trans "Nouveau projet" %}</span>
+{% endblock %}
+
+{% block page_title %}{% trans "Créer un projet" %}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Un projet est un espace dédié pour analyser un corpus documentaire." %}</p>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center mt-4">
-    <div class="col-md-6">
-        <h2 class="mb-4">{% trans "Créer un projet" %}</h2>
-        <form method="post">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label for="name" class="form-label">{% trans "Nom du projet" %}</label>
-                <input type="text" class="form-control" id="name" name="name" required maxlength="200">
-            </div>
-            <div class="mb-3">
-                <label for="description" class="form-label">{% trans "Description" %}</label>
-                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-            </div>
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">{% trans "Créer" %}</button>
-                <a href="{% url 'project-list' %}" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
-            </div>
-        </form>
-    </div>
+<div class="sc-card sc-card--roomy max-w-[560px]">
+    <form method="post" class="grid gap-3.5">
+        {% csrf_token %}
+        <label class="sc-field">
+            <span class="sc-label">{% trans "Nom du projet" %}</span>
+            <input type="text" class="sc-input" id="name" name="name" required maxlength="200" autofocus
+                   placeholder="{% trans "ex. Audit Q4 2025" %}">
+        </label>
+        <label class="sc-field">
+            <span class="sc-label">{% trans "Description" %} <span class="font-normal text-ink-500">({% trans "optionnel" %})</span></span>
+            <textarea class="sc-textarea" id="description" name="description" rows="3"
+                      placeholder="{% trans "Décrivez brièvement l'objectif de ce projet…" %}"></textarea>
+        </label>
+        <div class="mt-1 flex gap-2">
+            <button type="submit" class="sc-btn sc-btn--primary">{% trans "Créer" %}</button>
+            <a href="{% url 'project-list' %}" class="sc-btn sc-btn--secondary">{% trans "Annuler" %}</a>
+        </div>
+    </form>
 </div>
 {% endblock %}

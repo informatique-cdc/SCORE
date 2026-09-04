@@ -1,475 +1,54 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Connecteurs - SCORE" %}{% endblock %}
-{% block nav_connectors %}active{% endblock %}
 
-{% block extra_css %}
-<style>
-    /* ── Search bar ── */
-    .conn-search {
-        background: var(--ds-grey-700);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: var(--ds-radius);
-        color: var(--ds-grey-100);
-        font-size: 13px;
-        padding: 8px 12px 8px 34px;
-        width: 280px;
-        transition: border-color 0.15s;
-    }
-    .conn-search:focus {
-        outline: none;
-        border-color: #0d6efd;
-    }
-    .conn-search::placeholder { color: var(--ds-text-muted); }
-    .conn-search-wrap {
-        position: relative;
-    }
-    .conn-search-wrap svg {
-        position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-        width: 16px; height: 16px; color: var(--ds-text-muted); pointer-events: none;
-    }
+{% block title %}{% trans "Connecteurs" %} - SCORE{% endblock %}
+{% block nav_connectors %}is-active{% endblock %}
 
-    /* ── Table ── */
-    .conn-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-    .conn-table thead th {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--ds-text-muted);
-        padding: 10px 16px;
-        border-bottom: 1px solid var(--ds-grey-500);
-        white-space: nowrap;
-        background: transparent;
-    }
-    .conn-table tbody tr {
-        transition: background 0.1s;
-        cursor: pointer;
-    }
-    .conn-table tbody tr:hover {
-        background: var(--ds-grey-700);
-    }
-    .conn-table tbody td {
-        font-size: 13px;
-        padding: 16px 16px;
-        border-bottom: 1px solid var(--ds-grey-500);
-        color: var(--ds-grey-100);
-        vertical-align: middle;
-    }
-    .conn-table tbody tr:last-child td {
-        border-bottom: none;
-    }
+{% block breadcrumbs %}
+    {% if current_tenant %}<span class="sc-crumb">{{ current_tenant.name }}<span class="sc-crumb-sep">/</span></span>{% endif %}
+    <span class="sc-crumb is-current">{% trans "Connecteurs" %}</span>
+{% endblock %}
 
-    /* ── Type cell (icon + name) ── */
-    .conn-type-cell {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .conn-type-icon {
-        width: 36px; height: 36px;
-        border-radius: 8px;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-    }
-    .conn-type-icon svg { width: 18px; height: 18px; }
-    .conn-type-icon.sharepoint { background: rgba(13,110,253,0.10); color: #60a5fa; }
-    .conn-type-icon.confluence { background: rgba(13,202,240,0.10); color: #22d3ee; }
-    .conn-type-icon.elasticsearch { background: rgba(254,210,48,0.10); color: #fed230; }
-    .conn-type-icon.generic { background: rgba(108,113,126,0.10); color: #9ca3af; }
-    .conn-type-name {
-        font-weight: 600;
-        color: var(--ds-grey-100);
-    }
+{% block page_title %}{% trans "Connecteurs" %}{% endblock %}
 
-    /* ── Name column ── */
-    .conn-config-name {
-        color: var(--ds-text-muted);
-        font-size: 13px;
-    }
+{% block page_lede %}
+<p class="sc-lede">{% trans "Les sources de données branchées sur ce projet. Chaque synchronisation met à jour le corpus que SCORE analyse." %}</p>
+{% endblock %}
 
-    /* ── Sync column ── */
-    .conn-sync-ago {
-        font-weight: 500;
-        color: var(--ds-grey-100);
-        font-size: 13px;
-    }
-    .conn-sync-status {
-        font-size: 11px;
-        color: var(--ds-text-muted);
-    }
-
-    /* ── Doc count ── */
-    .conn-doc-count {
-        font-weight: 500;
-        font-variant-numeric: tabular-nums;
-    }
-
-    /* ── Status dot ── */
-    .conn-status-dot {
-        display: inline-block;
-        width: 7px; height: 7px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
-    }
-    .conn-status-dot.active { background: #34d399; }
-    .conn-status-dot.inactive { background: #f87171; }
-
-    /* ── Dropdown ── */
-    .conn-menu-btn {
-        background: none; border: none; color: var(--ds-text-muted);
-        padding: 4px 6px; border-radius: 4px; cursor: pointer;
-        transition: background 0.1s;
-        line-height: 1;
-    }
-    .conn-menu-btn:hover { background: var(--ds-grey-500); color: var(--ds-grey-100); }
-
-    /* ── Create section ── */
-    .conn-create-section {
-        margin-top: 40px;
-    }
-    .conn-create-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--ds-grey-100);
-        margin-bottom: 4px;
-    }
-    .conn-create-desc {
-        font-size: 13px;
-        color: var(--ds-text-muted);
-        margin-bottom: 20px;
-    }
-    .conn-type-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-    }
-    @media (max-width: 768px) { .conn-type-grid { grid-template-columns: 1fr; } }
-    .conn-type-card {
-        background: var(--ds-grey-700);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: var(--ds-radius);
-        padding: 16px 18px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        text-decoration: none;
-        color: var(--ds-grey-100);
-        transition: all 0.15s;
-    }
-    .conn-type-card:hover {
-        border-color: #0d6efd;
-        background: rgba(13,110,253,0.04);
-        color: var(--ds-grey-100);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    }
-    .conn-type-card-name {
-        font-size: 14px;
-        font-weight: 600;
-    }
-    .conn-type-card-desc {
-        font-size: 11px;
-        color: var(--ds-text-muted);
-    }
-
-    /* ── Empty state ── */
-    .conn-empty {
-        text-align: center;
-        padding: 48px 24px;
-    }
-    .conn-empty-icon {
-        width: 48px; height: 48px;
-        color: var(--ds-text-muted);
-        margin-bottom: 12px;
-    }
-    .conn-empty-text {
-        font-size: 13px;
-        color: var(--ds-text-muted);
-        margin-bottom: 16px;
-    }
-
-    /* ── Security banner ── */
-    .sec-banner {
-        position: relative;
-        background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.02) 100%);
-        border: 1px solid rgba(16,185,129,0.18);
-        border-left: 3px solid #10b981;
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin-bottom: 20px;
-        overflow: hidden;
-    }
-    .sec-banner::before {
-        content: '';
-        position: absolute;
-        top: -40px; right: -40px;
-        width: 120px; height: 120px;
-        background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%);
-        pointer-events: none;
-    }
-    .sec-banner-row {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        position: relative;
-    }
-    .sec-banner-icon {
-        flex-shrink: 0;
-        width: 34px; height: 34px;
-        border-radius: 8px;
-        background: rgba(16,185,129,0.12);
-        display: flex; align-items: center; justify-content: center;
-        color: #10b981;
-        transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .sec-banner:hover .sec-banner-icon { transform: scale(1.08) rotate(-3deg); }
-    .sec-banner-icon svg { width: 18px; height: 18px; }
-    .sec-banner-body { flex: 1; min-width: 0; }
-    .sec-banner-title {
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--ds-grey-100);
-        margin-bottom: 2px;
-        letter-spacing: 0.01em;
-    }
-    .sec-banner-text {
-        font-size: 12px;
-        color: var(--ds-text-muted);
-        line-height: 1.5;
-    }
-    .sec-banner-toggle {
-        background: none; border: none; padding: 0;
-        color: #10b981;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        display: inline-flex; align-items: center; gap: 4px;
-        transition: color 0.15s;
-    }
-    .sec-banner-toggle:hover { color: #34d399; }
-    .sec-banner-toggle svg {
-        width: 12px; height: 12px;
-        transition: transform 0.25s ease;
-    }
-    .sec-banner-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
-    .sec-banner-details {
-        display: grid;
-        grid-template-rows: 0fr;
-        transition: grid-template-rows 0.3s ease, margin-top 0.3s ease;
-        margin-top: 0;
-    }
-    .sec-banner-details[data-open="true"] {
-        grid-template-rows: 1fr;
-        margin-top: 10px;
-    }
-    .sec-banner-details-inner {
-        overflow: hidden;
-    }
-    .sec-banner-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px 16px;
-        padding: 10px 12px;
-        background: rgba(16,185,129,0.04);
-        border: 1px solid rgba(16,185,129,0.10);
-        border-radius: 8px;
-    }
-    @media (max-width: 640px) { .sec-banner-grid { grid-template-columns: 1fr; } }
-    .sec-banner-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 11.5px;
-        color: var(--ds-text-muted);
-        line-height: 1.4;
-    }
-    .sec-banner-dot {
-        flex-shrink: 0;
-        width: 5px; height: 5px;
-        border-radius: 50%;
-        background: #10b981;
-        opacity: 0.7;
-    }
-
-    /* ── Security banner (inline — modal) ── */
-    .sec-banner-inline {
-        position: relative;
-        background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.02) 100%);
-        border: 1px solid rgba(16,185,129,0.18);
-        border-left: 3px solid #10b981;
-        border-radius: 10px;
-        padding: 12px 14px;
-        margin-bottom: 18px;
-        overflow: hidden;
-    }
-    .sec-banner-inline::before {
-        content: '';
-        position: absolute;
-        top: -30px; right: -30px;
-        width: 80px; height: 80px;
-        background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%);
-        pointer-events: none;
-    }
-    .sec-inline-row {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        position: relative;
-    }
-    .sec-inline-icon {
-        flex-shrink: 0;
-        width: 28px; height: 28px;
-        border-radius: 7px;
-        background: rgba(16,185,129,0.12);
-        display: flex; align-items: center; justify-content: center;
-        color: #10b981;
-        transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .sec-banner-inline:hover .sec-inline-icon { transform: scale(1.08) rotate(-3deg); }
-    .sec-inline-icon svg { width: 14px; height: 14px; }
-    .sec-inline-body { flex: 1; min-width: 0; }
-    .sec-inline-title {
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--ds-grey-100);
-        margin-bottom: 1px;
-    }
-    .sec-inline-text {
-        font-size: 11px;
-        color: var(--ds-text-muted);
-        line-height: 1.45;
-    }
-
-    /* ── Create modal ── */
-    #conn-create-modal .modal-dialog {
-        max-width: 520px;
-    }
-    #conn-create-modal .modal-content {
-        background: var(--ds-grey-700);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: 14px;
-        padding: 36px 36px 28px;
-    }
-    .cf-close {
-        position: absolute;
-        top: 16px; right: 16px;
-        background: none; border: none;
-        color: var(--ds-text-muted);
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        transition: color 0.15s;
-        line-height: 1;
-        z-index: 1;
-    }
-    .cf-close:hover { color: var(--ds-grey-100); }
-    .cf-close svg { width: 20px; height: 20px; }
-    .cf-icons {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        margin-bottom: 20px;
-    }
-    .cf-icon-box {
-        width: 56px; height: 56px;
-        border-radius: 14px;
-        display: flex; align-items: center; justify-content: center;
-    }
-    .cf-icon-box svg { width: 28px; height: 28px; }
-    .cf-icon-box.sharepoint { background: rgba(13,110,253,0.12); color: #60a5fa; }
-    .cf-icon-box.confluence { background: rgba(13,202,240,0.12); color: #22d3ee; }
-    .cf-icon-box.elasticsearch { background: rgba(254,210,48,0.12); color: #fed230; }
-    .cf-icon-box.generic { background: rgba(108,113,126,0.12); color: #9ca3af; }
-    .cf-icon-box.score-icon { background: rgba(13,110,253,0.12); color: #0d6efd; }
-    .cf-arrow { color: var(--ds-text-muted); }
-    .cf-arrow svg { width: 20px; height: 20px; }
-    .cf-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--ds-grey-100);
-        text-align: center;
-        margin-bottom: 6px;
-    }
-    .cf-subtitle {
-        font-size: 13px;
-        color: var(--ds-text-muted);
-        text-align: center;
-        margin-bottom: 28px;
-        line-height: 1.5;
-    }
-    .cf-label {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--ds-grey-100);
-        margin-bottom: 6px;
-        display: block;
-    }
-    .cf-input {
-        width: 100%;
-        background: var(--ds-grey-800);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: 10px;
-        color: var(--ds-grey-100);
-        font-size: 13px;
-        padding: 10px 14px;
-        transition: border-color 0.15s;
-    }
-    .cf-input:focus { outline: none; border-color: #0d6efd; }
-    .cf-input::placeholder { color: var(--ds-text-muted); }
-    .cf-hint { font-size: 11px; color: var(--ds-text-muted); margin-top: 4px; }
-    .cf-group { margin-bottom: 18px; }
-    .cf-select {
-        width: 100%;
-        background: var(--ds-grey-800);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: 10px;
-        color: var(--ds-grey-100);
-        font-size: 13px;
-        padding: 10px 14px;
-        transition: border-color 0.15s;
-        appearance: auto;
-    }
-    .cf-select:focus { outline: none; border-color: #0d6efd; }
-    .cf-submit {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 10px;
-        background: #0d6efd;
-        color: #fff;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.15s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        margin-top: 6px;
-    }
-    .cf-submit:hover { background: #0b5ed7; }
-    .cf-submit svg { width: 16px; height: 16px; }
-    .cf-divider {
-        border: none;
-        border-top: 1px solid var(--ds-grey-500);
-        margin: 24px 0 16px;
-    }
-    .cf-footer {
-        font-size: 12px;
-        color: var(--ds-text-muted);
-        text-align: center;
-        line-height: 1.6;
-    }
-</style>
+{% block page_actions %}
+    {% if membership.can_edit %}
+    <a href="{% url 'connector-create' %}" class="sc-btn sc-btn--primary">
+        <svg class="size-3 shrink-0" viewBox="0 0 12 12" fill="none"><path d="M6 2.5v7M2.5 6h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        {% trans "Nouveau connecteur" %}
+    </a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
 {% include "connectors/_connector_cards.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // Délégation sur document : la grille est remplacée par Turbo à chaque
+    // rafraîchissement automatique, un écouteur direct ne survivrait pas.
+    function apply(query) {
+        var cards = document.querySelectorAll('[data-conn-card]');
+        var shown = 0;
+        cards.forEach(function(card) {
+            var match = (card.getAttribute('data-conn-search') || '').indexOf(query) !== -1;
+            card.hidden = !match;
+            if (match) shown++;
+        });
+        var count = document.querySelector('[data-conn-count]');
+        if (count) count.textContent = shown + ' / ' + cards.length;
+    }
+
+    document.addEventListener('input', function(e) {
+        if (e.target.id !== 'conn-filter') return;
+        apply(e.target.value.trim().toLowerCase());
+    });
+})();
+</script>
 {% endblock %}

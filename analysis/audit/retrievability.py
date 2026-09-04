@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class RetrievabilityAxis(BaseAuditAxis):
     axis_key = "retrievability"
-    axis_label = "Retrievability"
+    axis_label = "Repérabilité"
 
     def analyze(self):
         from ingestion.models import Document, DocumentChunk

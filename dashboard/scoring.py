@@ -5,6 +5,7 @@ from score.scoring import (  # noqa: F401
     _grade,
     health_score,
     build_breakdown_json,
+    build_breakdown_rows,
     compute_score,
     compute_score_detail,
     compute_score_for_job,

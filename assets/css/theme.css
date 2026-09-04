@@ -1,0 +1,255 @@
+/* Tokens repris de la maquette « SCORE - Refonte ». Les valeurs fractionnaires
+   (8.5px, 10.5px, 11.5px…) sont volontaires : les arrondir casse l'ISO. */
+
+@theme {
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+
+  /* Graisse des éléments de navigation inactifs. Absente de Tailwind. */
+  --font-weight-450: 450;
+
+  /* Nommées d'après leur valeur en px pour rendre l'écart à la maquette vérifiable. */
+  --text-8: 8px;
+  --text-8p5: 8.5px;
+  --text-10: 10px;
+  --text-10p5: 10.5px;
+  --text-11: 11px;
+  --text-11p5: 11.5px;
+  --text-12: 12px;
+  --text-12p5: 12.5px;
+  --text-13: 13px;
+  --text-13p5: 13.5px;
+  --text-14: 14px;
+  --text-14p5: 14.5px;
+  --text-15: 15px;
+  --text-16: 16px;
+  --text-17: 17px;
+  --text-18: 18px;
+  --text-20: 20px;
+  --text-22: 22px;
+  --text-24: 24px;
+  --text-26: 26px;
+  --text-27: 27px;
+  --text-30: 30px;
+  --text-38: 38px;
+  --text-46: 46px;
+
+  --tracking-eyebrow: 0.12em;
+  --tracking-thead: 0.08em;
+  --tracking-tag: 0.02em;
+  --tracking-micro: 0.1em;
+  --tracking-wordmark: -0.02em;
+  --tracking-h1: -0.025em;
+  --tracking-metric: -0.03em;
+  --tracking-hero: -0.04em;
+
+  --leading-flat: 1;
+  --leading-h1: 1.1;
+  --leading-snug: 1.45;
+  --leading-normal: 1.5;
+  --leading-claim: 1.55;
+  --leading-bubble: 1.6;
+  --leading-excerpt: 1.75;
+
+  /* ── Neutres ── */
+  /* Crème et non le #f7f8fa de la maquette : son header vitré est en rgb(246 245 241),
+     ce qui suppose un fond chaud dessous. Arbitré avec le user. */
+  --color-page: #f6f5f1;
+  --color-surface: #ffffff;
+  --color-surface-50: #fafbfc;
+  --color-surface-100: #f5f6fa;
+  --color-surface-200: #f0f1f4;
+  --color-surface-300: #e8eaee;
+  --color-line: #e2e4e9;
+  --color-line-300: #c9ced8;
+  --color-line-400: #b9bec9;
+  --color-ink: #14181a;
+  --color-ink-700: #454c51;
+  --color-ink-500: #6c717e;
+  --color-ink-400: #9aa0ab;
+
+  /* ── Off-neutres chauds : ne pas fondre dans la rampe grise ── */
+  --color-header-glass: rgb(246 245 241 / 0.86);
+  --color-warm-rail: #edebe4;
+  --color-warm-row: #fcfbf8;
+  --color-warm-ring: #c6c1b5;
+
+  /* ── Nutri-Score ── */
+  --color-score-a: #038141;
+  --color-score-b: #85bb2f;
+  --color-score-c: #fecb02;
+  --color-score-d: #ee8100;
+  --color-score-e: #e63e11;
+  --color-score-c-ink: #333333;
+
+  /* ── Tintes de sévérité ── */
+  --color-danger-bg: #fdecea;
+  --color-danger-bg-deep: #fdf3f1;
+  --color-danger-line: #f5ddd7;
+  --color-danger-line-strong: #f0c6bc;
+  --color-danger-ink: #b02e1b;
+  --color-danger-ink-soft: #7a3a2c;
+
+  --color-warn-bg: #fdf3e8;
+  --color-warn-line: #f3e3d2;
+  --color-warn-ink: #8a5100;
+
+  --color-ok-bg: #e7f0eb;
+  --color-ok-bg-warm: #f4f9f6;
+  --color-ok-line: #cbe3d8;
+  --color-ok-ink: #0a6b45;
+  --color-ok-ink-soft: #38614f;
+
+  --color-info-bg: #eef3f8;
+  --color-info-ink: #3e7cb1;
+  --color-llm-bg: #f0e9fb;
+  --color-llm-ink: #5b3a9e;
+
+  --color-mark-bg: #fcefc4;
+  --color-mark-line: #e9d9a0;
+
+  /* Résolus à l'exécution : l'accent est un réglage et les graphiques le lisent. */
+  --color-accent: var(--accent);
+  --color-accent-hover: #026433;
+  --color-rail-bg: var(--rail-bg);
+  --color-rail-ink: var(--rail-ink);
+  --color-rail-line: var(--rail-line);
+  --color-rail-soft: var(--rail-soft);
+  --color-rail-nav-active-bg: var(--rail-nav-active-bg);
+  --color-rail-nav-hover-bg: var(--rail-nav-hover-bg);
+  --color-rail-nav-ink: var(--rail-nav-ink);
+  --color-rail-nav-active-ink: var(--rail-nav-active-ink);
+
+  --radius-xs: 3px;
+  --radius-4: 4px;
+  --radius-5: 5px;
+  --radius-6: 6px;
+  --radius-7: 7px;
+  --radius-8: 8px;
+  --radius-9: 9px;
+  --radius-10: 10px;
+  --radius-11: 11px;
+  --radius-12: 12px;
+  --radius-13: 13px;
+  --radius-14: 14px;
+  --radius-15: 15px;
+  --radius-16: 16px;
+  --radius-18: 18px;
+  --radius-20: 20px;
+  --radius-22: 22px;
+
+  --shadow-accent: 0 1px 2px rgb(3 129 65 / 0.3);
+  --shadow-page: 0 1px 3px rgb(20 24 26 / 0.08);
+  --shadow-thumb: 0 1px 3px rgb(20 24 26 / 0.2);
+  --shadow-legend: 0 2px 8px rgb(20 24 26 / 0.06);
+  --shadow-tip: 0 6px 20px rgb(20 24 26 / 0.12);
+  --shadow-lift: 0 8px 24px rgb(20 24 26 / 0.07);
+  --shadow-modal: 0 30px 80px rgb(20 24 26 / 0.28);
+
+  /* Courbe expo-out, signature de toute la maquette. */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-rise: rise 0.5s ease both;
+  --animate-fade: fade 0.2s ease both;
+  --animate-dot: dot 1.6s ease-in-out infinite;
+  --animate-sweep: sweep 2.6s ease-in-out infinite;
+  --animate-grow: grow 0.7s var(--ease-expo) both;
+
+  --sidebar-width: 248px;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes dot {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.6);
+    }
+  }
+  @keyframes sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(320%);
+    }
+  }
+  @keyframes grow {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+}
+
+:root {
+  --accent: #038141;
+}
+
+/* Palette sombre provisoire. La maquette ne décrit que le mode clair : ces valeurs
+   reprennent les tons sombres de l'ancienne feuille Bootstrap pour que le thème
+   existant reste utilisable, en attendant une vraie passe de design. */
+[data-theme="dark"] {
+  --color-page: #1f2024;
+  --color-surface: #27282a;
+  --color-surface-50: #2b2c2f;
+  --color-surface-100: #303135;
+  --color-surface-200: #37383a;
+  --color-surface-300: #3f4043;
+  --color-line: #37383a;
+  --color-line-300: #4a4b4f;
+  --color-line-400: #5a5b5f;
+  --color-ink: #f8f8f8;
+  --color-ink-700: #c9ccd1;
+  --color-ink-500: #9aa0ab;
+  --color-ink-400: #7e838d;
+  --color-header-glass: rgb(31 32 36 / 0.86);
+  --color-warm-row: #2b2c2f;
+}
+
+/* Le rail est le seul endroit de l'application où deux palettes complètes coexistent. */
+[data-rail="dark"] {
+  --rail-bg: #14181a;
+  --rail-ink: #f0f1f4;
+  --rail-line: rgb(255 255 255 / 0.14);
+  --rail-soft: rgb(255 255 255 / 0.06);
+  --rail-nav-active-bg: rgb(255 255 255 / 0.12);
+  --rail-nav-hover-bg: rgb(255 255 255 / 0.07);
+  --rail-nav-ink: rgb(241 239 233 / 0.72);
+  --rail-nav-active-ink: #ffffff;
+}
+
+[data-rail="light"] {
+  --rail-bg: #edebe4;
+  --rail-ink: #14181a;
+  --rail-line: rgb(20 24 26 / 0.12);
+  --rail-soft: rgb(255 255 255 / 0.6);
+  /* Voile blanc et non les #e8eaee / #f0f1f4 de la maquette : ces gris bleutés
+     inversent la dominante du rail crème. Même principe que le rail sombre. */
+  --rail-nav-active-bg: rgb(255 255 255 / 0.85);
+  --rail-nav-hover-bg: rgb(255 255 255 / 0.45);
+  --rail-nav-ink: #454c51;
+  --rail-nav-active-ink: #14181a;
+}

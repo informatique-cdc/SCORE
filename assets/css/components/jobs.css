@@ -1,0 +1,242 @@
+@layer components {
+  /* Composants des écrans d'exécution : liste d'analyses, progression, phases. */
+
+  /* ── Pastille de note en ligne de tableau ──
+     Plus petite que .sc-grade, qui est dimensionnée pour la carte de score.
+     Le fond vient d'une classe .sc-fill--* : ne pas en poser ici, elles sont
+     déclarées avant dans la cascade et seraient écrasées. */
+  .sc-grade-chip {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    border-radius: var(--radius-7);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-size: var(--text-12);
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .sc-grade-chip--muted {
+    background: var(--color-line-300);
+  }
+
+  /* Le jaune Nutri-Score n'accepte pas de texte blanc. */
+  .sc-grade-chip.sc-fill--c {
+    color: var(--color-score-c-ink);
+  }
+
+  .sc-grade-chip--sm {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-5);
+    font-size: var(--text-10p5);
+  }
+
+  /* ── Piste de progression posée sur une carte sombre ── */
+  .sc-track--on-dark {
+    background: rgb(255 255 255 / 0.14);
+  }
+
+  .sc-track--on-dark .sc-track-fill {
+    background: var(--color-score-b);
+  }
+
+  /* ── Configuration d'analyse : sections dépliables ── */
+  .sc-cfg-section .sc-disclosure.is-open {
+    border-radius: var(--radius-12) var(--radius-12) 0 0;
+    background: var(--color-surface-100);
+  }
+
+  .sc-cfg-panel {
+    display: grid;
+    gap: 11px;
+    padding: 13px 14px 15px;
+    border: 1px solid var(--color-line);
+    border-top: 0;
+    border-radius: 0 0 var(--radius-12) var(--radius-12);
+    background: var(--color-surface);
+  }
+
+  /* display:grid l'emporterait sur le display:none implicite de [hidden]. */
+  .sc-cfg-panel[hidden] {
+    display: none;
+  }
+
+  .sc-cfg-row {
+    display: grid;
+    grid-template-columns: 152px minmax(0, 1fr) 46px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .sc-cfg-label {
+    font-size: var(--text-12);
+    color: var(--color-ink-700);
+  }
+
+  .sc-cfg-note {
+    font-size: var(--text-10p5);
+    color: var(--color-ink-400);
+  }
+
+  .sc-cfg-value {
+    font-size: var(--text-12);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  /* ── Curseur de seuil : input natif transparent sur la piste dessinée ──
+     Le natif conserve clavier et glisser ; la piste .sc-slider-* ne fait qu'afficher. */
+  .sc-slider {
+    position: relative;
+    display: grid;
+    align-items: center;
+    height: 22px;
+  }
+
+  .sc-slider .sc-slider-track {
+    pointer-events: none;
+  }
+
+  .sc-slider-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+    appearance: none;
+    background: transparent;
+  }
+
+  .sc-slider:focus-within .sc-slider-thumb {
+    box-shadow: 0 0 0 3px var(--color-ok-line);
+  }
+
+  /* ── Interrupteur ── */
+  .sc-switch {
+    position: relative;
+    display: inline-flex;
+    width: 38px;
+    height: 22px;
+    flex: 0 0 auto;
+  }
+
+  .sc-switch-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .sc-switch-ui {
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--color-surface-300);
+    transition: background 0.15s ease;
+  }
+
+  .sc-switch-ui::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: var(--shadow-thumb);
+    transition: transform 0.18s var(--ease-expo);
+  }
+
+  .sc-switch-input:checked + .sc-switch-ui {
+    background: var(--color-accent);
+  }
+
+  .sc-switch-input:checked + .sc-switch-ui::after {
+    transform: translateX(16px);
+  }
+
+  .sc-switch-input:focus-visible + .sc-switch-ui {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Piste creuse du donut de score : neutre de la rampe, pour suivre le thème
+     sombre au lieu d'être figée en clair dans l'attribut stroke du SVG. */
+  .sc-donut-track {
+    stroke: var(--color-surface-200);
+  }
+
+  /* ── Légende posée sur une visualisation ── */
+  .sc-viz-legend {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 10;
+    max-height: 190px;
+    min-width: 132px;
+    overflow-y: auto;
+    padding: 9px 11px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-10);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-legend);
+  }
+
+  /* La couleur vient de la palette du graphe : seule variable pilotée par JS. */
+  .sc-legend-swatch--data {
+    background: var(--sc-dot, var(--color-line-300));
+    border-radius: 50%;
+  }
+
+  .sc-viz-zoom {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  /* ── Phases : icône du dessin de phase dans la pastille ── */
+  .sc-phase-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Le libellé occupe la place restante, les métriques restent à droite. */
+  .sc-phase-label {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--text-12p5);
+    color: var(--color-ink-500);
+  }
+
+  .sc-phase.is-active .sc-phase-label {
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  .sc-phase.is-done .sc-phase-label {
+    color: var(--color-ink-700);
+  }
+
+  .sc-phase-meta {
+    font-size: var(--text-11);
+    color: var(--color-ink-500);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}

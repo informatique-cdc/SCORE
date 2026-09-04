@@ -1,0 +1,49 @@
+{% load i18n %}
+{# Modale du prompt système. La variable {context} est matérialisée par un jeton #}
+{# non éditable : l'éditeur refuse de supprimer le dernier.                      #}
+
+<div class="sc-scrim" data-overlay="chatPrompt" hidden>
+    <div class="sc-modal sc-modal--md" data-overlay-dialog role="dialog" aria-modal="true" aria-labelledby="chatPromptTitle">
+        <div class="sc-modal-head">
+            <div>
+                <h2 class="sc-modal-title" id="chatPromptTitle">{% trans "Prompt système de l'assistant" %}</h2>
+                <p class="sc-modal-sub">{% trans "Personnalisez les instructions données à l'assistant pour ce projet." %}</p>
+            </div>
+            <button type="button" class="sc-icon-btn sc-icon-btn--30" data-overlay-close aria-label="{% trans "Fermer" %}">✕</button>
+        </div>
+
+        <div class="sc-modal-body grid gap-3">
+            <p class="sc-modal-sub mt-0">
+                {% trans "La variable" %} <code class="sc-code">{context}</code>
+                {% trans "sera remplacée par les passages de documents trouvés — elle est obligatoire et ne peut pas être supprimée." %}
+            </p>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="sc-eyebrow">{% trans "Variables" %}</span>
+                <button type="button" class="sc-prompt-var" id="spInsertContext" data-tip="{% trans "Insérer la variable au curseur" %}">
+                    <svg viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                    context
+                </button>
+            </div>
+
+            <div class="sc-prompt-editor-wrap">
+                <div class="sc-prompt-editor" id="spEditor" contenteditable="true" spellcheck="true"
+                     role="textbox" aria-multiline="true" aria-label="{% trans "Prompt système" %}"
+                     data-placeholder="{% trans "Entrez votre prompt système personnalisé…" %}"></div>
+                <div class="sc-prompt-foot">
+                    <span id="spCharCount">0 {% trans "caractères" %}</span>
+                    <span class="sc-prompt-flag sc-prompt-flag--ok" id="spContextStatus">
+                        <svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        {% trans "{context} présent" %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sc-modal-foot">
+            <button type="button" class="sc-btn sc-btn--secondary flex-1" id="spResetBtn">{% trans "Rétablir par défaut" %}</button>
+            <button type="button" class="sc-btn sc-btn--secondary flex-1" data-overlay-close>{% trans "Annuler" %}</button>
+            <button type="button" class="sc-btn sc-btn--primary flex-1" id="spSaveBtn">{% trans "Enregistrer" %}</button>
+        </div>
+    </div>
+</div>

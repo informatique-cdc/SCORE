@@ -1,0 +1,66 @@
+/* Paliers de score A-E, déclinés en fond, en encre et en trait.
+
+   Ces classes se combinent avec des composants (.sc-tag, .sc-dim-fill, .sc-kpi-dot…)
+   qui déclarent eux aussi `background` ou `color`. Elles sont donc importées en
+   dernier : à spécificité égale, c'est l'ordre de déclaration qui tranche. */
+
+@layer components {
+  /* ── Remplissages et encres par palier de score ── */
+  .sc-fill--a {
+    background: var(--color-score-a);
+  }
+  .sc-fill--b {
+    background: var(--color-score-b);
+  }
+  .sc-fill--c {
+    background: var(--color-score-c);
+  }
+  .sc-fill--d {
+    background: var(--color-score-d);
+  }
+  .sc-fill--e {
+    background: var(--color-score-e);
+  }
+  .sc-fill--none {
+    background: var(--color-line-300);
+  }
+
+  .sc-ink--a {
+    color: var(--color-score-a);
+  }
+  .sc-ink--b {
+    color: var(--color-score-b);
+  }
+  /* Le jaune Nutri-Score est illisible sur fond blanc : assombri pour le texte. */
+  .sc-ink--c {
+    color: #c9a300;
+  }
+  .sc-ink--d {
+    color: var(--color-score-d);
+  }
+  .sc-ink--e {
+    color: var(--color-score-e);
+  }
+  .sc-ink--none {
+    color: var(--color-ink-400);
+  }
+
+  .sc-stroke--a {
+    stroke: var(--color-score-a);
+  }
+  .sc-stroke--b {
+    stroke: var(--color-score-b);
+  }
+  .sc-stroke--c {
+    stroke: var(--color-score-c);
+  }
+  .sc-stroke--d {
+    stroke: var(--color-score-d);
+  }
+  .sc-stroke--e {
+    stroke: var(--color-score-e);
+  }
+  .sc-stroke--none {
+    stroke: var(--color-line-300);
+  }
+}

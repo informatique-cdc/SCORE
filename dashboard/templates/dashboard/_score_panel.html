@@ -1,0 +1,168 @@
+{% load i18n score_ui %}
+<turbo-frame id="dashboard-score-panel" target="_top">
+<section class="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-stretch gap-4"
+         data-controller="auto-refresh"
+         data-auto-refresh-url-value="{% url 'dashboard-score-panel-partial' %}"
+         data-auto-refresh-frame-value="dashboard-score-panel"
+         data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
+
+    <div class="sc-card sc-card--roomy animate-rise">
+        <div class="mb-1 flex flex-wrap items-center justify-between gap-4">
+            <div class="sc-eyebrow">{% trans "Qualité de la base" %}</div>
+            {% if latest_analysis and latest_analysis.completed_at %}
+            <div class="text-11p5 text-ink-500">{% trans "Snapshot du" %} {{ latest_analysis.completed_at|date:"j M · H:i" }}</div>
+            {% endif %}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-7">
+            <div class="sc-donut">
+                <svg class="sc-donut-svg" viewBox="0 0 168 168">
+                    <circle cx="84" cy="84" r="70" fill="none" stroke="#f0f1f4" stroke-width="14" />
+                    {% if ds.score %}
+                    <circle class="sc-donut-value sc-stroke--{{ ds.score|score_color }}" cx="84" cy="84" r="70"
+                            fill="none" stroke-width="14" stroke-linecap="round"
+                            stroke-dasharray="{% widthratio ds.score 100 440 %} 440" />
+                    {% endif %}
+                </svg>
+                <div class="sc-donut-center">
+                    <div class="sc-donut-number">{{ ds.score }}</div>
+                    <div class="sc-donut-caption">{% trans "sur 100" %}</div>
+                </div>
+            </div>
+
+            <div class="min-w-[240px] flex-[1_1_260px]">
+                <div class="sc-grades">
+                    {% for letter in "ABCDE" %}
+                    <div class="sc-grade sc-grade--{{ letter|lower }}{% if ds.grade == letter %} is-active{% endif %}">{{ letter }}</div>
+                    {% endfor %}
+                </div>
+
+                {% if ds.has_analysis %}
+                <p class="mb-3.5 text-13p5 leading-normal text-ink-700 pretty">
+                    {% blocktrans with grade=ds.grade %}Note <strong>{{ grade }}</strong> sur les sept dimensions mesurées.{% endblocktrans %}
+                </p>
+                <button type="button" class="sc-btn sc-btn--secondary sc-btn--sm" data-overlay-open="scorePanel">{% trans "Voir le détail des 7 dimensions" %} →</button>
+                {% elif ds.has_docs %}
+                <p class="mb-3.5 text-13p5 leading-normal text-ink-700 pretty">
+                    {% trans "Vos documents sont indexés mais aucune analyse n'a encore été lancée : seule la santé du corpus est mesurée." %}
+                </p>
+                {% else %}
+                <p class="mb-3.5 text-13p5 leading-normal text-ink-700 pretty">
+                    {% trans "Connectez une source et synchronisez des documents pour obtenir un score." %}
+                </p>
+                <a href="{% url 'connector-create' %}" class="sc-btn sc-btn--secondary sc-btn--sm">{% trans "Ajouter un connecteur" %} →</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="sc-dims">
+            {% for d in dimensions %}
+            <div class="sc-dim">
+                <div class="sc-dim-label">{{ d.label }}</div>
+                <div class="sc-dim-track">
+                    {% if d.value is not None %}
+                    <div class="sc-dim-fill sc-fill--{{ d.value|score_color }}" style="--sc-fill: {{ d.value }}%"></div>
+                    {% endif %}
+                </div>
+                <div class="sc-dim-value">{% if d.value is not None %}{{ d.value }}{% else %}—{% endif %}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="grid min-w-0 grid-rows-[auto_1fr] gap-4">
+        <div class="sc-card animate-rise">
+            <div class="sc-eyebrow mb-3.5">{% trans "Profil du corpus" %}</div>
+            {% if ds.has_analysis %}
+            <div id="ds-radar" class="h-[240px] w-full"></div>
+            {% else %}
+            <div class="sc-empty">
+                <div class="sc-empty-detail">{% trans "Le profil apparaîtra après la première analyse." %}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if should_poll and latest_analysis %}
+        <div class="sc-card sc-card--dark animate-rise">
+            <div class="sc-sweep"></div>
+            <div class="sc-eyebrow mb-2.5 flex items-center gap-2">
+                <span class="sc-live-dot"></span>{% trans "Analyse en cours" %}
+            </div>
+            <div class="mb-1 font-display text-15">{{ latest_analysis.get_status_display }}</div>
+            <div class="mb-3.5 text-12 opacity-60">{% trans "Démarrée" %} {{ latest_analysis.created_at|timesince }}</div>
+            <a href="{% url 'analysis-detail' latest_analysis.pk %}" class="sc-btn sc-btn--on-dark">{% trans "Suivre la progression" %} →</a>
+        </div>
+        {% else %}
+        <div class="sc-card">
+            <div class="sc-eyebrow mb-3.5">{% trans "Corpus" %}</div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <div class="mb-1 text-11p5 text-ink-500">{% trans "Connecteurs" %}</div>
+                    <div class="font-display text-18 font-semibold num">{{ connector_count }}</div>
+                </div>
+                <div>
+                    <div class="mb-1 text-11p5 text-ink-500">{% trans "Clusters" %}</div>
+                    <div class="font-display text-18 font-semibold num">{{ cluster_count }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% if ds.has_analysis %}
+{{ breakdown_json|json_script:"radar-data" }}
+<script>
+(function() {
+    var el = document.getElementById("ds-radar");
+    var radarData = window.scChart && scChart.readJson("radar-data");
+    if (!el || !radarData || !window.echarts) return;
+
+    var chart = echarts.init(el, null, { renderer: "canvas" });
+
+    function draw() {
+        var t = scChart.tokens();
+        chart.setOption(Object.assign(scChart.base(), {
+            radar: {
+                indicator: radarData.map(function(d) { return { name: d.axis, max: 100 }; }),
+                shape: "polygon",
+                splitNumber: 5,
+                radius: "68%",
+                center: ["50%", "52%"],
+                axisName: { color: t.ink500, fontSize: 10 },
+                splitLine: { lineStyle: { color: t.line } },
+                splitArea: { areaStyle: { color: ["transparent", scChart.accentAlpha(0.035)] } },
+                axisLine: { lineStyle: { color: t.line } }
+            },
+            series: [{
+                type: "radar",
+                data: [
+                    {
+                        name: "{% trans "Objectif" %} 70",
+                        value: radarData.map(function() { return 70; }),
+                        lineStyle: { color: t.line400, width: 1.2, type: "dashed" },
+                        symbol: "none",
+                        itemStyle: { opacity: 0 }
+                    },
+                    {
+                        name: "{% trans "Aujourd'hui" %}",
+                        value: radarData.map(function(d) { return d.score; }),
+                        areaStyle: { color: scChart.accentAlpha(0.16) },
+                        lineStyle: { color: t.accent, width: 2 },
+                        itemStyle: { color: t.accent, borderColor: t.surface, borderWidth: 1 },
+                        symbol: "circle",
+                        symbolSize: 7
+                    }
+                ],
+                animationDuration: 800
+            }]
+        }));
+    }
+
+    draw();
+    scChart.autoResize(el, chart);
+    scChart.onThemeChange(draw);
+})();
+</script>
+{% endif %}
+</turbo-frame>

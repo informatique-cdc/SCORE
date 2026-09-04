@@ -21,6 +21,7 @@ from analysis.models import (
     TraceEvent,
 )
 from analysis.semantic_graph import graph_dir
+from score.cachekit import invalidate_project
 
 ITEMS_PER_PAGE = 20
 
@@ -131,6 +132,7 @@ def contradiction_resolve(request, pk, contra_pk):
     if resolution in ("resolved", "kept", ""):
         contra.resolution = resolution
         contra.save(update_fields=["resolution"])
+        invalidate_project(request.project)
 
     # Preserve active filters in redirect
     type_filter = request.POST.get("type_filter", "")
@@ -157,6 +159,7 @@ def contradiction_batch_resolve(request, pk):
             pk__in=ids,
             analysis_job=job,
         ).update(resolution=resolution)
+        invalidate_project(request.project)
 
     # Preserve active filters in redirect
     type_filter = request.POST.get("type_filter", "")
@@ -245,6 +248,7 @@ def gap_resolve(request, pk, gap_pk):
     if resolution in ("resolved", "kept", ""):
         gap.resolution = resolution
         gap.save(update_fields=["resolution"])
+        invalidate_project(request.project)
 
     type_filter = request.POST.get("type_filter", "")
     resolution_filter = request.POST.get("resolution_filter", "")
@@ -270,6 +274,7 @@ def gap_batch_resolve(request, pk):
             pk__in=ids,
             analysis_job=job,
         ).update(resolution=resolution)
+        invalidate_project(request.project)
 
     type_filter = request.POST.get("type_filter", "")
     resolution_filter = request.POST.get("resolution_filter", "")
@@ -336,6 +341,7 @@ def hallucination_resolve(request, pk, hallu_pk):
     if resolution in ("resolved", "kept", ""):
         report.resolution = resolution
         report.save(update_fields=["resolution"])
+        invalidate_project(request.project)
 
     type_filter = request.POST.get("type_filter", "")
     resolution_filter = request.POST.get("resolution_filter", "")
@@ -359,6 +365,7 @@ def hallucination_batch_resolve(request, pk):
             pk__in=ids,
             analysis_job=job,
         ).update(resolution=resolution)
+        invalidate_project(request.project)
 
     type_filter = request.POST.get("type_filter", "")
     resolution_filter = request.POST.get("resolution_filter", "")

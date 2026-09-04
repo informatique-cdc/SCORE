@@ -5,43 +5,43 @@
 
 {% block content %}
 {% if form.errors %}
-<div class="alert alert-danger">
+<div class="sc-auth-alert" role="alert">
+    {% for error in form.non_field_errors %}
+    <div>{{ error }}</div>
+    {% endfor %}
     {% for field in form %}
         {% for error in field.errors %}
         <div>{{ error }}</div>
         {% endfor %}
     {% endfor %}
-    {% for error in form.non_field_errors %}
-    <div>{{ error }}</div>
-    {% endfor %}
 </div>
 {% endif %}
 
-<form method="post" action="{% url 'account_signup' %}">
+<form method="post" action="{% url 'account_signup' %}" class="sc-auth-form">
     {% csrf_token %}
-    <div class="mb-3">
-        <label for="id_username" class="form-label">{% trans "Nom d'utilisateur" %}</label>
-        <input type="text" name="username" id="id_username" class="form-control" value="{{ form.username.value|default:'' }}" autofocus required>
+    <div class="sc-field">
+        <label class="sc-label" for="id_username">{% trans "Nom d'utilisateur" %}</label>
+        <input type="text" name="username" id="id_username" class="sc-input" value="{{ form.username.value|default:'' }}" autofocus required>
     </div>
-    <div class="mb-3">
-        <label for="id_email" class="form-label">{% trans "Email" %}</label>
-        <input type="email" name="email" id="id_email" class="form-control" value="{{ form.email.value|default:'' }}" required>
+    <div class="sc-field">
+        <label class="sc-label" for="id_email">{% trans "Email" %}</label>
+        <input type="email" name="email" id="id_email" class="sc-input" value="{{ form.email.value|default:'' }}" required>
     </div>
-    <div class="mb-3">
-        <label for="id_password1" class="form-label">{% trans "Mot de passe" %}</label>
-        <input type="password" name="password1" id="id_password1" class="form-control" required>
+    <div class="sc-field">
+        <label class="sc-label" for="id_password1">{% trans "Mot de passe" %}</label>
+        <input type="password" name="password1" id="id_password1" class="sc-input" required>
     </div>
-    <div class="mb-3">
-        <label for="id_password2" class="form-label">{% trans "Confirmer le mot de passe" %}</label>
-        <input type="password" name="password2" id="id_password2" class="form-control" required>
+    <div class="sc-field">
+        <label class="sc-label" for="id_password2">{% trans "Confirmer le mot de passe" %}</label>
+        <input type="password" name="password2" id="id_password2" class="sc-input" required>
     </div>
     {% if redirect_field_value %}
     <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
     {% endif %}
-    <button type="submit" class="btn btn-danger w-100">{% trans "Créer mon compte" %}</button>
+    <button type="submit" class="sc-btn sc-btn--primary w-full">{% trans "Créer mon compte" %}</button>
 </form>
 
-<div class="auth-footer">
+<div class="sc-auth-foot">
     {% trans "Déjà un compte ?" %} <a href="{% url 'account_login' %}">{% trans "Se connecter" %}</a>
 </div>
 {% endblock %}

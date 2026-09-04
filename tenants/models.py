@@ -92,6 +92,9 @@ class Project(TenantScopedModel):
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=80)
     description = models.TextField(blank=True, default="")
+    # Entre dans les clés de cache des composants du projet : l'incrémenter périme
+    # d'un coup tout ce qui a été calculé pour ce projet. Voir score.cachekit.
+    cache_version = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

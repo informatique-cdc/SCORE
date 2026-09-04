@@ -1,428 +1,223 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Ajouter un connecteur - SCORE" %}{% endblock %}
-{% block nav_connectors %}active{% endblock %}
 
-{% block extra_css %}
-<style>
-    .cf-wrap {
-        display: flex;
-        justify-content: center;
-        padding: 24px 0;
-    }
-    .cf-card {
-        width: 100%;
-        max-width: 520px;
-        background: var(--ds-grey-700);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: 14px;
-        padding: 36px 36px 28px;
-        position: relative;
-    }
+{% block title %}{% trans "Nouveau connecteur" %} - SCORE{% endblock %}
+{% block nav_connectors %}is-active{% endblock %}
 
-    /* Close button */
-    .cf-close {
-        position: absolute;
-        top: 16px; right: 16px;
-        background: none; border: none;
-        color: var(--ds-text-muted);
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        transition: color 0.15s;
-        line-height: 1;
-    }
-    .cf-close:hover { color: var(--ds-grey-100); }
-    .cf-close svg { width: 20px; height: 20px; }
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'connector-list' %}">{% trans "Connecteurs" %}<span class="sc-crumb-sep">/</span></a>
+    <span class="sc-crumb is-current">{% trans "Nouveau" %}</span>
+{% endblock %}
 
-    /* Icon header */
-    .cf-icons {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        margin-bottom: 20px;
-    }
-    .cf-icon-box {
-        width: 56px; height: 56px;
-        border-radius: 14px;
-        display: flex; align-items: center; justify-content: center;
-    }
-    .cf-icon-box svg { width: 28px; height: 28px; }
-    .cf-icon-box.sharepoint { background: rgba(13,110,253,0.12); color: #60a5fa; }
-    .cf-icon-box.confluence { background: rgba(13,202,240,0.12); color: #22d3ee; }
-    .cf-icon-box.elasticsearch { background: rgba(254,210,48,0.12); color: #fed230; }
-    .cf-icon-box.generic { background: rgba(108,113,126,0.12); color: #9ca3af; }
-    .cf-icon-box.zipupload { background: rgba(168,85,247,0.12); color: #a855f7; }
-    .cf-icon-box.score-icon { background: rgba(13,110,253,0.12); color: #0d6efd; }
-    .cf-arrow { color: var(--ds-text-muted); }
-    .cf-arrow svg { width: 20px; height: 20px; }
+{% block page_title %}{% trans "Nouveau connecteur" %}{% endblock %}
 
-    /* Title / subtitle */
-    .cf-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--ds-grey-100);
-        text-align: center;
-        margin-bottom: 6px;
-    }
-    .cf-subtitle {
-        font-size: 13px;
-        color: var(--ds-text-muted);
-        text-align: center;
-        margin-bottom: 28px;
-        line-height: 1.5;
-    }
+{% block page_lede %}
+<p class="sc-lede">{% trans "Trois étapes : choisissez la source, décrivez comment l'atteindre, fournissez les identifiants. SCORE indexera ensuite ses documents à chaque synchronisation." %}</p>
+{% endblock %}
 
-    /* Form fields */
-    .cf-label {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--ds-grey-100);
-        margin-bottom: 6px;
-        display: block;
-    }
-    .cf-input {
-        width: 100%;
-        background: var(--ds-grey-800);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: 10px;
-        color: var(--ds-grey-100);
-        font-size: 13px;
-        padding: 10px 14px;
-        transition: border-color 0.15s;
-    }
-    .cf-input:focus {
-        outline: none;
-        border-color: #0d6efd;
-    }
-    .cf-input::placeholder { color: var(--ds-text-muted); }
-    .cf-input:invalid:not(:placeholder-shown) {
-        border-color: #dc3545;
-    }
-    .cf-error {
-        font-size: 11px;
-        color: #dc3545;
-        margin-top: 4px;
-        display: none;
-    }
-    .cf-input:invalid:not(:placeholder-shown) + .cf-error,
-    .was-validated .cf-input:invalid + .cf-error {
-        display: block;
-    }
-    .cf-hint {
-        font-size: 11px;
-        color: var(--ds-text-muted);
-        margin-top: 4px;
-    }
-    .cf-group {
-        margin-bottom: 18px;
-    }
-
-    /* Select */
-    .cf-select {
-        width: 100%;
-        background: var(--ds-grey-800);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: 10px;
-        color: var(--ds-grey-100);
-        font-size: 13px;
-        padding: 10px 14px;
-        transition: border-color 0.15s;
-        appearance: auto;
-    }
-    .cf-select:focus {
-        outline: none;
-        border-color: #0d6efd;
-    }
-
-    /* Submit button */
-    .cf-submit {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 10px;
-        background: #0d6efd;
-        color: #fff;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.15s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        margin-top: 6px;
-    }
-    .cf-submit:hover { background: #0b5ed7; }
-    .cf-submit svg { width: 16px; height: 16px; }
-
-    /* Divider */
-    .cf-divider {
-        border: none;
-        border-top: 1px solid var(--ds-grey-500);
-        margin: 24px 0 16px;
-    }
-
-    /* Footer */
-    .cf-footer {
-        font-size: 12px;
-        color: var(--ds-text-muted);
-        text-align: center;
-        line-height: 1.6;
-    }
-    .cf-footer-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #0d6efd;
-        text-decoration: none;
-        margin-top: 8px;
-    }
-    .cf-footer-link:hover { text-decoration: underline; }
-    .cf-footer-link svg { width: 14px; height: 14px; }
-
-    /* Security banner (inline) */
-    .sec-banner-inline {
-        position: relative;
-        background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.02) 100%);
-        border: 1px solid rgba(16,185,129,0.18);
-        border-left: 3px solid #10b981;
-        border-radius: 10px;
-        padding: 12px 14px;
-        margin-bottom: 18px;
-        overflow: hidden;
-    }
-    .sec-banner-inline::before {
-        content: '';
-        position: absolute;
-        top: -30px; right: -30px;
-        width: 80px; height: 80px;
-        background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%);
-        pointer-events: none;
-    }
-    .sec-inline-row {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        position: relative;
-    }
-    .sec-inline-icon {
-        flex-shrink: 0;
-        width: 28px; height: 28px;
-        border-radius: 7px;
-        background: rgba(16,185,129,0.12);
-        display: flex; align-items: center; justify-content: center;
-        color: #10b981;
-        transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .sec-banner-inline:hover .sec-inline-icon { transform: scale(1.08) rotate(-3deg); }
-    .sec-inline-icon svg { width: 14px; height: 14px; }
-    .sec-inline-body { flex: 1; min-width: 0; }
-    .sec-inline-title {
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--ds-grey-100);
-        margin-bottom: 1px;
-    }
-    .sec-inline-text {
-        font-size: 11px;
-        color: var(--ds-text-muted);
-        line-height: 1.45;
-    }
-</style>
+{% block page_actions %}
+<a href="{% url 'connector-list' %}" class="sc-btn sc-btn--secondary">{% trans "Retour aux connecteurs" %}</a>
 {% endblock %}
 
 {% block content %}
-<div class="cf-wrap">
-    <div class="cf-card">
-        <!-- Close -->
-        <a href="{% url 'connector-list' %}" class="cf-close">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </a>
+<div class="sc-wizard">
+    <div class="sc-card sc-card--roomy">
 
-        <!-- Icons: connector type ⇄ SCORE -->
-        <div class="cf-icons">
-            <div class="cf-icon-box" id="cf-type-icon">
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        <div class="sc-steps mb-5">
+            <div class="sc-step is-current" data-cf-marker="1">
+                <span class="sc-step-n">1</span>
+                <span class="sc-step-label">{% trans "Source" %}</span>
+                <span class="sc-step-line"></span>
             </div>
-            <div class="cf-arrow">
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16l-4-4m0 0l4-4m-4 4h18"/><path d="M17 8l4 4m0 0l-4 4m4-4H3" opacity="0"/></svg>
+            <div class="sc-step" data-cf-marker="2">
+                <span class="sc-step-n">2</span>
+                <span class="sc-step-label">{% trans "Configuration" %}</span>
+                <span class="sc-step-line"></span>
             </div>
-            <div class="cf-icon-box score-icon">
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
+            <div class="sc-step" data-cf-marker="3">
+                <span class="sc-step-n">3</span>
+                <span class="sc-step-label">{% trans "Identifiants" %}</span>
             </div>
         </div>
 
-        <!-- Title -->
-        <div class="cf-title" id="cf-title">{% trans "Connecter SharePoint &agrave; SCORE" %}</div>
-        <div class="cf-subtitle">{% trans "Configurez les param&egrave;tres de connexion pour indexer automatiquement vos documents dans SCORE." %}</div>
+        {% if error %}
+        <div class="sc-card sc-card--danger mb-4 text-12p5">{{ error }}</div>
+        {% endif %}
 
-        {% if error %}<div class="alert alert-danger" style="font-size:13px;border-radius:10px;margin-bottom:18px;">{{ error }}</div>{% endif %}
-        <form method="post" id="create-form" enctype="multipart/form-data" data-turbo="false">
+        <form method="post" id="create-form" enctype="multipart/form-data" data-turbo="false" novalidate>
             {% csrf_token %}
 
-            <!-- Name -->
-            <div class="cf-group">
-                <label for="name" class="cf-label">{% trans "Nom du connecteur" %}</label>
-                <input type="text" name="name" id="name" class="cf-input" placeholder="{% trans "Ex. Documents RH" %}" required>
-                <div class="cf-error">{% trans "Veuillez saisir un nom pour le connecteur." %}</div>
-            </div>
-
-            <!-- Type selector -->
-            <div class="cf-group">
-                <label for="connector_type" class="cf-label">{% trans "Type de source" %}</label>
-                <select name="connector_type" id="connector_type" class="cf-select">
+            {# ── Étape 1 : type de source ── #}
+            <div class="sc-cf-panel" data-cf-step="1">
+                <div>
+                    <div class="sc-eyebrow">{% trans "Type de source" %}</div>
+                    <p class="mt-1 text-12 text-ink-500 pretty">{% trans "Le type détermine les paramètres de connexion demandés à l'étape suivante." %}</p>
+                </div>
+                <div class="sc-conn-types">
                     {% for val, label in connector_types %}
-                    <option value="{{ val }}">{{ label }}</option>
+                    <label class="sc-choice sc-choice--pick">
+                        <input type="radio" class="sc-choice-input" name="connector_type" value="{{ val }}"
+                               data-cf-type {% if forloop.first %}checked{% endif %}>
+                        <span class="flex items-center gap-2.5">
+                            <span class="sc-conn-badge sc-conn-badge--sm sc-conn-badge--{{ val }}">{{ val|slice:":2"|upper }}</span>
+                            <span class="sc-choice-title">{{ label }}</span>
+                        </span>
+                        <span class="sc-choice-sub">
+                            {% if val == 'sharepoint' %}{% trans "Bibliothèques SharePoint Online" %}
+                            {% elif val == 'confluence' %}{% trans "Espaces Confluence Cloud" %}
+                            {% elif val == 'elasticsearch' %}{% trans "Index Elasticsearch" %}
+                            {% elif val == 'zipupload' %}{% trans "Archive ZIP de documents" %}
+                            {% else %}{% trans "Fichiers locaux ou URL" %}{% endif %}
+                        </span>
+                    </label>
                     {% endfor %}
-                </select>
-            </div>
-
-            <!-- SharePoint config -->
-            <div id="config-sharepoint" class="connector-config">
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "URL du site" %}</label>
-                    <input type="text" name="config_site_url" class="cf-input" placeholder="your-site.sharepoint.com">
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "ID du lecteur (optionnel)" %}</label>
-                    <input type="text" name="config_drive_id" class="cf-input">
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Chemin du dossier" %}</label>
-                    <input type="text" name="config_folder_path" class="cf-input" value="/" placeholder="/">
                 </div>
             </div>
 
-            <!-- Confluence config -->
-            <div id="config-confluence" class="connector-config" style="display:none">
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "URL Confluence" %}</label>
-                    <input type="url" name="config_url" class="cf-input" placeholder="https://your-org.atlassian.net">
+            {# ── Étape 2 : configuration ── #}
+            <div class="sc-cf-panel" data-cf-step="2" hidden>
+                <label class="sc-field">
+                    <span class="sc-label">{% trans "Nom du connecteur" %}</span>
+                    <input type="text" name="name" id="name" class="sc-input" placeholder="{% trans "Ex. Documents RH" %}" required>
+                    <span class="text-11 text-ink-500">{% trans "Ce nom identifie la source dans SCORE." %}</span>
+                </label>
+
+                <div class="sc-eyebrow" data-cf-config-title></div>
+
+                <div class="sc-cf-panel connector-config" id="config-sharepoint">
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "URL du site" %}</span>
+                        <input type="text" name="config_site_url" class="sc-input" placeholder="your-site.sharepoint.com">
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "ID du lecteur" %} <span class="font-normal text-ink-500">({% trans "optionnel" %})</span></span>
+                        <input type="text" name="config_drive_id" class="sc-input">
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Chemin du dossier" %}</span>
+                        <input type="text" name="config_folder_path" class="sc-input" value="/" placeholder="/">
+                    </label>
                 </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Cl&eacute; d'espace" %}</label>
-                    <input type="text" name="config_space_key" class="cf-input">
+
+                <div class="sc-cf-panel connector-config" id="config-confluence" hidden>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "URL Confluence" %}</span>
+                        <input type="url" name="config_url" class="sc-input" placeholder="https://your-org.atlassian.net">
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Clé d'espace" %}</span>
+                        <input type="text" name="config_space_key" class="sc-input">
+                    </label>
+                </div>
+
+                <div class="sc-cf-panel connector-config" id="config-elasticsearch" hidden>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Hôte(s) Elasticsearch" %}</span>
+                        <input type="text" name="config_hosts" class="sc-input" placeholder="https://localhost:9200">
+                        <span class="text-11 text-ink-500">{% trans "URL(s) séparées par des virgules. Laisser vide si Cloud ID est renseigné." %}</span>
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Cloud ID" %} <span class="font-normal text-ink-500">({% trans "optionnel" %})</span></span>
+                        <input type="text" name="config_cloud_id" class="sc-input" placeholder="{% trans "deployment:dXMtY2Vud..." %}">
+                        <span class="text-11 text-ink-500">{% trans "Identifiant Elastic Cloud (alternative aux hôtes)." %}</span>
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Index" %}</span>
+                        <input type="text" name="config_index" class="sc-input" placeholder="{% trans "ex. documents, articles-*" %}" required>
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Méthode d'authentification" %}</span>
+                        <select name="config_auth_method" class="sc-select">
+                            <option value="api_key">{% trans "Clé API" %}</option>
+                            <option value="basic_auth">{% trans "Utilisateur / Mot de passe" %}</option>
+                            <option value="bearer_token">{% trans "Bearer Token" %}</option>
+                        </select>
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Utilisateur" %} <span class="font-normal text-ink-500">({% trans "basic_auth uniquement" %})</span></span>
+                        <input type="text" name="config_username" class="sc-input" placeholder="elastic">
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Champ contenu" %}</span>
+                        <input type="text" name="config_content_field" class="sc-input" placeholder="content" value="content">
+                        <span class="text-11 text-ink-500">{% trans "Nom du champ contenant le texte principal du document." %}</span>
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Champ titre" %}</span>
+                        <input type="text" name="config_title_field" class="sc-input" placeholder="title" value="title">
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Vérifier les certificats TLS" %}</span>
+                        <select name="config_verify_certs" class="sc-select">
+                            <option value="true" selected>{% trans "Oui" %}</option>
+                            <option value="false">{% trans "Non" %}</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="sc-cf-panel connector-config" id="config-generic" hidden>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Type de source" %}</span>
+                        <select name="config_source_type" class="sc-select">
+                            <option value="filesystem">{% trans "Système de fichiers local" %}</option>
+                            <option value="http">{% trans "URL HTTP/HTTPS" %}</option>
+                        </select>
+                    </label>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Chemin de base / URL" %}</span>
+                        <input type="text" name="config_base_path" class="sc-input" placeholder="/path/to/docs ou https://...">
+                    </label>
+                </div>
+
+                <div class="sc-cf-panel connector-config" id="config-zipupload" hidden>
+                    <label class="sc-field">
+                        <span class="sc-label">{% trans "Fichier ZIP" %}</span>
+                        <input type="file" name="zip_file" class="sc-input sc-file" accept=".zip,application/zip">
+                        <span class="text-11 text-ink-500">{% trans "Sélectionnez une archive ZIP contenant vos documents." %}</span>
+                    </label>
                 </div>
             </div>
 
-            <!-- Elasticsearch config -->
-            <div id="config-elasticsearch" class="connector-config" style="display:none">
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "H&ocirc;te(s) Elasticsearch" %}</label>
-                    <input type="text" name="config_hosts" class="cf-input" placeholder="https://localhost:9200">
-                    <div class="cf-hint">{% trans "URL(s) s&eacute;par&eacute;es par des virgules. Laisser vide si Cloud ID est renseign&eacute;." %}</div>
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Cloud ID (optionnel)" %}</label>
-                    <input type="text" name="config_cloud_id" class="cf-input" placeholder="{% trans "deployment:dXMtY2Vud..." %}">
-                    <div class="cf-hint">{% trans "Identifiant Elastic Cloud (alternative aux h&ocirc;tes)." %}</div>
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Index" %}</label>
-                    <input type="text" name="config_index" class="cf-input" placeholder="{% trans "ex. documents, articles-*" %}" required>
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "M&eacute;thode d'authentification" %}</label>
-                    <select name="config_auth_method" class="cf-select">
-                        <option value="api_key">{% trans "Cl&eacute; API" %}</option>
-                        <option value="basic_auth">{% trans "Utilisateur / Mot de passe" %}</option>
-                        <option value="bearer_token">{% trans "Bearer Token" %}</option>
-                    </select>
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Utilisateur (basic_auth uniquement)" %}</label>
-                    <input type="text" name="config_username" class="cf-input" placeholder="elastic">
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Champ contenu" %}</label>
-                    <input type="text" name="config_content_field" class="cf-input" placeholder="content" value="content">
-                    <div class="cf-hint">{% trans "Nom du champ contenant le texte principal du document." %}</div>
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Champ titre" %}</label>
-                    <input type="text" name="config_title_field" class="cf-input" placeholder="title" value="title">
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "V&eacute;rifier les certificats TLS" %}</label>
-                    <select name="config_verify_certs" class="cf-select">
-                        <option value="true" selected>{% trans "Oui" %}</option>
-                        <option value="false">{% trans "Non" %}</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Generic config -->
-            <div id="config-generic" class="connector-config" style="display:none">
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Type de source" %}</label>
-                    <select name="config_source_type" class="cf-select">
-                        <option value="filesystem">{% trans "Syst&egrave;me de fichiers local" %}</option>
-                        <option value="http">{% trans "URL HTTP/HTTPS" %}</option>
-                    </select>
-                </div>
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Chemin de base / URL" %}</label>
-                    <input type="text" name="config_base_path" class="cf-input" placeholder="/path/to/docs ou https://...">
-                </div>
-            </div>
-
-            <!-- Zip Upload config -->
-            <div id="config-zipupload" class="connector-config" style="display:none">
-                <div class="cf-group">
-                    <label class="cf-label">{% trans "Fichier ZIP" %}</label>
-                    <input type="file" name="zip_file" class="cf-input" accept=".zip,application/zip">
-                    <div class="cf-hint">{% trans "S&eacute;lectionnez une archive ZIP contenant vos documents." %}</div>
-                </div>
-            </div>
-
-            <!-- Security banner -->
-            <div class="sec-banner-inline">
-                <div class="sec-inline-row">
-                    <div class="sec-inline-icon">
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {# ── Étape 3 : identifiants ── #}
+            <div class="sc-cf-panel" data-cf-step="3" hidden>
+                <div class="sc-conn-note">
+                    <span class="sc-conn-shield">
+                        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-12p5 font-semibold">{% trans "Chiffrement au repos" %}</div>
+                        <p class="mt-0.5 text-11p5 leading-snug text-ink-500 pretty">
+                            {% trans "Votre secret sera chiffré avec une clé propre à votre organisation (Fernet + HKDF). Il ne sera jamais stocké en clair dans la base de données." %}
+                        </p>
                     </div>
-                    <div class="sec-inline-body">
-                        <div class="sec-inline-title">{% trans "Chiffrement de bout en bout" %}</div>
-                        <div class="sec-inline-text">{% trans "Votre secret sera chiffr&eacute; avec une cl&eacute; propre &agrave; votre organisation (Fernet + HKDF). Il ne sera jamais stock&eacute; en clair dans la base de donn&eacute;es." %}</div>
-                    </div>
                 </div>
+
+                <label class="sc-field">
+                    <span class="sc-label">{% trans "Clé API / Secret" %}</span>
+                    <input type="password" name="secret_value" id="secret_value" class="sc-input"
+                           placeholder="{% trans "Valeur du secret (stockée chiffrée)" %}" autocomplete="new-password">
+                    <span class="text-11 text-ink-500">{% trans "La valeur sera chiffrée avant stockage. Laissez vide pour utiliser une variable d'environnement." %}</span>
+                </label>
+
+                <label class="sc-field">
+                    <span class="sc-label">{% trans "Variable d'environnement" %} <span class="font-normal text-ink-500">({% trans "optionnel" %})</span></span>
+                    <input type="text" name="credential_ref" id="credential_ref" class="sc-input" placeholder="{% trans "ex. SHAREPOINT_CLIENT_SECRET" %}">
+                    <span class="text-11 text-ink-500">{% trans "Utilisée uniquement si aucun secret n'est saisi ci-dessus." %}</span>
+                </label>
+
+                <p class="text-11p5 leading-snug text-ink-500 pretty">
+                    {% trans "En créant ce connecteur, vous autorisez SCORE à accéder et indexer les documents de la source configurée. Vous pouvez le désactiver à tout moment depuis la page Connecteurs." %}
+                </p>
             </div>
 
-            <!-- Secret value (encrypted in DB) -->
-            <div class="cf-group">
-                <label for="secret_value" class="cf-label">{% trans "Cl&eacute; API / Secret" %}</label>
-                <input type="password" name="secret_value" id="secret_value" class="cf-input" placeholder="{% trans "Valeur du secret (stock&eacute;e chiffr&eacute;e)" %}" autocomplete="new-password">
-                <div class="cf-hint">{% trans "La valeur sera chiffr&eacute;e avant stockage. Laissez vide pour utiliser une variable d'environnement." %}</div>
+            <div class="sc-cf-foot">
+                <button type="button" class="sc-btn sc-btn--secondary" data-cf-back hidden>{% trans "Retour" %}</button>
+                <a href="{% url 'connector-list' %}" class="sc-btn sc-btn--secondary" data-cf-cancel>{% trans "Annuler" %}</a>
+                <div class="flex-1"></div>
+                <button type="button" class="sc-btn sc-btn--primary" data-cf-next>{% trans "Continuer" %}</button>
+                <button type="submit" class="sc-btn sc-btn--primary" data-cf-submit hidden>{% trans "Créer le connecteur" %}</button>
             </div>
-
-            <!-- Credential ref (env var fallback) -->
-            <div class="cf-group">
-                <label for="credential_ref" class="cf-label">{% trans "Variable d'environnement (optionnel)" %}</label>
-                <input type="text" name="credential_ref" id="credential_ref" class="cf-input" placeholder="{% trans "ex. SHAREPOINT_CLIENT_SECRET" %}">
-                <div class="cf-hint">{% trans "Utilis&eacute;e uniquement si aucun secret n'est saisi ci-dessus." %}</div>
-            </div>
-
-            <!-- Submit -->
-            <button type="submit" class="cf-submit">
-                <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                {% trans "Connecter" %}
-            </button>
         </form>
-
-        <hr class="cf-divider">
-
-        <div class="cf-footer">
-            {% trans "En cr&eacute;ant ce connecteur, vous autorisez SCORE &agrave; acc&eacute;der et indexer les documents de la source configur&eacute;e. Vous pouvez le d&eacute;sactiver &agrave; tout moment depuis la page Connecteurs." %}
-            <br>
-            <a href="{% url 'connector-list' %}" class="cf-footer-link">
-                {% trans "Retour aux connecteurs" %}
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
-            </a>
-        </div>
     </div>
 </div>
 {% endblock %}
@@ -430,73 +225,117 @@
 {% block extra_js %}
 <script>
 (function() {
-    var icons = {
-        sharepoint: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>',
-        confluence: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-        elasticsearch: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>',
-        generic: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
-        zipupload: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
-    };
-    var classes = {
-        sharepoint: 'sharepoint',
-        confluence: 'confluence',
-        elasticsearch: 'elasticsearch',
-        generic: 'generic',
-        zipupload: 'zipupload'
-    };
-    var titles = {
-        sharepoint: 'Connecter SharePoint \u00e0 SCORE',
-        confluence: 'Connecter Confluence \u00e0 SCORE',
-        elasticsearch: 'Connecter Elasticsearch \u00e0 SCORE',
-        generic: 'Connecter une source \u00e0 SCORE',
-        zipupload: 'Importer un fichier ZIP dans SCORE'
-    };
+    var form = document.getElementById('create-form');
+    if (!form) return;
 
-    var select = document.getElementById('connector_type');
-    var iconBox = document.getElementById('cf-type-icon');
-    var titleEl = document.getElementById('cf-title');
+    var markers = document.querySelectorAll('[data-cf-marker]');
+    var back = form.querySelector('[data-cf-back]');
+    var cancel = form.querySelector('[data-cf-cancel]');
+    var next = form.querySelector('[data-cf-next]');
+    var submit = form.querySelector('[data-cf-submit]');
+    var heading = form.querySelector('[data-cf-config-title]');
+    var LAST = 3;
+    var step = 1;
 
-    function update(type) {
-        /* Icon */
-        iconBox.className = 'cf-icon-box ' + (classes[type] || 'generic');
-        iconBox.innerHTML = icons[type] || icons.generic;
-        /* Title */
-        titleEl.textContent = titles[type] || titles.generic;
-        /* Config panels – hide all, disable their required fields */
-        document.querySelectorAll('.connector-config').forEach(function(el) {
-            el.style.display = 'none';
-            el.querySelectorAll('[required]').forEach(function(inp) { inp.disabled = true; });
-        });
-        var target = document.getElementById('config-' + type);
-        if (target) {
-            target.style.display = 'block';
-            target.querySelectorAll('[disabled]').forEach(function(inp) { inp.disabled = false; });
-        }
+    function panel(n) {
+        return form.querySelector('[data-cf-step="' + n + '"]');
     }
 
-    select.addEventListener('change', function() { update(this.value); });
+    function show(n) {
+        step = n;
+        form.querySelectorAll('[data-cf-step]').forEach(function(el) {
+            el.hidden = el.getAttribute('data-cf-step') !== String(n);
+        });
+        markers.forEach(function(m) {
+            var i = Number(m.getAttribute('data-cf-marker'));
+            m.classList.toggle('is-current', i === n);
+            m.classList.toggle('is-done', i < n);
+        });
+        back.hidden = n === 1;
+        cancel.hidden = n !== 1;
+        next.hidden = n === LAST;
+        submit.hidden = n !== LAST;
+    }
 
-    /* Form validation feedback */
-    var form = document.getElementById('create-form');
-    form.addEventListener('submit', function(e) {
-        if (!form.checkValidity()) {
-            e.preventDefault();
-            form.classList.add('was-validated');
-            var firstInvalid = form.querySelector(':invalid:not(fieldset)');
-            if (firstInvalid) {
-                firstInvalid.focus();
-                firstInvalid.scrollIntoView({behavior: 'smooth', block: 'center'});
+    // Le formulaire est en novalidate : sans cela le navigateur refuserait de
+    // signaler un champ requis situé dans une étape masquée.
+    function valid(n) {
+        var fields = panel(n).querySelectorAll('input, select, textarea');
+        for (var i = 0; i < fields.length; i++) {
+            var field = fields[i];
+            if (field.disabled || field.type === 'hidden' || field.offsetParent === null) continue;
+            if (!field.checkValidity()) {
+                field.reportValidity();
+                return false;
             }
         }
+        return true;
+    }
+
+    /* Panneau de configuration propre au type choisi. Les champs requis des
+       panneaux masqués sont désactivés : ils ne doivent ni bloquer l'envoi ni
+       partir dans la requête. */
+    function updateType() {
+        var picked = form.querySelector('[data-cf-type]:checked');
+        var type = picked ? picked.value : '';
+
+        form.querySelectorAll('.connector-config').forEach(function(el) {
+            el.hidden = true;
+            el.querySelectorAll('[required]').forEach(function(input) { input.disabled = true; });
+        });
+
+        var target = document.getElementById('config-' + type);
+        if (target) {
+            target.hidden = false;
+            target.querySelectorAll('[disabled]').forEach(function(input) { input.disabled = false; });
+        }
+
+        if (heading && picked) {
+            var label = picked.closest('.sc-choice').querySelector('.sc-choice-title');
+            heading.textContent = label ? label.textContent.trim() : '';
+        }
+    }
+
+    form.addEventListener('change', function(e) {
+        if (e.target.hasAttribute('data-cf-type')) updateType();
     });
 
-    /* Init from query param or default */
-    var params = new URLSearchParams(window.location.search);
-    var initial = params.get('type');
-    if (initial && icons[initial]) {
-        select.value = initial;
+    next.addEventListener('click', function() {
+        if (!valid(step)) return;
+        show(Math.min(step + 1, LAST));
+    });
+
+    back.addEventListener('click', function() {
+        show(Math.max(step - 1, 1));
+    });
+
+    form.addEventListener('submit', function(e) {
+        for (var n = 1; n <= LAST; n++) {
+            if (n === step) continue;
+            var target = panel(n);
+            var wasHidden = target.hidden;
+            target.hidden = false;
+            var ok = valid(n);
+            target.hidden = wasHidden;
+            if (!ok) {
+                e.preventDefault();
+                show(n);
+                valid(n);
+                return;
+            }
+        }
+        if (!valid(step)) e.preventDefault();
+    });
+
+    // Type pré-sélectionné depuis la grille « Ajouter une source ».
+    var wanted = new URLSearchParams(window.location.search).get('type');
+    if (wanted) {
+        var radio = form.querySelector('[data-cf-type][value="' + CSS.escape(wanted) + '"]');
+        if (radio) radio.checked = true;
     }
-    update(select.value);
+
+    updateType();
+    show(1);
 })();
 </script>
 {% endblock %}

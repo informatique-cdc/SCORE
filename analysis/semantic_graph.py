@@ -122,8 +122,61 @@ class ProjectGraphBuilder:
             )
 
 
+def graph_mtime(project_id: str):
+    """Horodatage de ``graph.json``, ou None si le graphe n'existe pas."""
+    try:
+        return graph_dir(project_id).joinpath("graph.json").stat().st_mtime_ns
+    except OSError:
+        return None
+
+
+def graph_stats(project_id: str):
+    """Nombre de concepts et de liens, sans reconstruire l'index vectoriel.
+
+    Reste coûteux — ``graph.json`` pèse des centaines de mégaoctets — mais bien
+    moins que ``load_graph``, qui reconstruit en plus l'index. Appelé depuis une
+    frame différée et mémoïsé sur l'horodatage du fichier.
+    """
+    try:
+        with open(graph_dir(project_id) / "graph.json") as f:
+            data = json.load(f)
+    except OSError:
+        return None
+    # networkx nomme la liste « links » jusqu'en 3.3, « edges » ensuite.
+    edges = data.get("edges") or data.get("links") or []
+    return {"total_nodes": len(data.get("nodes", [])), "total_edges": len(edges)}
+
+
+# Mémo local au process : reconstruire l'index vectoriel à chaque requête coûte
+# bien plus cher que de garder le graphe en mémoire. Un objet NSG ne peut pas
+# aller dans le cache partagé — il n'est ni sérialisable proprement ni de taille
+# raisonnable pour une colonne. Borné à deux entrées pour ne pas retenir les
+# graphes de tous les projets visités par un worker.
+_GRAPH_MEMO: dict = {}
+_GRAPH_MEMO_MAX = 2
+
+
 def load_graph(project_id: str):
     """Load a previously built graph from disk. Returns None if not found."""
+    mtime = graph_mtime(project_id)
+    if mtime is None:
+        _GRAPH_MEMO.pop(project_id, None)
+        return None
+
+    memo = _GRAPH_MEMO.get(project_id)
+    if memo and memo[0] == mtime:
+        return memo[1]
+
+    nsg = _read_graph(project_id)
+    if nsg is not None:
+        if len(_GRAPH_MEMO) >= _GRAPH_MEMO_MAX and project_id not in _GRAPH_MEMO:
+            _GRAPH_MEMO.pop(next(iter(_GRAPH_MEMO)))
+        _GRAPH_MEMO[project_id] = (mtime, nsg)
+    return nsg
+
+
+def _read_graph(project_id: str):
+    """Lit le graphe et ses vecteurs depuis le disque, puis reconstruit l'index."""
     import networkx as nx
 
     gdir = graph_dir(project_id)

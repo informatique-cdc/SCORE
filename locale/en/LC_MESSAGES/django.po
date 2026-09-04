@@ -1642,7 +1642,7 @@ msgstr "Problem"
 msgid "Envoi…"
 msgstr "Sending..."
 
-msgid "Erreur lors de l\\'envoi. Veuillez réessayer."
+msgid "Erreur lors de l'envoi. Veuillez réessayer."
 msgstr "Error while sending. Please try again."
 
 msgid "Vue d'ensemble de votre base de connaissances"

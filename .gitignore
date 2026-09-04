@@ -7,11 +7,19 @@ build/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
 data/
 staticfiles/
 *.log
 .coverage
+coverage.xml
 htmlcov/
 .pytest_cache/
 .ruff_cache/
 media/
+node_modules/
+Refonte interface SCORE/
+kg-plan.md
+dashboard/static/css/app.css
+dashboard/static/fonts/

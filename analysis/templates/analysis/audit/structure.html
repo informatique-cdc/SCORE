@@ -1,138 +1,135 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Structure RAG — Audit RAG{% endblock %}
-{% block nav_analysis %}active{% endblock %}
+{% load i18n analysis_ui score_ui %}
 
-{% block nav_analysis_submenu %}
-<a class="sidebar-subitem" href="{% url 'analysis-detail' job.analysis_job_id %}">Vue d'ensemble</a>
-<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">Audit RAG</a>
-<a class="sidebar-subitem" href="{% url 'analysis-trace' job.analysis_job_id %}">Trace pipeline</a>
+{% block title %}{{ axis_label }} - {% trans "Audit RAG" %} - SCORE{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'analysis-list' %}">{% trans "Analyses" %}<span class="sc-crumb-sep">/</span></a>
+    {% if job.analysis_job_id %}
+    <a class="sc-crumb" href="{% url 'analysis-detail' job.analysis_job_id %}">{% trans "Analyse" %} {{ analysis_number }}<span class="sc-crumb-sep">/</span></a>
+    <a class="sc-crumb" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">{% trans "Audit RAG" %}<span class="sc-crumb-sep">/</span></a>
+    {% endif %}
+    <span class="sc-crumb is-current">{{ axis_label }}</span>
 {% endblock %}
 
+{% block page_title %}{{ axis_label }}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Qualité du découpage des documents : taille des fragments, homogénéité, densité informationnelle et lisibilité. Un bon découpage donne au moteur et au modèle des unités de texte exploitables." %}</p>
+{% endblock %}
+
+{% block page_actions %}
+<span class="text-13 text-ink-500 num">{{ result.score|floatformat:0 }}/100</span>
+<span class="sc-tag sc-tag--grade sc-ink--{{ result.score|score_color }}">{{ result.score|score_grade }}</span>
+{% endblock %}
+
+{% block page_tabs %}{% if job.analysis_job_id %}{% analysis_tabs job.analysis_job "audit" %}{% endif %}{% endblock %}
+
 {% block content %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb mb-2" style="font-size:13px;--bs-breadcrumb-divider:'/';">
-        <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
-        <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyses</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyse {{ analysis_number }}</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'analysis-audit-overview' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Audit RAG</a></li>
-        <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">Structure RAG</li>
-    </ol>
-</nav>
+<div class="flex flex-col gap-3.5">
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Structure RAG</h2>
-    <span class="badge {% if result.score >= 80 %}bg-success{% elif result.score >= 60 %}bg-primary{% elif result.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:18px;padding:8px 16px;">
-        {{ result.score|floatformat:0 }}/100
-    </span>
-</div>
-<p class="text-muted mb-4" style="font-size:13px;">
-    Évalue la qualité du découpage (chunking) des documents : taille des fragments, homogénéité, densité informationnelle et lisibilité.
-    Un bon découpage garantit que le moteur de recherche et le LLM travaillent sur des unités de texte cohérentes et exploitables.
-</p>
+    <section class="sc-card sc-card--roomy">
+        <div class="sc-eyebrow mb-3.5">{% trans "Sous-scores" %}</div>
+        <div class="grid gap-3.5">
+            <div>
+                <div class="sc-dim">
+                    <div class="sc-dim-label">{% trans "Uniformité" %}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ metrics.sub_scores.uniformity|score_color }}" style="--sc-fill: {{ metrics.sub_scores.uniformity|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ metrics.sub_scores.uniformity|floatformat:0 }}</div>
+                </div>
+                <p class="sc-stat-hint">{% trans "Homogénéité des tailles de fragments. Des tailles proches améliorent la cohérence de la recherche." %}</p>
+            </div>
+            <div>
+                <div class="sc-dim">
+                    <div class="sc-dim-label">{% trans "Outliers" %}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ metrics.sub_scores.outliers|score_color }}" style="--sc-fill: {{ metrics.sub_scores.outliers|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ metrics.sub_scores.outliers|floatformat:0 }}</div>
+                </div>
+                <p class="sc-stat-hint">{% trans "Part de fragments aux tailles extrêmes, trop courts ou trop longs. Un score bas signale beaucoup de fragments hors norme." %}</p>
+            </div>
+            <div>
+                <div class="sc-dim">
+                    <div class="sc-dim-label">{% trans "Densité" %}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ metrics.sub_scores.density|score_color }}" style="--sc-fill: {{ metrics.sub_scores.density|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ metrics.sub_scores.density|floatformat:0 }}</div>
+                </div>
+                <p class="sc-stat-hint">{% trans "Densité informationnelle moyenne (mots uniques rapportés aux mots totaux). Un ratio élevé signale un contenu riche et peu répétitif." %}</p>
+            </div>
+            <div>
+                <div class="sc-dim">
+                    <div class="sc-dim-label">{% trans "Lisibilité" %}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ metrics.sub_scores.readability|score_color }}" style="--sc-fill: {{ metrics.sub_scores.readability|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ metrics.sub_scores.readability|floatformat:0 }}</div>
+                </div>
+                <p class="sc-stat-hint">{% trans "Longueur des phrases et des mots. Des fragments lisibles facilitent la génération de réponses fiables." %}</p>
+            </div>
+        </div>
+    </section>
 
-<!-- Sub-scores with explanations -->
-<div class="row g-3 mb-4">
-    <div class="col">
-        <div class="card stat-card {% if metrics.sub_scores.uniformity >= 80 %}success{% elif metrics.sub_scores.uniformity >= 60 %}primary{% elif metrics.sub_scores.uniformity >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
-            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.uniformity|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Uniformity</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Homogénéité des tailles de chunks. Un score élevé signifie que les fragments ont des tailles proches, ce qui améliore la cohérence de la recherche.</div>
+    <section class="grid grid-cols-6 gap-3">
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.total_chunks }}</div>
+            <div class="sc-stat-label">{% trans "Fragments" %}</div>
+            <div class="sc-stat-hint">{% trans "Total dans le corpus." %}</div>
         </div>
-    </div>
-    <div class="col">
-        <div class="card stat-card {% if metrics.sub_scores.outliers >= 80 %}success{% elif metrics.sub_scores.outliers >= 60 %}primary{% elif metrics.sub_scores.outliers >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
-            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.outliers|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Outliers</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Proportion de chunks aux tailles extrêmes (trop courts ou trop longs). Un score bas indique de nombreux fragments hors norme qui dégradent la qualité du RAG.</div>
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.mean_tokens|floatformat:0 }}</div>
+            <div class="sc-stat-label">{% trans "Moy. tokens" %}</div>
+            <div class="sc-stat-hint">{% trans "Idéal entre 200 et 500." %}</div>
         </div>
-    </div>
-    <div class="col">
-        <div class="card stat-card {% if metrics.sub_scores.density >= 80 %}success{% elif metrics.sub_scores.density >= 60 %}primary{% elif metrics.sub_scores.density >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
-            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.density|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Density</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Densité informationnelle moyenne des chunks (mots uniques / mots totaux). Un ratio élevé signifie un contenu riche et peu répétitif par fragment.</div>
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.std_tokens|floatformat:0 }}</div>
+            <div class="sc-stat-label">{% trans "Écart-type" %}</div>
+            <div class="sc-stat-hint">{% trans "Faible = découpage homogène." %}</div>
         </div>
-    </div>
-    <div class="col">
-        <div class="card stat-card {% if metrics.sub_scores.readability >= 80 %}success{% elif metrics.sub_scores.readability >= 60 %}primary{% elif metrics.sub_scores.readability >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
-            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.readability|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Readability</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Lisibilité du texte (longueur des phrases et des mots). Des chunks lisibles facilitent la compréhension par le LLM et la génération de réponses fiables.</div>
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.too_small }}</div>
+            <div class="sc-stat-label">{% trans "Trop courts" %}</div>
+            <div class="sc-stat-hint">{% trans "Peu de contexte pour le modèle." %}</div>
         </div>
-    </div>
-</div>
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.too_large }}</div>
+            <div class="sc-stat-label">{% trans "Trop longs" %}</div>
+            <div class="sc-stat-hint">{% trans "Risque de dilution et de bruit." %}</div>
+        </div>
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.avg_density|floatformat:2 }}</div>
+            <div class="sc-stat-label">{% trans "Densité moy." %}</div>
+            <div class="sc-stat-hint">{% trans "Proche de 1,0 = contenu varié." %}</div>
+        </div>
+    </section>
 
-<!-- Key metrics -->
-<div class="row g-3 mb-4">
-    <div class="col-md-2">
-        <div class="card p-3 text-center">
-            <div style="font-size:18px;font-weight:700;">{{ metrics.total_chunks }}</div>
-            <div class="text-muted" style="font-size:10px;">Chunks</div>
-            <div class="text-muted mt-1" style="font-size:9px;">Nombre total de fragments dans le corpus.</div>
+    <section class="grid grid-cols-2 gap-3.5">
+        <div class="sc-card">
+            <div class="sc-eyebrow mb-1.5">{% trans "Distribution des tailles" %}</div>
+            <p class="mb-3 text-11p5 text-ink-500 pretty">{% trans "Nombre de tokens par fragment. La bande claire marque la plage recommandée : les barres qui en sortent signalent des fragments trop courts ou trop longs." %}</p>
+            <div id="chart-histogram" class="sc-viz h-[280px]"></div>
         </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card p-3 text-center">
-            <div style="font-size:18px;font-weight:700;">{{ metrics.mean_tokens|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:10px;">Moy. tokens</div>
-            <div class="text-muted mt-1" style="font-size:9px;">Taille moyenne d'un chunk en tokens. Idéal entre 200 et 500 tokens.</div>
+        <div class="sc-card">
+            <div class="sc-eyebrow mb-1.5">{% trans "Taille et densité" %}</div>
+            <p class="mb-3 text-11p5 text-ink-500 pretty">{% trans "Un point par fragment : taille en abscisse, densité lexicale en ordonnée. Les fragments idéaux occupent le centre haut." %}</p>
+            <div id="chart-scatter" class="sc-viz h-[280px]"></div>
         </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card p-3 text-center">
-            <div style="font-size:18px;font-weight:700;">{{ metrics.std_tokens|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:10px;">Écart-type</div>
-            <div class="text-muted mt-1" style="font-size:9px;">Dispersion des tailles. Un écart-type faible indique un découpage homogène.</div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card p-3 text-center">
-            <div style="font-size:18px;font-weight:700;">{{ metrics.too_small }}</div>
-            <div class="text-muted" style="font-size:10px;">Trop courts</div>
-            <div class="text-muted mt-1" style="font-size:9px;">Chunks sous le seuil minimal. Trop courts = peu de contexte pour le LLM.</div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card p-3 text-center">
-            <div style="font-size:18px;font-weight:700;">{{ metrics.too_large }}</div>
-            <div class="text-muted" style="font-size:10px;">Trop longs</div>
-            <div class="text-muted mt-1" style="font-size:9px;">Chunks au-delà du seuil maximal. Trop longs = risque de dilution et de bruit.</div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card p-3 text-center">
-            <div style="font-size:18px;font-weight:700;">{{ metrics.avg_density|floatformat:2 }}</div>
-            <div class="text-muted" style="font-size:10px;">Densité moy.</div>
-            <div class="text-muted mt-1" style="font-size:9px;">Ratio mots uniques / total. Proche de 1.0 = contenu varié et informatif.</div>
-        </div>
-    </div>
-</div>
+    </section>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-6">
-        <div class="card p-3">
-            <h6 class="mb-3">Distribution des tailles (tokens)</h6>
-            <p class="text-muted mb-2" style="font-size:11px;">Histogramme du nombre de tokens par chunk. Les barres rouges indiquent les chunks hors des seuils (trop courts ou trop longs). Idéalement, la distribution est concentrée dans la zone cible.</p>
-            <div id="chart-histogram" style="height:280px;"></div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card p-3">
-            <h6 class="mb-3">Taille vs Densité</h6>
-            <p class="text-muted mb-2" style="font-size:11px;">Chaque point représente un chunk. L'axe X indique la taille en tokens, l'axe Y la densité lexicale (mots uniques / total). Les chunks idéaux se situent dans la zone centrale avec une densité élevée.</p>
-            <div id="chart-scatter" style="height:280px;"></div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-12">
-        <div class="card p-3">
-            <h6 class="mb-3">Distribution par source (connecteur)</h6>
-            <p class="text-muted mb-2" style="font-size:11px;">Boîtes à moustaches de la taille des chunks par source. La barre blanche indique la médiane, la boîte couvre les quartiles Q1-Q3, et les moustaches vont du min au max. Permet d'identifier les connecteurs produisant des chunks trop hétérogènes.</p>
-            <div id="chart-violin" style="height:280px;"></div>
-        </div>
-    </div>
+    <section class="sc-card">
+        <div class="sc-eyebrow mb-1.5">{% trans "Distribution par source" %}</div>
+        <p class="mb-3 text-11p5 text-ink-500 pretty">{% trans "Boîtes à moustaches de la taille des fragments par connecteur : médiane, quartiles Q1-Q3, minimum et maximum. Repère les sources trop hétérogènes." %}</p>
+        <div id="chart-violin" class="sc-viz h-[280px]"></div>
+    </section>
 </div>
 {% endblock %}
 
@@ -140,74 +137,187 @@
 {{ chart_data|json_script:"chart-data" }}
 <script>
 (function() {
-    const chartData = JSON.parse(document.getElementById("chart-data").textContent);
-    const thresholds = chartData.thresholds || {};
+    var chartData = JSON.parse(document.getElementById("chart-data").textContent);
+    var thresholds = chartData.thresholds || {};
 
-    // Token histogram with threshold lines
-    if (chartData.token_histogram && chartData.token_histogram.length) {
-        const data = chartData.token_histogram;
-        const container = d3.select("#chart-histogram");
-        const w = container.node().clientWidth, h = 280;
-        const margin = {top: 10, right: 10, bottom: 30, left: 45};
-        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
-        const x = d3.scaleBand().domain(data.map((d,i) => i)).range([margin.left, w - margin.right]).padding(0.05);
-        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([h - margin.bottom, margin.top]);
+    /* Plage recommandée : la moitié haute de la cible configurée (256-512 tokens
+       avec le réglage par défaut). En dessous le fragment manque de contexte,
+       au-dessus il dilue l'information. */
+    var optimal = Number(thresholds.optimal) || 0;
+    var bandLo = optimal ? optimal / 2 : null;
+    var bandHi = optimal || null;
 
-        svg.selectAll("rect").data(data).join("rect")
-            .attr("x", (d,i) => x(i)).attr("y", d => y(d.count))
-            .attr("width", x.bandwidth()).attr("height", d => y(0) - y(d.count))
-            .attr("fill", d => (d.bin_end <= thresholds.min || d.bin_start >= thresholds.max) ? "#dc3545" : "#0d6efd")
-            .attr("rx", 1);
-
-        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).tickFormat(i => data[i] ? Math.round(data[i].bin_start) : "").tickValues(data.map((d,i) => i).filter(i => i % 3 === 0))).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","9px");
-        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
-        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    /* Le conteneur est vidé à chaque passe : draw() est rejoué au changement de thème. */
+    function frame(id) {
+        var el = document.getElementById(id);
+        if (!el) return null;
+        el.innerHTML = "";
+        return { el: el, w: el.clientWidth || 420 };
     }
 
-    // Scatter: size vs density
-    if (chartData.size_density_scatter && chartData.size_density_scatter.length) {
-        const data = chartData.size_density_scatter;
-        const container = d3.select("#chart-scatter");
-        const w = container.node().clientWidth, h = 280;
-        const margin = {top: 10, right: 10, bottom: 30, left: 45};
-        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
-        const x = d3.scaleLinear().domain([0, d3.max(data, d => d.tokens)]).nice().range([margin.left, w - margin.right]);
-        const y = d3.scaleLinear().domain([0, 1]).range([h - margin.bottom, margin.top]);
-
-        svg.selectAll("circle").data(data).join("circle")
-            .attr("cx", d => x(d.tokens)).attr("cy", d => y(d.density))
-            .attr("r", 2.5).attr("fill", "#0d6efd").attr("opacity", 0.5);
-
-        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).ticks(6)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","9px");
-        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
-        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    function note(el, message) {
+        var div = document.createElement("div");
+        div.className = "sc-viz-note";
+        div.textContent = message;
+        el.appendChild(div);
     }
 
-    // Violin-like per source (box plot)
-    if (chartData.source_violin && chartData.source_violin.length) {
-        const data = chartData.source_violin;
-        const container = d3.select("#chart-violin");
-        const w = container.node().clientWidth, h = 280;
-        const margin = {top: 10, right: 10, bottom: 40, left: 45};
-        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
-        const x = d3.scaleBand().domain(data.map(d => d.source)).range([margin.left, w - margin.right]).padding(0.3);
-        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.max) * 1.1]).nice().range([h - margin.bottom, margin.top]);
-
-        data.forEach(d => {
-            const cx = x(d.source) + x.bandwidth() / 2;
-            const bw = x.bandwidth();
-            // Whiskers
-            svg.append("line").attr("x1",cx).attr("x2",cx).attr("y1",y(d.min)).attr("y2",y(d.max)).attr("stroke","var(--ds-grey-100)").attr("stroke-width",1);
-            // Box
-            svg.append("rect").attr("x",x(d.source)).attr("y",y(d.q3)).attr("width",bw).attr("height",Math.max(1,y(d.q1)-y(d.q3))).attr("fill","#0d6efd").attr("opacity",0.7).attr("rx",2);
-            // Median
-            svg.append("line").attr("x1",x(d.source)).attr("x2",x(d.source)+bw).attr("y1",y(d.median)).attr("y2",y(d.median)).attr("stroke","#fff").attr("stroke-width",2);
-        });
-
-        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","10px");
-        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(5)).selectAll("text").attr("fill","var(--ds-grey-100)");
-        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
+    function makeSvg(f, h) {
+        return d3.select(f.el).append("svg")
+            .attr("viewBox", "0 0 " + f.w + " " + h)
+            .attr("width", "100%").attr("height", h);
     }
+
+    /* Axe de valeurs : libellés discrets. Axe de catégories : libellés lisibles. */
+    function axisStyle(g, t, kind) {
+        g.selectAll(".tick text")
+            .attr("fill", kind === "category" ? t.ink700 : t.ink500)
+            .style("font-size", kind === "category" ? "11px" : "10px");
+        g.selectAll(".domain, .tick line").attr("stroke", t.line);
+    }
+
+    function tipOn(sel, f, tip, html) {
+        sel.on("mouseover", function(e, d) { tip.style("display", "block").html(html(d)); })
+            .on("mousemove", function(e) {
+                var box = f.el.getBoundingClientRect();
+                tip.style("left", (e.clientX - box.left + 12) + "px").style("top", (e.clientY - box.top - 10) + "px");
+            })
+            .on("mouseout", function() { tip.style("display", "none"); });
+    }
+
+    function draw() {
+        var t = scChart.tokens();
+
+        // ── Histogramme des tailles, avec la bande recommandée ──
+        var f = frame("chart-histogram");
+        if (f && chartData.token_histogram && chartData.token_histogram.length) {
+            var data = chartData.token_histogram;
+            var h = 280, m = { top: 10, right: 10, bottom: 28, left: 44 };
+            var svg = makeSvg(f, h);
+            var x = d3.scaleBand().domain(data.map(function(d, i) { return i; })).range([m.left, f.w - m.right]).padding(0.06);
+            var y = d3.scaleLinear().domain([0, d3.max(data, function(d) { return d.count; })]).nice().range([h - m.bottom, m.top]);
+
+            var center = function(d) { return (d.bin_start + d.bin_end) / 2; };
+            var inBand = function(d) {
+                if (bandLo === null) return true;
+                return center(d) >= bandLo && center(d) <= bandHi;
+            };
+
+            // Rectangle translucide posé derrière les barres.
+            if (bandLo !== null) {
+                var lo = null, hi = null;
+                data.forEach(function(d, i) {
+                    if (inBand(d)) {
+                        if (lo === null) lo = i;
+                        hi = i;
+                    }
+                });
+                if (lo !== null) {
+                    var pad = x.step() * x.padding() / 2;
+                    var bandX = x(lo) - pad;
+                    var bandW = x(hi) + x.bandwidth() + pad - bandX;
+                    svg.append("rect")
+                        .attr("x", bandX).attr("y", m.top)
+                        .attr("width", bandW).attr("height", h - m.bottom - m.top)
+                        .attr("rx", 4)
+                        .attr("fill", scChart.accentAlpha(0.06))
+                        .attr("stroke", t.b)
+                        .attr("stroke-dasharray", "3 3");
+                    svg.append("text")
+                        .attr("x", bandX + 6).attr("y", m.top + 12)
+                        .attr("fill", t.ink500).style("font-size", "9.5px")
+                        .text("{% trans "plage recommandée" %} " + Math.round(bandLo) + "–" + Math.round(bandHi));
+                }
+            }
+
+            var tip = d3.select(f.el).append("div").attr("class", "tooltip-viz").style("display", "none");
+            var bars = svg.selectAll("rect.sc-bar").data(data).join("rect")
+                .attr("class", "sc-bar")
+                .attr("x", function(d, i) { return x(i); })
+                .attr("y", y(0))
+                .attr("width", x.bandwidth())
+                .attr("height", 0)
+                .attr("rx", 1.5)
+                .attr("fill", function(d) {
+                    if (bandLo === null || inBand(d)) return t.accent;
+                    return center(d) < bandLo ? t.c : t.d;
+                });
+            tipOn(bars, f, tip, function(d) {
+                return "<strong>" + Math.round(d.bin_start) + "–" + Math.round(d.bin_end) +
+                    " {% trans "tokens" %}</strong><br>" + d.count + " {% trans "fragments" %}";
+            });
+            bars.transition().duration(700).delay(function(d, i) { return i * 35; })
+                .attr("y", function(d) { return y(d.count); })
+                .attr("height", function(d) { return y(0) - y(d.count); });
+
+            var gx = svg.append("g").attr("transform", "translate(0," + (h - m.bottom) + ")")
+                .call(d3.axisBottom(x)
+                    .tickFormat(function(i) { return data[i] ? Math.round(data[i].bin_start) : ""; })
+                    .tickValues(data.map(function(d, i) { return i; }).filter(function(i) { return i % 3 === 0; })));
+            var gy = svg.append("g").attr("transform", "translate(" + m.left + ",0)").call(d3.axisLeft(y).ticks(5));
+            axisStyle(gx, t, "value");
+            axisStyle(gy, t, "value");
+        } else if (f) {
+            note(f.el, "{% trans "Aucune donnée de taille." %}");
+        }
+
+        // ── Taille et densité ──
+        f = frame("chart-scatter");
+        if (f && chartData.size_density_scatter && chartData.size_density_scatter.length) {
+            var pts = chartData.size_density_scatter;
+            var sh = 280, sm = { top: 10, right: 10, bottom: 28, left: 44 };
+            var ssvg = makeSvg(f, sh);
+            var sx = d3.scaleLinear().domain([0, d3.max(pts, function(d) { return d.tokens; })]).nice().range([sm.left, f.w - sm.right]);
+            var sy = d3.scaleLinear().domain([0, 1]).range([sh - sm.bottom, sm.top]);
+            var stip = d3.select(f.el).append("div").attr("class", "tooltip-viz").style("display", "none");
+            var dots = ssvg.selectAll("circle").data(pts).join("circle")
+                .attr("cx", function(d) { return sx(d.tokens); })
+                .attr("cy", function(d) { return sy(d.density); })
+                .attr("r", 2.5).attr("fill", t.accent).attr("opacity", 0.45);
+            tipOn(dots, f, stip, function(d) {
+                return "<strong>" + d.doc_title + "</strong><br>" + d.tokens +
+                    " {% trans "tokens" %} · {% trans "densité" %} " + d.density;
+            });
+            var sgx = ssvg.append("g").attr("transform", "translate(0," + (sh - sm.bottom) + ")").call(d3.axisBottom(sx).ticks(6));
+            var sgy = ssvg.append("g").attr("transform", "translate(" + sm.left + ",0)").call(d3.axisLeft(sy).ticks(5));
+            axisStyle(sgx, t, "value");
+            axisStyle(sgy, t, "value");
+        } else if (f) {
+            note(f.el, "{% trans "Aucun fragment mesuré." %}");
+        }
+
+        // ── Boîtes par source ──
+        f = frame("chart-violin");
+        if (f && chartData.source_violin && chartData.source_violin.length) {
+            var box = chartData.source_violin;
+            var bh = 280, bm = { top: 10, right: 10, bottom: 38, left: 44 };
+            var bsvg = makeSvg(f, bh);
+            var bx = d3.scaleBand().domain(box.map(function(d) { return d.source; })).range([bm.left, f.w - bm.right]).padding(0.35);
+            var by = d3.scaleLinear().domain([0, d3.max(box, function(d) { return d.max; }) * 1.1]).nice().range([bh - bm.bottom, bm.top]);
+
+            box.forEach(function(d) {
+                var cx = bx(d.source) + bx.bandwidth() / 2;
+                bsvg.append("line").attr("x1", cx).attr("x2", cx).attr("y1", by(d.min)).attr("y2", by(d.max))
+                    .attr("stroke", t.line300).attr("stroke-width", 1);
+                bsvg.append("rect").attr("x", bx(d.source)).attr("y", by(d.q3))
+                    .attr("width", bx.bandwidth()).attr("height", Math.max(1, by(d.q1) - by(d.q3)))
+                    .attr("fill", t.accent).attr("opacity", 0.7).attr("rx", 3);
+                bsvg.append("line").attr("x1", bx(d.source)).attr("x2", bx(d.source) + bx.bandwidth())
+                    .attr("y1", by(d.median)).attr("y2", by(d.median))
+                    .attr("stroke", t.surface).attr("stroke-width", 2);
+            });
+
+            var bgx = bsvg.append("g").attr("transform", "translate(0," + (bh - bm.bottom) + ")").call(d3.axisBottom(bx));
+            var bgy = bsvg.append("g").attr("transform", "translate(" + bm.left + ",0)").call(d3.axisLeft(by).ticks(5));
+            axisStyle(bgx, t, "category");
+            axisStyle(bgy, t, "value");
+        } else if (f) {
+            note(f.el, "{% trans "Aucune source mesurée." %}");
+        }
+    }
+
+    draw();
+    scChart.onThemeChange(draw);
 })();
 </script>
 {% endblock %}

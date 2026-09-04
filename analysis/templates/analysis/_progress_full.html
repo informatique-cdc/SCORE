@@ -4,130 +4,128 @@
 <script>window.location.reload();</script>
 {% endif %}
 
-<div class="progress-page">
-    <!-- Header -->
-    <div class="progress-header">
-        <div class="progress-header-icon">
-            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            </svg>
-        </div>
-        <h2>{% if job.status == "queued" %}{% trans "Analyse en attente" %}{% else %}{% trans "Analyse en cours" %}{% endif %}</h2>
-        <div class="subtitle">
-            {{ job.created_at|date:"d M Y, H:i" }}
-            &middot; {{ job.project.name }}
-        </div>
-    </div>
+<div class="mx-auto flex max-w-[760px] flex-col gap-3.5">
 
-    <!-- Overall progress -->
-    <div class="overall-bar-wrapper">
-        <div class="overall-bar-top">
-            <span class="overall-pct">{{ job.progress_pct }}%</span>
+    <div class="sc-card sc-card--dark sc-card--roomy animate-rise">
+        <div class="sc-sweep"></div>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="sc-eyebrow flex items-center gap-2">
+                <span class="sc-live-dot"></span>
+                {% if job.status == "queued" %}{% trans "Analyse en attente" %}{% else %}{% trans "Analyse en cours" %}{% endif %}
+            </div>
             {% if overall_eta %}
-            <span class="overall-eta">{% trans "Temps restant :" %} {{ overall_eta }}</span>
+            <div class="text-11p5 opacity-60">{% trans "Temps restant :" %} {{ overall_eta }}</div>
             {% endif %}
         </div>
-        <div class="overall-progress">
-            <div class="overall-progress-fill" style="width:{{ job.progress_pct }}%"></div>
+
+        <div class="mb-3 flex items-baseline gap-2.5">
+            <span class="sc-metric">{{ job.progress_pct }}%</span>
+            <span class="text-13 opacity-70">{{ job.get_current_phase_display }}</span>
+        </div>
+
+        <div class="sc-track sc-track--live sc-track--on-dark h-2.5">
+            <div class="sc-track-fill" style="--sc-fill: {{ job.progress_pct }}%"></div>
         </div>
     </div>
 
-    <!-- Stepper: Analysis phases -->
-    <div class="stepper-section">
-        <div class="stepper-section-title">{% trans "Analyse du corpus" %}</div>
-        <ul class="stepper-list">
-            {% for phase in analysis_phases %}
-            <li class="stepper-item {{ phase.status }}">
-                <div class="stepper-indicator">
-                    {% if phase.status == "done" %}
-                    <svg fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                    {% else %}
-                    <svg fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="{{ phase.icon_svg }}"/></svg>
-                    {% endif %}
-                </div>
-                <div class="stepper-body">
-                    <div class="stepper-label">{{ phase.label }}</div>
-                    {% if phase.status == "active" and job.phase_detail.step %}
-                    <div class="stepper-sub">
-                        <div class="stepper-sub-label">
-                            {{ job.phase_detail.step }}
-                            &mdash; {{ job.phase_detail.done }} / {{ job.phase_detail.total }}
-                            {% if sub_eta %}({{ sub_eta }}){% endif %}
-                        </div>
-                        {% widthratio job.phase_detail.done job.phase_detail.total 100 as sub_pct %}
-                        <div class="stepper-sub-bar">
-                            <div class="stepper-sub-bar-fill" style="width:{{ sub_pct }}%"></div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
+    <div class="sc-card">
+        <div class="sc-steps">
+            <div class="sc-step {% if job.current_phase == 'done' or job.current_phase|slice:':6' == 'audit_' %}is-done{% else %}is-current{% endif %}">
+                <span class="sc-step-n">1</span>
+                <span class="sc-step-label">{% trans "Analyse du corpus" %}</span>
+                <span class="sc-step-line"></span>
+            </div>
+            <div class="sc-step {% if job.current_phase == 'done' %}is-done{% elif job.current_phase|slice:':6' == 'audit_' %}is-current{% endif %}">
+                <span class="sc-step-n">2</span>
+                <span class="sc-step-label">{% trans "Audit qualité" %}</span>
+                <span class="sc-step-line"></span>
+            </div>
+            <div class="sc-step {% if job.current_phase == 'done' %}is-current{% endif %}">
+                <span class="sc-step-n">3</span>
+                <span class="sc-step-label">{% trans "Rapport" %}</span>
+            </div>
+        </div>
     </div>
 
-    <!-- Stepper: Audit phases -->
-    <div class="stepper-section">
-        <div class="stepper-section-title">{% trans "Audit qualit&eacute;" %}</div>
-        <ul class="stepper-list">
-            {% for phase in audit_phases %}
-            <li class="stepper-item {{ phase.status }}">
-                <div class="stepper-indicator">
+    <div class="sc-card">
+        <div class="sc-eyebrow mb-3">{% trans "Analyse du corpus" %}</div>
+        <div class="grid gap-1.5">
+            {% for phase in analysis_phases %}
+            <div class="sc-phase {% if phase.status == 'active' %}is-active{% elif phase.status == 'done' %}is-done{% endif %}">
+                <span class="sc-phase-dot">
                     {% if phase.status == "done" %}
-                    <svg fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg class="sc-phase-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     {% else %}
-                    <svg fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="{{ phase.icon_svg }}"/></svg>
+                    <svg class="sc-phase-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ phase.icon_svg }}"/></svg>
                     {% endif %}
-                </div>
-                <div class="stepper-body">
-                    <div class="stepper-label">{{ phase.label }}</div>
-                    {% if phase.status == "active" and job.phase_detail.step %}
-                    <div class="stepper-sub">
-                        <div class="stepper-sub-label">
-                            {{ job.phase_detail.step }}
-                            &mdash; {{ job.phase_detail.done }} / {{ job.phase_detail.total }}
-                            {% if sub_eta %}({{ sub_eta }}){% endif %}
-                        </div>
-                        {% widthratio job.phase_detail.done job.phase_detail.total 100 as sub_pct %}
-                        <div class="stepper-sub-bar">
-                            <div class="stepper-sub-bar-fill" style="width:{{ sub_pct }}%"></div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </li>
+                </span>
+                <span class="sc-phase-label cell-truncate">{{ phase.label }}</span>
+                {% if phase.status == "active" and job.phase_detail.step %}
+                {% widthratio job.phase_detail.done job.phase_detail.total 100 as sub_pct %}
+                <span class="sc-phase-meta">{{ job.phase_detail.step }} · {{ job.phase_detail.done }}/{{ job.phase_detail.total }}{% if sub_eta %} · {{ sub_eta }}{% endif %}</span>
+                <div class="sc-phase-track"><div class="sc-phase-fill" style="--sc-fill: {{ sub_pct }}%"></div></div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="sc-empty">
+                <div class="sc-empty-detail">{% trans "Aucune phase à afficher." %}</div>
+            </div>
             {% endfor %}
-        </ul>
+        </div>
+    </div>
+
+    <div class="sc-card">
+        <div class="sc-eyebrow mb-3">{% trans "Audit qualité" %}</div>
+        <div class="grid gap-1.5">
+            {% for phase in audit_phases %}
+            <div class="sc-phase {% if phase.status == 'active' %}is-active{% elif phase.status == 'done' %}is-done{% endif %}">
+                <span class="sc-phase-dot">
+                    {% if phase.status == "done" %}
+                    <svg class="sc-phase-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    {% else %}
+                    <svg class="sc-phase-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ phase.icon_svg }}"/></svg>
+                    {% endif %}
+                </span>
+                <span class="sc-phase-label cell-truncate">{{ phase.label }}</span>
+                {% if phase.status == "active" and job.phase_detail.step %}
+                {% widthratio job.phase_detail.done job.phase_detail.total 100 as sub_pct %}
+                <span class="sc-phase-meta">{{ job.phase_detail.step }} · {{ job.phase_detail.done }}/{{ job.phase_detail.total }}{% if sub_eta %} · {{ sub_eta }}{% endif %}</span>
+                <div class="sc-phase-track"><div class="sc-phase-fill" style="--sc-fill: {{ sub_pct }}%"></div></div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="sc-empty">
+                <div class="sc-empty-detail">{% trans "Cette analyse n'inclut pas d'audit RAG." %}</div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
     {% if job.error_message %}
-    <div class="alert alert-danger mt-4" style="font-size:13px;">{{ job.error_message|truncatechars:500 }}</div>
+    <div class="sc-card sc-card--danger">
+        <div class="sc-eyebrow mb-1.5 text-danger-ink">{% trans "Échec du pipeline" %}</div>
+        <p class="sc-finding-detail text-danger-ink-soft">{{ job.error_message|truncatechars:500 }}</p>
+    </div>
     {% endif %}
 
-    <!-- Actions -->
-    <div class="d-flex justify-content-center align-items-center gap-3 mt-4" style="font-size:13px;">
-        <a href="{% url 'analysis-list' %}" class="text-muted" style="text-decoration:none;" data-turbo-frame="_top">&larr; {% trans "Retour &agrave; l'historique" %}</a>
-        <span style="color:var(--ds-grey-500);">&middot;</span>
-        <form method="post" action="{% url 'analysis-cancel' job.pk %}" data-turbo-frame="_top" style="display:inline;"
-              data-confirm-title="{% trans "Arr&ecirc;ter l'analyse" %}"
-              data-confirm-message="{% trans "Arr&ecirc;ter cette analyse en cours ?" %}"
-              data-confirm-action="{% trans "Arr&ecirc;ter" %}">
+    <div class="flex flex-wrap items-center justify-center gap-2">
+        <a href="{% url 'analysis-list' %}" class="sc-btn sc-btn--secondary sc-btn--sm" data-turbo-frame="_top">← {% trans "Retour à l'historique" %}</a>
+        {% if membership.can_edit %}
+        <form method="post" action="{% url 'analysis-cancel' job.pk %}" data-turbo-frame="_top"
+              data-confirm-title="{% trans "Arrêter l'analyse" %}"
+              data-confirm-message="{% trans "Arrêter cette analyse en cours ?" %}"
+              data-confirm-action="{% trans "Arrêter" %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-warning" style="font-size:12px;padding:3px 12px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:3px;"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
-                {% trans "Arr&ecirc;ter" %}
-            </button>
+            <button type="submit" class="sc-btn sc-btn--secondary sc-btn--sm">{% trans "Arrêter" %}</button>
         </form>
-        <form method="post" action="{% url 'analysis-delete' job.pk %}" data-turbo-frame="_top" style="display:inline;"
+        <form method="post" action="{% url 'analysis-delete' job.pk %}" data-turbo-frame="_top"
               data-confirm-title="{% trans "Supprimer l'analyse" %}"
-              data-confirm-message="{% trans "Supprimer cette analyse et tous ses r&eacute;sultats ? Cette action est irr&eacute;versible." %}"
+              data-confirm-message="{% trans "Supprimer cette analyse et tous ses résultats ? Cette action est irréversible." %}"
               data-confirm-action="{% trans "Supprimer" %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:12px;padding:3px 12px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                {% trans "Supprimer" %}
-            </button>
+            <button type="submit" class="sc-btn sc-btn--danger sc-btn--sm">{% trans "Supprimer" %}</button>
         </form>
+        {% endif %}
     </div>
 </div>
 </turbo-frame>

@@ -1,0 +1,9 @@
+<div class="sc-tabs" data-scroll="1">
+    {% for t in tabs %}
+    <a class="sc-tab {% if t.key == current %}is-active{% endif %}" href="{% url t.url_name job.pk %}">
+        <span>{{ t.label }}</span>
+        {% if t.count is not None %}<span class="sc-tab-count">{{ t.count }}</span>{% endif %}
+        <span class="sc-tab-bar"></span>
+    </a>
+    {% endfor %}
+</div>

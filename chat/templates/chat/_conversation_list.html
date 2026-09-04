@@ -1,0 +1,32 @@
+{% load i18n %}
+{# Historique des conversations, injecté dans le rail via {% block sidebar_extra %}. #}
+{# Styles calés sur les jetons du rail pour suivre la bascule de contraste.        #}
+
+<div class="sc-conv">
+    <div class="sc-conv-head">
+        <span class="sc-conv-title">{% trans "Historique" %}</span>
+        <button type="button" class="sc-conv-btn" data-disclosure="convSearch" aria-expanded="false"
+                data-tip="{% trans "Rechercher" %}" aria-label="{% trans "Rechercher" %}">
+            <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button type="button" class="sc-conv-btn" data-chat-new
+                data-tip="{% trans "Nouvelle conversation" %}" aria-label="{% trans "Nouvelle conversation" %}">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+    </div>
+
+    <div class="sc-conv-search" data-disclosure-panel="convSearch" hidden>
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input type="text" id="convSearchInput" placeholder="{% trans "Rechercher…" %}" autocomplete="off" spellcheck="false"
+               aria-label="{% trans "Rechercher une conversation" %}">
+    </div>
+
+    <div class="sc-conv-list" id="convList" data-scroll="1">
+        {% trans "Sans titre" as untitled_label %}
+        {% for conv in conversations %}
+        <button type="button" class="sc-conv-item" data-conversation-id="{{ conv.id }}">{{ conv.title|default:untitled_label }}</button>
+        {% empty %}
+        <div class="sc-conv-empty" id="convEmpty">{% trans "Aucune conversation" %}</div>
+        {% endfor %}
+    </div>
+</div>

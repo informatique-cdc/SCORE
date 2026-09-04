@@ -1,69 +1,99 @@
-{% load i18n %}
+{% load i18n score_ui %}
 <turbo-frame id="analysis-jobs">
 <div data-controller="auto-refresh"
      data-auto-refresh-url-value="{% url 'analysis-jobs-partial' %}"
      data-auto-refresh-frame-value="analysis-jobs"
      data-auto-refresh-active-value="{{ should_poll|yesno:'true,false' }}">
-<table class="table table-hover mb-0">
-    <thead>
-        <tr><th>{% trans "ID" %}</th><th>{% trans "SCORE" %}</th><th>{% trans "Statut" %}</th><th>{% trans "Phase" %}</th><th>{% trans "Progression" %}</th><th>{% trans "Audit RAG" %}</th><th>{% trans "Date" %}</th><th></th></tr>
-    </thead>
-    <tbody>
-        {% for job in jobs %}
-        <tr>
-            <td><code>{{ job.id|truncatechars:12 }}</code></td>
-            <td>
+
+{% if jobs %}
+<div class="sc-table" data-scroll="1">
+    <div class="sc-thead min-w-[1080px] [--sc-cols:118px_150px_104px_minmax(120px,1fr)_120px_104px_128px_104px]">
+        <div>{% trans "Analyse" %}</div>
+        <div>{% trans "SCORE" %}</div>
+        <div>{% trans "Statut" %}</div>
+        <div>{% trans "Phase" %}</div>
+        <div>{% trans "Progression" %}</div>
+        <div>{% trans "Audit RAG" %}</div>
+        <div>{% trans "Date" %}</div>
+        <div class="text-right">{% trans "Actions" %}</div>
+    </div>
+
+    {% for job in jobs %}
+    <div class="sc-trow min-w-[1080px]">
+        <div class="sc-tr [--sc-cols:118px_150px_104px_minmax(120px,1fr)_120px_104px_128px_104px]">
+            <div class="min-w-0">
+                <a class="sc-td-primary block" href="{% url 'analysis-detail' job.pk %}" data-turbo-frame="_top">#{{ job.id|truncatechars:10 }}</a>
+            </div>
+
+            <div class="min-w-0">
                 {% if job.score_result %}
-                <div class="d-flex align-items-center gap-2">
-                    <span class="score-inline">
-                        {% for letter in "ABCDE" %}
-                        <span class="ds-letter ds-{{ letter }}{% if job.score_result.grade == letter %} active{% endif %}">{{ letter }}</span>
-                        {% endfor %}
-                    </span>
-                    <small style="font-weight:600;color:var(--ds-text-muted);">{{ job.score_result.score }}</small>
+                <div class="flex items-center gap-2">
+                    <span class="sc-grade-chip sc-fill--{{ job.score_result.score|score_color }}">{{ job.score_result.grade }}</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="sc-score-value">{{ job.score_result.score }}<span class="text-ink-400">/100</span></div>
+                        <div class="sc-score-track">
+                            <div class="sc-score-fill sc-fill--{{ job.score_result.score|score_color }}" style="--sc-fill: {{ job.score_result.score }}%"></div>
+                        </div>
+                    </div>
                 </div>
                 {% else %}
-                <span class="text-muted" style="font-size:12px;">&mdash;</span>
+                <span class="sc-td-meta">—</span>
                 {% endif %}
-            </td>
-            <td>
-                <span class="badge bg-{% if job.status == 'completed' %}success{% elif job.status == 'running' %}primary{% elif job.status == 'failed' %}danger{% elif job.status == 'cancelled' %}warning{% else %}secondary{% endif %}">
-                    {{ job.get_status_display }}
-                </span>
-            </td>
-            <td><small>{{ job.get_current_phase_display }}</small></td>
-            <td>
-                <div class="progress" style="width: 100px;">
-                    <div class="progress-bar" style="width: {{ job.progress_pct }}%">{{ job.progress_pct }}%</div>
+            </div>
+
+            <div class="min-w-0">
+                <span class="sc-tag {% if job.status == 'completed' %}sc-tag--ok{% elif job.status == 'running' %}sc-tag--info{% elif job.status == 'failed' %}sc-tag--danger{% elif job.status == 'cancelled' %}sc-tag--warn{% endif %}">{{ job.get_status_display }}</span>
+            </div>
+
+            <div class="sc-td-meta">{{ job.get_current_phase_display }}</div>
+
+            <div class="min-w-0">
+                <div class="sc-track h-1.5 {% if job.status == 'running' %}sc-track--live{% endif %}">
+                    <div class="sc-track-fill {% if job.status == 'failed' %}sc-fill--e{% elif job.status == 'cancelled' %}sc-fill--c{% else %}sc-fill--a{% endif %}" style="--sc-fill: {{ job.progress_pct }}%"></div>
                 </div>
-            </td>
-            <td>
+                <div class="mt-1 text-11 text-ink-400 num">{{ job.progress_pct }}%</div>
+            </div>
+
+            <div class="min-w-0">
                 {% if job.linked_audit and job.linked_audit.overall_grade %}
-                <span class="score-pill active score-{{ job.linked_audit.overall_grade }}" style="width:24px;height:24px;font-size:12px;">{{ job.linked_audit.overall_grade }}</span>
-                <small>{{ job.linked_audit.overall_score|floatformat:0 }}</small>
+                <div class="flex items-center gap-1.5">
+                    <span class="sc-grade-chip sc-grade-chip--sm sc-fill--{{ job.linked_audit.overall_score|score_color }}">{{ job.linked_audit.overall_grade }}</span>
+                    <span class="text-12 num">{{ job.linked_audit.overall_score|floatformat:0 }}</span>
+                </div>
                 {% elif job.linked_audit %}
-                <span class="text-muted">{% trans "En cours" %}</span>
+                <span class="sc-td-meta">{% trans "En cours" %}</span>
                 {% else %}
-                <span class="text-muted">&mdash;</span>
+                <span class="sc-td-meta">—</span>
                 {% endif %}
-            </td>
-            <td>
-                <small>{{ job.created_at|date:"d M Y, H:i" }}</small>
-            </td>
-            <td>
-                <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary" data-turbo-frame="_top">{% trans "Voir" %}</a>
-                {% if job.status == "queued" or job.status == "failed" or job.status == "cancelled" %}
-                <form method="post" action="{% url 'analysis-retry' job.pk %}" class="d-inline" data-turbo-frame="_top">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-warning">{% trans "R&eacute;essayer" %}</button>
-                </form>
+            </div>
+
+            <div class="sc-td-meta">{{ job.created_at|date:"j M Y · H:i" }}</div>
+
+            <div class="flex items-center justify-end gap-1.5">
+                <a href="{% url 'analysis-detail' job.pk %}" class="sc-btn sc-btn--secondary sc-btn--sm" data-turbo-frame="_top">{% trans "Voir" %}</a>
+                {% if membership.can_edit %}
+                    {% if job.status == "queued" or job.status == "failed" or job.status == "cancelled" %}
+                    <form method="post" action="{% url 'analysis-retry' job.pk %}" data-turbo-frame="_top">
+                        {% csrf_token %}
+                        <button type="submit" class="sc-icon-btn sc-icon-btn--confirm" title="{% trans "Réessayer" %}" aria-label="{% trans "Réessayer" %}">
+                            <svg class="size-3" viewBox="0 0 12 12" fill="none"><path d="M10 5.2A4.2 4.2 0 102.5 8.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M10.5 2v3.2H7.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                    </form>
+                    {% endif %}
                 {% endif %}
-            </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="8" class="text-center text-muted py-4">{% trans "Aucune analyse pour le moment. Lancez votre premi&egrave;re analyse pour obtenir un score." %}</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="sc-card">
+    <div class="sc-empty">
+        <div class="sc-empty-title">{% trans "Aucune analyse" %}</div>
+        <div class="sc-empty-detail">{% trans "Lancez votre première analyse pour obtenir un score et découvrir les doublons, contradictions et lacunes de votre base." %}</div>
+    </div>
+</div>
+{% endif %}
+
 </div>
 </turbo-frame>

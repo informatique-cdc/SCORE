@@ -1,24 +1,28 @@
+{% load i18n %}
 {% if job.status == "running" or job.status == "queued" %}
-<div class="card mb-4 p-3">
-    <div class="d-flex align-items-center gap-3 mb-2">
-        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-        <span>
-            {% if job.status == "queued" %}En attente de traitement…{% endif %}
-            {% if job.status == "running" %}
-                Axe en cours :
-                {% if job.current_axis == "hygiene" %}Hygiène du corpus
-                {% elif job.current_axis == "structure" %}Structure RAG
-                {% elif job.current_axis == "coverage" %}Couverture sémantique
-                {% elif job.current_axis == "coherence" %}Cohérence interne
-                {% elif job.current_axis == "retrievability" %}Retrievability
-                {% elif job.current_axis == "governance" %}Gouvernance & metadata
-                {% endif %}
-            {% endif %}
-        </span>
-        <span class="text-muted ms-auto">{{ job.progress_pct }}%</span>
+<div class="sc-card sc-card--dark animate-rise">
+    <div class="sc-sweep"></div>
+    <div class="mb-2.5 flex flex-wrap items-center gap-2">
+        <span class="sc-live-dot"></span>
+        <span class="sc-eyebrow">{% trans "Audit RAG en cours" %}</span>
+        <span class="ml-auto text-12 num">{{ job.progress_pct }}%</span>
     </div>
-    <div class="progress" style="height:8px;">
-        <div class="progress-bar progress-bar-animated bg-primary" style="width:{{ job.progress_pct }}%"></div>
+    <div class="mb-3 font-display text-15">
+        {% if job.status == "queued" %}
+            {% trans "En attente de traitement…" %}
+        {% else %}
+            {% trans "Axe en cours" %} :
+            {% if job.current_axis == "hygiene" %}{% trans "Hygiène du corpus" %}
+            {% elif job.current_axis == "structure" %}{% trans "Structure RAG" %}
+            {% elif job.current_axis == "coverage" %}{% trans "Couverture sémantique" %}
+            {% elif job.current_axis == "coherence" %}{% trans "Cohérence interne" %}
+            {% elif job.current_axis == "retrievability" %}{% trans "Retrievability" %}
+            {% elif job.current_axis == "governance" %}{% trans "Gouvernance & metadata" %}
+            {% endif %}
+        {% endif %}
+    </div>
+    <div class="sc-track sc-track--live h-1.5 bg-white/15">
+        <div class="sc-track-fill bg-white" style="--sc-fill: {{ job.progress_pct }}%"></div>
     </div>
 </div>
 {% endif %}

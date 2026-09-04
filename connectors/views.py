@@ -17,6 +17,7 @@ from django.views.decorators.http import require_POST
 
 from ingestion.models import Document, DocumentChunk, IngestionJob
 from ingestion.tasks import run_ingestion
+from score.cachekit import invalidate_project
 from vectorstore.store import get_vector_store
 
 from tenants.models import AuditLog, log_audit
@@ -32,6 +33,17 @@ def _has_active_ingestion_jobs(project):
         IngestionJob.objects.filter(project=project)
         .filter(status__in=[IngestionJob.Status.QUEUED, IngestionJob.Status.RUNNING])
         .exists()
+    )
+
+
+def _project_connectors(project):
+    """Connectors of a project, annotated with the per-status counts the cards show."""
+    return ConnectorConfig.objects.filter(project=project).annotate(
+        doc_count=Count("documents", filter=~models.Q(documents__status=Document.Status.DELETED)),
+        pending_count=Count(
+            "documents", filter=models.Q(documents__status=Document.Status.PENDING)
+        ),
+        error_count=Count("documents", filter=models.Q(documents__status=Document.Status.ERROR)),
     )
 
 
@@ -52,9 +64,7 @@ def _connector_jobs_context(connector):
 def connector_list(request):
     if not request.project:
         return redirect("project-list")
-    connectors = ConnectorConfig.objects.filter(project=request.project).annotate(
-        doc_count=Count("documents", filter=~models.Q(documents__status=Document.Status.DELETED)),
-    )
+    connectors = _project_connectors(request.project)
     return render(
         request,
         "connectors/list.html",
@@ -204,6 +214,7 @@ def connector_delete(request, pk):
     )
     logger.info("Deleting connector=%s (%s) with %d documents", connector.name, pk, len(doc_ids))
     connector.delete()
+    invalidate_project(request.project)
 
     return redirect("connector-list")
 
@@ -212,9 +223,7 @@ def connector_delete(request, pk):
 def connector_cards_partial(request):
     if not request.project:
         return redirect("project-list")
-    connectors = ConnectorConfig.objects.filter(project=request.project).annotate(
-        doc_count=Count("documents", filter=~models.Q(documents__status=Document.Status.DELETED)),
-    )
+    connectors = _project_connectors(request.project)
     return render(
         request,
         "connectors/_connector_cards.html",

@@ -1,217 +1,278 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Couverture sémantique — Audit RAG{% endblock %}
-{% block nav_analysis %}active{% endblock %}
+{% load i18n analysis_ui score_ui %}
 
-{% block nav_analysis_submenu %}
-<a class="sidebar-subitem" href="{% url 'analysis-detail' job.analysis_job_id %}">Vue d'ensemble</a>
-<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">Audit RAG</a>
-<a class="sidebar-subitem" href="{% url 'analysis-trace' job.analysis_job_id %}">Trace pipeline</a>
+{% block title %}{{ axis_label }} - {% trans "Audit RAG" %} - SCORE{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'analysis-list' %}">{% trans "Analyses" %}<span class="sc-crumb-sep">/</span></a>
+    {% if job.analysis_job_id %}
+    <a class="sc-crumb" href="{% url 'analysis-detail' job.analysis_job_id %}">{% trans "Analyse" %} {{ analysis_number }}<span class="sc-crumb-sep">/</span></a>
+    <a class="sc-crumb" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">{% trans "Audit RAG" %}<span class="sc-crumb-sep">/</span></a>
+    {% endif %}
+    <span class="sc-crumb is-current">{{ axis_label }}</span>
 {% endblock %}
 
+{% block page_title %}{{ axis_label }}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Diversité et équilibre thématique du corpus. Les documents sont regroupés en topics, puis analysés pour repérer les zones mal couvertes, les déséquilibres et les documents isolés." %}</p>
+{% endblock %}
+
+{% block page_actions %}
+<span class="text-13 text-ink-500 num">{{ result.score|floatformat:0 }}/100</span>
+<span class="sc-tag sc-tag--grade sc-ink--{{ result.score|score_color }}">{{ result.score|score_grade }}</span>
+{% endblock %}
+
+{% block page_tabs %}{% if job.analysis_job_id %}{% analysis_tabs job.analysis_job "audit" %}{% endif %}{% endblock %}
+
 {% block content %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb mb-2" style="font-size:13px;--bs-breadcrumb-divider:'/';">
-        <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
-        <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyses</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyse {{ analysis_number }}</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'analysis-audit-overview' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Audit RAG</a></li>
-        <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">Couverture s&eacute;mantique</li>
-    </ol>
-</nav>
+<div class="flex flex-col gap-3.5">
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Couverture sémantique</h2>
-    <span class="badge {% if result.score >= 80 %}bg-success{% elif result.score >= 60 %}bg-primary{% elif result.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:18px;padding:8px 16px;">
-        {{ result.score|floatformat:0 }}/100
-    </span>
-</div>
-<p class="text-muted mb-4" style="font-size:13px;">
-    Évalue la diversité et l'équilibre thématique du corpus. Les documents sont regroupés en topics via NMF (factorisation matricielle),
-    puis analysés pour détecter les zones mal couvertes, les déséquilibres et les documents isolés (outliers).
-</p>
+    <section class="sc-card sc-card--roomy">
+        <div class="sc-eyebrow mb-3.5">{% trans "Sous-scores" %}</div>
+        <div class="grid gap-3.5">
+            <div>
+                <div class="sc-dim">
+                    <div class="sc-dim-label">{% trans "Équilibre" %}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ metrics.sub_scores.balance|score_color }}" style="--sc-fill: {{ metrics.sub_scores.balance|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ metrics.sub_scores.balance|floatformat:0 }}</div>
+                </div>
+                <p class="sc-stat-hint">{% trans "Répartition des documents entre les topics (1 − Gini). Un score élevé signale une couverture uniforme, sans sujet sur-représenté." %}</p>
+            </div>
+            <div>
+                <div class="sc-dim">
+                    <div class="sc-dim-label">{% trans "Couverture" %}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ metrics.sub_scores.coverage|score_color }}" style="--sc-fill: {{ metrics.sub_scores.coverage|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ metrics.sub_scores.coverage|floatformat:0 }}</div>
+                </div>
+                <p class="sc-stat-hint">{% trans "Part des topics documentés par au moins trois documents. Un score bas révèle des sujets identifiés mais peu documentés." %}</p>
+            </div>
+            <div>
+                <div class="sc-dim">
+                    <div class="sc-dim-label">{% trans "Outliers" %}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ metrics.sub_scores.outliers|score_color }}" style="--sc-fill: {{ metrics.sub_scores.outliers|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ metrics.sub_scores.outliers|floatformat:0 }}</div>
+                </div>
+                <p class="sc-stat-hint">{% trans "Propreté du corpus vis-à-vis des documents isolés. Un score élevé signale peu d'orphelins n'appartenant clairement à aucun topic." %}</p>
+            </div>
+            <div>
+                <div class="sc-dim">
+                    <div class="sc-dim-label">{% trans "Cohérence" %}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ metrics.sub_scores.coherence|score_color }}" style="--sc-fill: {{ metrics.sub_scores.coherence|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ metrics.sub_scores.coherence|floatformat:0 }}</div>
+                </div>
+                <p class="sc-stat-hint">{% trans "Cohérence interne des clusters (similarité moyenne au centroïde). Un score élevé signale des topics sémantiquement serrés." %}</p>
+            </div>
+        </div>
+    </section>
 
-<!-- Sub-scores with explanations -->
-<div class="row g-3 mb-4">
-    <div class="col">
-        <div class="card stat-card {% if metrics.sub_scores.balance >= 80 %}success{% elif metrics.sub_scores.balance >= 60 %}primary{% elif metrics.sub_scores.balance >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
-            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.balance|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Balance</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Équilibre entre les clusters thématiques (1 − Gini). Un score élevé signifie que les documents sont répartis uniformément entre les topics, sans sur-représentation.</div>
+    <section class="grid grid-cols-4 gap-3">
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.k_topics }}</div>
+            <div class="sc-stat-label">{% trans "Topics détectés" %}</div>
+            <div class="sc-stat-hint">{% trans "Nombre de thématiques déduites de la taille du corpus." %}</div>
         </div>
-    </div>
-    <div class="col">
-        <div class="card stat-card {% if metrics.sub_scores.coverage >= 80 %}success{% elif metrics.sub_scores.coverage >= 60 %}primary{% elif metrics.sub_scores.coverage >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
-            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.coverage|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Coverage</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Proportion de topics ayant au moins 3 documents associés. Un score bas révèle des thématiques identifiées mais faiblement documentées dans le corpus.</div>
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.covered_topics }}</div>
+            <div class="sc-stat-label">{% trans "Topics couverts" %}</div>
+            <div class="sc-stat-hint">{% trans "Topics comptant au moins trois documents." %}</div>
         </div>
-    </div>
-    <div class="col">
-        <div class="card stat-card {% if metrics.sub_scores.outliers >= 80 %}success{% elif metrics.sub_scores.outliers >= 60 %}primary{% elif metrics.sub_scores.outliers >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
-            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.outliers|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Outliers</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Propreté du corpus vis-à-vis des documents isolés (LOF). Un score élevé indique peu de documents orphelins qui n'appartiennent clairement à aucun topic.</div>
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.outlier_count }}</div>
+            <div class="sc-stat-label">{% trans "Documents isolés" %}</div>
+            <div class="sc-stat-hint">{% trans "Documents ne s'intégrant à aucun cluster thématique." %}</div>
         </div>
-    </div>
-    <div class="col">
-        <div class="card stat-card {% if metrics.sub_scores.coherence >= 80 %}success{% elif metrics.sub_scores.coherence >= 60 %}primary{% elif metrics.sub_scores.coherence >= 40 %}warning{% else %}danger{% endif %} p-3 text-center">
-            <div style="font-size:24px;font-weight:700;">{{ metrics.sub_scores.coherence|floatformat:0 }}</div>
-            <div class="text-muted" style="font-size:11px;text-transform:uppercase;">Coherence</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Cohérence intra-cluster (similarité cosinus moyenne au centroïde). Un score élevé signifie que les documents d'un même topic sont sémantiquement proches.</div>
+        <div class="sc-stat">
+            <div class="sc-stat-value num">{{ metrics.gini_coefficient|floatformat:2 }}</div>
+            <div class="sc-stat-label">{% trans "Gini (déséquilibre)" %}</div>
+            <div class="sc-stat-hint">{% trans "0 = parfaitement équilibré, 1 = tout concentré sur quelques topics." %}</div>
         </div>
-    </div>
-</div>
+    </section>
 
-<!-- Key metrics -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card p-3 text-center">
-            <div style="font-size:20px;font-weight:700;">{{ metrics.k_topics }}</div>
-            <div class="text-muted" style="font-size:11px;">Topics NMF</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Nombre de thématiques détectées automatiquement par NMF. Calculé en fonction de la taille du corpus (√(n/2), max 20).</div>
+    <section class="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3.5">
+        <div class="sc-card">
+            <div class="sc-eyebrow mb-1.5">{% trans "Projection 2D par topic" %}</div>
+            <p class="mb-3 text-11p5 text-ink-500 pretty">{% trans "Un point par fragment, projeté en deux dimensions. La couleur donne le topic, les points rouges sont les documents isolés. Des groupes bien séparés indiquent une bonne structuration." %}</p>
+            <div id="chart-scatter" class="sc-viz h-[400px]"></div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card p-3 text-center">
-            <div style="font-size:20px;font-weight:700;">{{ metrics.covered_topics }}</div>
-            <div class="text-muted" style="font-size:11px;">Topics couverts</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Topics ayant au moins 3 documents associés. Les topics non couverts représentent des sujets identifiés mais insuffisamment documentés.</div>
+        <div class="sc-card">
+            <div class="sc-eyebrow mb-1.5">{% trans "Volume par topic" %}</div>
+            <p class="mb-3 text-11p5 text-ink-500 pretty">{% trans "Un déséquilibre marqué révèle une couverture inégale du corpus." %}</p>
+            <div id="chart-volumes" class="sc-viz h-[400px]"></div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card p-3 text-center">
-            <div style="font-size:20px;font-weight:700;">{{ metrics.outlier_count }}</div>
-            <div class="text-muted" style="font-size:11px;">Outliers</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Documents isolés détectés par LOF (Local Outlier Factor). Ces documents ne s'intègrent dans aucun cluster thématique et peuvent nécessiter une vérification.</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card p-3 text-center">
-            <div style="font-size:20px;font-weight:700;">{{ metrics.gini_coefficient|floatformat:2 }}</div>
-            <div class="text-muted" style="font-size:11px;">Gini (déséquilibre)</div>
-            <div class="text-muted mt-1" style="font-size:10px;">Coefficient de Gini des tailles de clusters (0 = parfaitement équilibré, 1 = totalement déséquilibré). Mesure la concentration des documents dans quelques topics.</div>
-        </div>
-    </div>
-</div>
+    </section>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-8">
-        <div class="card p-3">
-            <h6 class="mb-3">Projection 2D par topic</h6>
-            <p class="text-muted mb-2" style="font-size:11px;">Chaque point représente un chunk, projeté en 2D via PCA sur les vecteurs SVD. La couleur indique le topic assigné par KMeans. Les points rouges sont les outliers détectés par LOF. Des clusters bien séparés indiquent une bonne structuration thématique.</p>
-            <div id="chart-scatter" style="height:400px;"></div>
+    <section>
+        <div class="mb-2.5 flex flex-wrap items-baseline justify-between gap-3">
+            <div class="sc-eyebrow">{% trans "Termes principaux par topic" %}</div>
+            <span class="text-11p5 text-ink-500 pretty">{% trans "Les dix termes les plus représentatifs de chaque topic." %}</span>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card p-3">
-            <h6 class="mb-3">Volume par topic</h6>
-            <p class="text-muted mb-2" style="font-size:11px;">Nombre de documents par topic. Un déséquilibre important (certains topics très volumineux, d'autres quasi-vides) révèle une couverture inégale du corpus.</p>
-            <div id="chart-volumes" style="height:400px;"></div>
-        </div>
-    </div>
-</div>
-
-{% if chart_data.topics_table %}
-<div class="card mb-4">
-    <div class="card-body">
-        <h6 class="mb-1" style="font-weight:600;">Termes principaux par topic</h6>
-        <p class="text-muted mb-3" style="font-size:11px;">Les 10 termes les plus représentatifs de chaque topic, extraits par NMF (Non-negative Matrix Factorization) sur la matrice TF-IDF. Ces termes permettent d'identifier la thématique de chaque cluster.</p>
-        <table class="table align-middle mb-0" style="font-size:13px;">
-            <thead><tr style="border-bottom:2px solid var(--ds-grey-500);"><th style="font-weight:600;">Topic</th><th style="font-weight:600;">Termes clés</th></tr></thead>
-            <tbody>
+        {% if chart_data.topics_table %}
+        <div class="sc-table" data-scroll="1">
+            <div class="sc-thead min-w-[560px] [--sc-cols:90px_1fr]">
+                <div>{% trans "Topic" %}</div>
+                <div>{% trans "Termes clés" %}</div>
+            </div>
             {% for topic in chart_data.topics_table %}
-            <tr style="border-bottom:1px solid var(--ds-grey-600);">
-                <td><span class="badge topic-badge" data-topic-id="{{ topic.id }}">{{ topic.id }}</span></td>
-                <td>{{ topic.terms|join:", " }}</td>
-            </tr>
+            <div class="sc-trow min-w-[560px]">
+                <div class="sc-tr [--sc-cols:90px_1fr]">
+                    <div>
+                        <span class="sc-tag sc-tag--type" data-topic-id="{{ topic.id }}">T{{ topic.id }}</span>
+                    </div>
+                    <div class="sc-td-meta">{{ topic.terms|join:", " }}</div>
+                </div>
+            </div>
             {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        </div>
+        {% else %}
+        <div class="sc-card">
+            <div class="sc-empty">
+                <div class="sc-empty-title">{% trans "Aucun topic" %}</div>
+                <div class="sc-empty-detail">{% trans "Le corpus est trop petit pour dégager des thématiques exploitables." %}</div>
+            </div>
+        </div>
+        {% endif %}
+    </section>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 {{ chart_data|json_script:"chart-data" }}
 <script>
 (function() {
-    const chartData = JSON.parse(document.getElementById("chart-data").textContent);
-    const color = d3.scaleOrdinal(d3.schemeCategory10);
+    var chartData = JSON.parse(document.getElementById("chart-data").textContent);
 
-    // Build topic label map from topics_table
-    const topicLabels = {};
-    if (chartData.topics_table) {
-        chartData.topics_table.forEach(function(t) {
-            topicLabels[t.id] = t.terms.slice(0, 3).join(", ");
+    var topicLabels = {};
+    (chartData.topics_table || []).forEach(function(t) {
+        topicLabels[t.id] = t.terms.slice(0, 3).join(", ");
+    });
+
+    /* Le conteneur est vidé à chaque passe : draw() est rejoué au changement de thème. */
+    function frame(id) {
+        var el = document.getElementById(id);
+        if (!el) return null;
+        el.innerHTML = "";
+        return { el: el, w: el.clientWidth || 420 };
+    }
+
+    function note(el, message) {
+        var div = document.createElement("div");
+        div.className = "sc-viz-note";
+        div.textContent = message;
+        el.appendChild(div);
+    }
+
+    function makeSvg(f, h) {
+        return d3.select(f.el).append("svg")
+            .attr("viewBox", "0 0 " + f.w + " " + h)
+            .attr("width", "100%").attr("height", h);
+    }
+
+    /* Axe de valeurs : libellés discrets. Axe de catégories : libellés lisibles. */
+    function axisStyle(g, t, kind) {
+        g.selectAll(".tick text")
+            .attr("fill", kind === "category" ? t.ink700 : t.ink500)
+            .style("font-size", kind === "category" ? "11px" : "10px");
+        g.selectAll(".domain, .tick line").attr("stroke", t.line);
+    }
+
+    function draw() {
+        var t = scChart.tokens();
+        var color = d3.scaleOrdinal(scChart.palette());
+
+        // ── Projection 2D ──
+        var f = frame("chart-scatter");
+        if (f && chartData.scatter_2d && chartData.scatter_2d.length) {
+            var data = chartData.scatter_2d;
+            var h = 400, m = { top: 12, right: 12, bottom: 28, left: 44 };
+            var svg = makeSvg(f, h);
+            var x = d3.scaleLinear().domain(d3.extent(data, function(d) { return d.x; })).nice().range([m.left, f.w - m.right]);
+            var y = d3.scaleLinear().domain(d3.extent(data, function(d) { return d.y; })).nice().range([h - m.bottom, m.top]);
+
+            var tooltip = d3.select(f.el).append("div").attr("class", "tooltip-viz").style("display", "none");
+
+            svg.selectAll("circle").data(data).join("circle")
+                .attr("cx", function(d) { return x(d.x); })
+                .attr("cy", function(d) { return y(d.y); })
+                .attr("r", function(d) { return d.outlier ? 5 : 3; })
+                .attr("fill", function(d) { return d.outlier ? t.e : color(d.topic); })
+                .attr("opacity", 0.75)
+                .attr("stroke", function(d) { return d.outlier ? t.surface : "none"; })
+                .attr("stroke-width", function(d) { return d.outlier ? 1 : 0; })
+                .on("mouseover", function(e, d) {
+                    var label = topicLabels[d.topic] || ("{% trans "Topic" %} " + d.topic);
+                    tooltip.style("display", "block").html(
+                        "<strong>" + d.doc_title + "</strong><br>{% trans "Topic" %} : " + label +
+                        (d.outlier ? " ({% trans "atypique" %})" : ""));
+                })
+                .on("mousemove", function(e) {
+                    var box = f.el.getBoundingClientRect();
+                    tooltip.style("left", (e.clientX - box.left + 12) + "px").style("top", (e.clientY - box.top - 10) + "px");
+                })
+                .on("mouseout", function() { tooltip.style("display", "none"); });
+
+            var gx = svg.append("g").attr("transform", "translate(0," + (h - m.bottom) + ")").call(d3.axisBottom(x).ticks(6));
+            var gy = svg.append("g").attr("transform", "translate(" + m.left + ",0)").call(d3.axisLeft(y).ticks(6));
+            axisStyle(gx, t, "value");
+            axisStyle(gy, t, "value");
+        } else if (f) {
+            note(f.el, "{% trans "Aucune projection disponible." %}");
+        }
+
+        // ── Volume par topic ──
+        f = frame("chart-volumes");
+        if (f && chartData.topic_volumes && chartData.topic_volumes.length) {
+            var vols = chartData.topic_volumes;
+            var vh = 400, vm = { top: 10, right: 34, bottom: 24, left: 44 };
+            var vsvg = makeSvg(f, vh);
+            var vy = d3.scaleBand().domain(vols.map(function(d) { return d.topic; })).range([vm.top, vh - vm.bottom]).padding(0.18);
+            var vx = d3.scaleLinear().domain([0, d3.max(vols, function(d) { return d.count; })]).nice().range([vm.left, f.w - vm.right]);
+
+            vsvg.selectAll("rect").data(vols).join("rect")
+                .attr("y", function(d) { return vy(d.topic); })
+                .attr("x", vm.left)
+                .attr("height", vy.bandwidth())
+                .attr("width", function(d) { return vx(d.count) - vm.left; })
+                .attr("fill", function(d) { return color(d.topic); })
+                .attr("rx", 2);
+
+            vsvg.selectAll("text.value").data(vols).join("text")
+                .attr("class", "value")
+                .attr("x", function(d) { return vx(d.count) + 5; })
+                .attr("y", function(d) { return vy(d.topic) + vy.bandwidth() / 2; })
+                .attr("dominant-baseline", "central")
+                .attr("fill", t.ink500).style("font-size", "10px")
+                .text(function(d) { return d.count; });
+
+            var vgy = vsvg.append("g").attr("transform", "translate(" + vm.left + ",0)")
+                .call(d3.axisLeft(vy).tickFormat(function(d) { return "T" + d; }));
+            axisStyle(vgy, t, "category");
+        } else if (f) {
+            note(f.el, "{% trans "Aucun volume à afficher." %}");
+        }
+
+        // Les pastilles du tableau reprennent la couleur du graphe.
+        document.querySelectorAll("[data-topic-id]").forEach(function(el) {
+            el.style.setProperty("--sc-dot", color(parseInt(el.dataset.topicId, 10)));
+            el.classList.add("sc-tag--topic");
         });
     }
 
-    // 2D scatter
-    if (chartData.scatter_2d && chartData.scatter_2d.length) {
-        const data = chartData.scatter_2d;
-        const container = d3.select("#chart-scatter");
-        const w = container.node().clientWidth, h = 400;
-        const margin = {top: 10, right: 10, bottom: 30, left: 40};
-        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
-
-        const x = d3.scaleLinear().domain(d3.extent(data, d => d.x)).nice().range([margin.left, w - margin.right]);
-        const y = d3.scaleLinear().domain(d3.extent(data, d => d.y)).nice().range([h - margin.bottom, margin.top]);
-
-        const tooltip = d3.select("body").append("div").attr("class","tooltip-viz").style("display","none");
-
-        svg.selectAll("circle").data(data).join("circle")
-            .attr("cx", d => x(d.x)).attr("cy", d => y(d.y))
-            .attr("r", d => d.outlier ? 5 : 3)
-            .attr("fill", d => d.outlier ? "#dc3545" : color(d.topic))
-            .attr("opacity", 0.7)
-            .attr("stroke", d => d.outlier ? "#fff" : "none")
-            .attr("stroke-width", d => d.outlier ? 1 : 0)
-            .on("mouseover", (e, d) => {
-                const tLabel = topicLabels[d.topic] || ("Topic " + d.topic);
-                tooltip.style("display","block").html(`<strong>${d.doc_title}</strong><br>Topic: ${tLabel}${d.outlier ? " (outlier)" : ""}`);
-            })
-            .on("mousemove", e => {
-                tooltip.style("left", (e.pageX+10)+"px").style("top", (e.pageY-10)+"px");
-            })
-            .on("mouseout", () => tooltip.style("display","none"));
-
-        svg.append("g").attr("transform", `translate(0,${h-margin.bottom})`).call(d3.axisBottom(x).ticks(6)).selectAll("text").attr("fill","var(--ds-grey-100)");
-        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(6)).selectAll("text").attr("fill","var(--ds-grey-100)");
-        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
-    }
-
-    // Volume bar
-    if (chartData.topic_volumes && chartData.topic_volumes.length) {
-        const data = chartData.topic_volumes;
-        const container = d3.select("#chart-volumes");
-        const w = container.node().clientWidth, h = 400;
-        const margin = {top: 10, right: 10, bottom: 30, left: 40};
-        const svg = container.append("svg").attr("viewBox", `0 0 ${w} ${h}`);
-
-        const y = d3.scaleBand().domain(data.map(d => d.topic)).range([margin.top, h - margin.bottom]).padding(0.15);
-        const x = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([margin.left, w - margin.right]);
-
-        svg.selectAll("rect").data(data).join("rect")
-            .attr("y", d => y(d.topic)).attr("x", margin.left)
-            .attr("height", y.bandwidth()).attr("width", d => x(d.count) - margin.left)
-            .attr("fill", d => color(d.topic)).attr("rx", 2);
-
-        svg.selectAll(".label").data(data).join("text")
-            .attr("x", d => x(d.count) + 4).attr("y", d => y(d.topic) + y.bandwidth()/2)
-            .attr("dominant-baseline","central").attr("fill","var(--ds-grey-100)").style("font-size","10px")
-            .text(d => d.count);
-
-        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y).tickFormat(d => "T" + d)).selectAll("text").attr("fill","var(--ds-grey-100)").style("font-size","10px");
-        svg.selectAll(".domain, .tick line").attr("stroke","var(--ds-grey-500)");
-    }
-
-    // Color topic badges in table to match chart colors
-    document.querySelectorAll(".topic-badge").forEach(function(el) {
-        const tid = parseInt(el.dataset.topicId, 10);
-        el.style.backgroundColor = color(tid);
-        el.style.color = "#fff";
-    });
+    draw();
+    scChart.onThemeChange(draw);
 })();
 </script>
 {% endblock %}

@@ -1,500 +1,369 @@
 {% extends "dashboard/base.html" %}
-{% load i18n %}
-{% block title %}{% trans "Trace pipeline" %} &mdash; {{ job.id|truncatechars:12 }} - SCORE{% endblock %}
-{% block nav_analysis %}active{% endblock %}
+{% load i18n analysis_ui %}
 
-{% block nav_analysis_submenu %}
-<a class="sidebar-subitem" href="{% url 'analysis-detail' job.pk %}">{% trans "Vue d'ensemble" %}</a>
-<a class="sidebar-subitem" href="{% url 'analysis-audit-overview' job.pk %}">{% trans "Audit RAG" %}</a>
-<a class="sidebar-subitem active" href="{% url 'analysis-trace' job.pk %}">{% trans "Trace pipeline" %}</a>
+{% block title %}{% trans "Trace du pipeline" %} - SCORE{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'analysis-list' %}">{% trans "Analyses" %}<span class="sc-crumb-sep">/</span></a>
+    <a class="sc-crumb" href="{% url 'analysis-detail' job.pk %}">#{{ job.pk }}<span class="sc-crumb-sep">/</span></a>
+    <span class="sc-crumb is-current">{% trans "Trace du pipeline" %}</span>
 {% endblock %}
 
-{% block extra_css %}
-<style>
-    .kpi-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-    .kpi-card {
-        flex: 1; min-width: 150px;
-        background: var(--ds-grey-700);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: var(--ds-radius);
-        padding: 16px 20px;
-        display: flex; flex-direction: column; gap: 4px;
-        transition: border-color 0.15s;
-    }
-    .kpi-card:hover { border-color: #6c717e; }
-    .kpi-label {
-        font-size: 12px; font-weight: 500; color: var(--ds-text-muted);
-        display: flex; align-items: center; gap: 6px;
-    }
-    .kpi-label svg { width: 14px; height: 14px; opacity: 0.6; }
-    .kpi-value { font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--ds-grey-100); }
-    .kpi-sub { font-size: 11px; color: var(--ds-text-muted); }
+{% block page_title %}{% trans "Trace du pipeline" %}{% endblock %}
 
-    .trace-card {
-        background: var(--ds-grey-700);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: var(--ds-radius);
-        margin-bottom: 16px;
-        transition: border-color 0.15s;
-    }
-    .trace-card:hover { border-color: #6c717e; }
-    .trace-card-header {
-        padding: 12px 16px;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--ds-grey-100);
-        border-bottom: 1px solid var(--ds-grey-500);
-    }
-    .trace-card-body { padding: 0; }
-
-    /* Phase accordion */
-    .phase-item {
-        border-bottom: 1px solid var(--ds-grey-500);
-        transition: background 0.1s;
-    }
-    .phase-item:last-child { border-bottom: none; }
-    .phase-header {
-        display: flex; align-items: center; gap: 10px;
-        padding: 10px 16px;
-        cursor: pointer;
-        font-size: 13px;
-        color: var(--ds-grey-100);
-        user-select: none;
-    }
-    .phase-header:hover { background: var(--ds-table-hover); }
-    .phase-chevron {
-        width: 16px; height: 16px; flex-shrink: 0;
-        transition: transform 0.2s;
-        color: var(--ds-text-muted);
-    }
-    .phase-item.open .phase-chevron { transform: rotate(90deg); }
-    .phase-label { flex: 1; font-weight: 500; }
-    .phase-stats {
-        display: flex; gap: 14px; font-size: 11px; color: var(--ds-text-muted);
-    }
-    .phase-stats span { white-space: nowrap; }
-    .phase-detail {
-        display: none;
-        padding: 0 16px 14px 42px;
-        font-size: 12px;
-        color: var(--ds-text-muted);
-    }
-    .phase-item.open .phase-detail { display: block; }
-    .phase-detail-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 6px 20px;
-    }
-    .phase-detail-grid dt { font-weight: 500; color: var(--ds-text-muted); font-size: 11px; }
-    .phase-detail-grid dd { margin: 0 0 4px; color: var(--ds-grey-100); font-size: 12px; }
-    .phase-error {
-        margin-top: 8px;
-        padding: 8px 10px;
-        background: rgba(220,53,69,0.08);
-        border-left: 3px solid #dc3545;
-        border-radius: 4px;
-        font-size: 11px;
-        color: #f87171;
-        word-break: break-word;
-    }
-
-    /* Status badges */
-    .status-dot {
-        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-    }
-    .status-dot.completed { background: #34d399; }
-    .status-dot.failed { background: #dc3545; }
-    .status-dot.skipped { background: #6c717e; }
-    .status-dot.running { background: #0d6efd; }
-
-    .badge-type {
-        display: inline-block;
-        padding: 2px 7px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-    .badge-type.llm_chat,
-    .badge-type.llm_chat_concurrent { background: rgba(13,110,253,0.15); color: #6ea8fe; }
-    .badge-type.llm_chat_batch { background: rgba(139,92,246,0.15); color: #a78bfa; }
-    .badge-type.llm_embed { background: rgba(234,179,8,0.15); color: #eab308; }
-    .badge-type.vec_search,
-    .badge-type.vec_search_claims { background: rgba(52,211,153,0.15); color: #34d399; }
-    .badge-type.vec_upsert { background: rgba(96,165,250,0.15); color: #60a5fa; }
-
-    /* Events table */
-    .events-toolbar {
-        display: flex; align-items: center; gap: 10px;
-        padding: 10px 16px;
-        border-bottom: 1px solid var(--ds-grey-500);
-    }
-    .events-toolbar select {
-        background: var(--ds-grey-800);
-        border: 1px solid var(--ds-grey-500);
-        border-radius: 6px;
-        color: var(--ds-grey-100);
-        font-size: 12px;
-        padding: 4px 8px;
-    }
-    .events-scroll {
-        max-height: 500px;
-        overflow-y: auto;
-    }
-    .events-table {
-        width: 100%;
-        font-size: 12px;
-        border-collapse: collapse;
-    }
-    .events-table th {
-        position: sticky; top: 0;
-        background: var(--ds-grey-700);
-        padding: 8px 10px;
-        font-weight: 600;
-        font-size: 11px;
-        color: var(--ds-text-muted);
-        text-align: left;
-        border-bottom: 1px solid var(--ds-grey-500);
-        white-space: nowrap;
-    }
-    .events-table td {
-        padding: 6px 10px;
-        border-bottom: 1px solid var(--ds-table-stripe);
-        color: var(--ds-grey-100);
-        white-space: nowrap;
-    }
-    .events-table tr:hover td { background: var(--ds-table-hover); }
-    .events-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: var(--ds-text-muted);
-    }
-    .empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.5; }
-    .empty-state p { font-size: 13px; margin: 0; }
-</style>
+{% block page_lede %}
+<p class="sc-lede">{% trans "Coût et durée de chaque phase de l'analyse, jusqu'au détail de chaque appel au modèle." %}</p>
 {% endblock %}
+
+{% block page_actions %}
+<span class="sc-tag sc-tag--lg">{{ job.get_status_display }} · {{ job.created_at|date:"j M Y, H:i" }}</span>
+{% endblock %}
+
+{% block page_tabs %}{% analysis_tabs job "trace" %}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h2 class="mb-0">{% trans "Trace du pipeline" %}</h2>
-        <span class="text-muted" style="font-size:13px;">{{ job.get_status_display }} &middot; {{ job.created_at|date:"d M Y, H:i" }}</span>
-    </div>
-    <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-outline-secondary btn-sm">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:4px;"><polyline points="15 18 9 12 15 6"/></svg>
-        {% trans "Retour" %}
-    </a>
-</div>
-
 {% if not trace %}
-<div class="empty-state">
-    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
-    <p>{% trans "Aucune trace disponible pour cette analyse." %}</p>
+<div class="sc-card">
+    <div class="sc-empty">
+        <div class="sc-empty-title">{% trans "Aucune trace" %}</div>
+        <div class="sc-empty-detail">{% trans "Cette analyse a été exécutée sans instrumentation, ou sa trace a été purgée." %}</div>
+    </div>
 </div>
 {% else %}
+<div class="flex flex-col gap-3.5">
 
-<!-- KPI Summary -->
-<div class="kpi-row">
-    <div class="kpi-card">
-        <div class="kpi-label">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-            {% trans "Tokens totaux" %}
-        </div>
-        <div class="kpi-value">{{ trace.total_tokens|floatformat:0 }}</div>
-        <div class="kpi-sub">{{ trace.total_prompt_tokens|floatformat:0 }} prompt + {{ trace.total_completion_tokens|floatformat:0 }} completion</div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-label">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            {% trans "Appels LLM" %}
-        </div>
-        <div class="kpi-value">{{ trace.total_llm_calls }}</div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-label">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
-            {% trans "Appels Embedding" %}
-        </div>
-        <div class="kpi-value">{{ trace.total_embed_calls }}</div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-label">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            {% trans "Dur&eacute;e totale" %}
-        </div>
-        <div class="kpi-value" id="kpi-duration">{{ trace.total_duration_seconds|floatformat:1 }}s</div>
-    </div>
-</div>
-
-<!-- Charts Row -->
-<div class="row g-3 mb-3">
-    <div class="col-md-6">
-        <div class="trace-card">
-            <div class="trace-card-header">{% trans "Dur&eacute;e par phase" %}</div>
-            <div class="trace-card-body" style="padding:12px;">
-                <div id="chart-waterfall" style="width:100%;height:300px;"></div>
+    <section class="grid grid-cols-4 gap-3">
+        <div class="sc-card">
+            <div class="sc-kpi-head">
+                <span class="sc-kpi-label">{% trans "Tokens totaux" %}</span>
+                <span class="sc-kpi-dot sc-fill--a"></span>
             </div>
+            <div class="sc-kpi-value"><span class="sc-metric">{{ trace.total_tokens|floatformat:0 }}</span></div>
+            <div class="sc-kpi-note">{{ trace.total_prompt_tokens|floatformat:0 }} {% trans "prompt" %} + {{ trace.total_completion_tokens|floatformat:0 }} {% trans "complétion" %}</div>
         </div>
-    </div>
-    <div class="col-md-6">
-        <div class="trace-card">
-            <div class="trace-card-header">{% trans "Distribution des tokens" %}</div>
-            <div class="trace-card-body" style="padding:12px;">
-                <div id="chart-tokens" style="width:100%;height:300px;"></div>
+        <div class="sc-card">
+            <div class="sc-kpi-head">
+                <span class="sc-kpi-label">{% trans "Appels LLM" %}</span>
+                <span class="sc-kpi-dot sc-fill--b"></span>
             </div>
+            <div class="sc-kpi-value"><span class="sc-metric">{{ trace.total_llm_calls }}</span></div>
+            <div class="sc-kpi-note">{% trans "générations et classifications" %}</div>
         </div>
-    </div>
-</div>
+        <div class="sc-card">
+            <div class="sc-kpi-head">
+                <span class="sc-kpi-label">{% trans "Appels embedding" %}</span>
+                <span class="sc-kpi-dot sc-fill--c"></span>
+            </div>
+            <div class="sc-kpi-value"><span class="sc-metric">{{ trace.total_embed_calls }}</span></div>
+            <div class="sc-kpi-note">{% trans "vectorisations de fragments" %}</div>
+        </div>
+        <div class="sc-card">
+            <div class="sc-kpi-head">
+                <span class="sc-kpi-label">{% trans "Durée totale" %}</span>
+                <span class="sc-kpi-dot sc-fill--d"></span>
+            </div>
+            <div class="sc-kpi-value"><span class="sc-metric" id="kpi-duration">{{ trace.total_duration_seconds|floatformat:1 }}s</span></div>
+            <div class="sc-kpi-note">{% blocktrans count n=phases|length %}{{ n }} phase{% plural %}{{ n }} phases{% endblocktrans %}</div>
+        </div>
+    </section>
 
-<!-- Phase Accordion -->
-<div class="trace-card mb-3">
-    <div class="trace-card-header">{% trans "Phases du pipeline" %}</div>
-    <div class="trace-card-body">
-        {% for phase in phases %}
-        <div class="phase-item" data-phase-idx="{{ forloop.counter0 }}">
-            <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-                <svg class="phase-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-                <span class="status-dot {{ phase.status }}"></span>
-                <span class="phase-label">{{ phase.phase_label }}</span>
-                <div class="phase-stats">
+    <section class="grid grid-cols-2 gap-3.5">
+        <div class="sc-card">
+            <div class="sc-eyebrow mb-3">{% trans "Durée par phase" %}</div>
+            <div class="sc-viz h-[300px]" id="chart-waterfall"></div>
+        </div>
+        <div class="sc-card">
+            <div class="sc-eyebrow mb-3">{% trans "Distribution des tokens" %}</div>
+            <div class="sc-viz h-[300px]" id="chart-tokens"></div>
+        </div>
+    </section>
+
+    <section class="sc-card">
+        <div class="sc-eyebrow mb-3">{% trans "Phases du pipeline" %}</div>
+        <div class="grid gap-1.5">
+            {% for phase in phases %}
+            <button type="button" class="sc-disclosure" data-disclosure="phase-{{ forloop.counter0 }}"
+                    data-disclosure-group="phases" aria-expanded="false">
+                <span class="sc-feed-dot mt-0 {% if phase.status == 'completed' %}sc-fill--a{% elif phase.status == 'failed' %}sc-fill--e{% elif phase.status == 'running' %}sc-fill--b{% else %}sc-fill--none{% endif %}"></span>
+                <span class="flex-1 cell-truncate">{{ phase.phase_label }}</span>
+                <span class="flex shrink-0 items-center gap-3 text-11 text-ink-500 num">
                     {% if phase.total_tokens %}<span>{{ phase.total_tokens }} tok</span>{% endif %}
                     {% if phase.llm_calls %}<span>{{ phase.llm_calls }} LLM</span>{% endif %}
                     {% if phase.embed_calls %}<span>{{ phase.embed_calls }} embed</span>{% endif %}
                     {% if phase.search_calls %}<span>{{ phase.search_calls }} search</span>{% endif %}
                     <span>{{ phase.duration_seconds|floatformat:1 }}s</span>
-                </div>
-            </div>
-            <div class="phase-detail">
-                <dl class="phase-detail-grid">
-                    <dt>{% trans "Statut" %}</dt>
-                    <dd>{{ phase.get_status_display }}</dd>
-                    <dt>{% trans "Dur&eacute;e" %}</dt>
-                    <dd>{{ phase.duration_seconds|floatformat:2 }}s</dd>
-                    <dt>{% trans "Tokens prompt" %}</dt>
-                    <dd>{{ phase.prompt_tokens }}</dd>
-                    <dt>{% trans "Tokens completion" %}</dt>
-                    <dd>{{ phase.completion_tokens }}</dd>
-                    <dt>{% trans "Tokens total" %}</dt>
-                    <dd>{{ phase.total_tokens }}</dd>
-                    <dt>{% trans "Appels LLM" %}</dt>
-                    <dd>{{ phase.llm_calls }}</dd>
-                    <dt>{% trans "Appels embed" %}</dt>
-                    <dd>{{ phase.embed_calls }}</dd>
-                    <dt>{% trans "Appels search" %}</dt>
-                    <dd>{{ phase.search_calls }}</dd>
-                    <dt>{% trans "Items entr&eacute;e" %}</dt>
-                    <dd>{{ phase.items_in }}</dd>
-                    <dt>{% trans "Items sortie" %}</dt>
-                    <dd>{{ phase.items_out }}</dd>
+                </span>
+                <span class="sc-disclosure-chevron">▾</span>
+            </button>
+            <div class="px-3.5 pb-2" data-disclosure-panel="phase-{{ forloop.counter0 }}" hidden>
+                <dl class="sc-kv">
+                    <div>
+                        <dt>{% trans "Statut" %}</dt>
+                        <dd>{{ phase.get_status_display }}</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Durée" %}</dt>
+                        <dd>{{ phase.duration_seconds|floatformat:2 }}s</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Tokens prompt" %}</dt>
+                        <dd>{{ phase.prompt_tokens }}</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Tokens complétion" %}</dt>
+                        <dd>{{ phase.completion_tokens }}</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Tokens total" %}</dt>
+                        <dd>{{ phase.total_tokens }}</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Appels LLM" %}</dt>
+                        <dd>{{ phase.llm_calls }}</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Appels embed" %}</dt>
+                        <dd>{{ phase.embed_calls }}</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Appels search" %}</dt>
+                        <dd>{{ phase.search_calls }}</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Items entrée" %}</dt>
+                        <dd>{{ phase.items_in }}</dd>
+                    </div>
+                    <div>
+                        <dt>{% trans "Items sortie" %}</dt>
+                        <dd>{{ phase.items_out }}</dd>
+                    </div>
                 </dl>
                 {% if phase.error_message %}
-                <div class="phase-error">{{ phase.error_message }}</div>
+                <div class="sc-inline-error mt-3">{{ phase.error_message }}</div>
                 {% endif %}
             </div>
+            {% empty %}
+            <div class="sc-empty">
+                <div class="sc-empty-detail">{% trans "Aucune phase enregistrée pour cette analyse." %}</div>
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-</div>
+    </section>
 
-<!-- Events Table -->
-<div class="trace-card">
-    <div class="trace-card-header">{% trans "Journal des &eacute;v&eacute;nements" %}</div>
-    <div class="events-toolbar">
-        <label style="font-size:12px;color:var(--ds-text-muted);">{% trans "Filtrer par type :" %}</label>
-        <select id="event-type-filter">
-            <option value="">{% trans "Tous" %}</option>
-        </select>
-        <span style="font-size:11px;color:var(--ds-text-muted);margin-left:auto;" id="events-count">{{ events|length }} &eacute;v&eacute;nement{{ events|length|pluralize:"s" }}</span>
-    </div>
-    <div class="events-scroll">
-        <table class="events-table">
-            <thead>
-                <tr>
-                    <th>{% trans "Horodatage" %}</th>
-                    <th>{% trans "Phase" %}</th>
-                    <th>{% trans "Type" %}</th>
-                    <th class="num">{% trans "Tokens" %}</th>
-                    <th class="num">{% trans "Items" %}</th>
-                    <th class="num">{% trans "Dur&eacute;e" %}</th>
-                    <th>{% trans "Mod&egrave;le" %}</th>
-                </tr>
-            </thead>
-            <tbody id="events-tbody">
-                {% for ev in events %}
-                <tr data-event-type="{{ ev.event_type }}">
-                    <td>{{ ev.timestamp|date:"H:i:s" }}</td>
-                    <td>{{ ev.phase_trace.phase_label|truncatechars:25 }}</td>
-                    <td><span class="badge-type {{ ev.event_type }}">{{ ev.get_event_type_display }}</span></td>
-                    <td class="num">{% if ev.total_tokens %}{{ ev.total_tokens }}{% else %}&mdash;{% endif %}</td>
-                    <td class="num">{% if ev.item_count %}{{ ev.item_count }}{% elif ev.result_count %}{{ ev.result_count }}{% else %}&mdash;{% endif %}</td>
-                    <td class="num">{{ ev.duration_seconds|floatformat:3 }}s</td>
-                    <td>{{ ev.model_name|default:"&mdash;" }}</td>
-                </tr>
+    <section class="flex flex-col gap-2.5">
+        <div class="flex flex-wrap items-center gap-2.5">
+            <div class="sc-eyebrow">{% trans "Journal des événements" %}</div>
+            <label class="sr-only" for="event-type-filter">{% trans "Filtrer par type" %}</label>
+            <select id="event-type-filter" class="sc-select sc-input--sm w-auto">
+                <option value="">{% trans "Tous les types" %}</option>
+                {% for key, label in event_type_labels.items %}
+                {% if key in event_types %}<option value="{{ key }}">{{ label }}</option>{% endif %}
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+            </select>
+            <span class="ml-auto text-11p5 text-ink-500 num" id="events-count">{% blocktrans count n=events|length %}{{ n }} événement{% plural %}{{ n }} événements{% endblocktrans %}</span>
+        </div>
 
+        {% if events %}
+        <div class="sc-table max-h-[520px] overflow-y-auto" data-scroll="1">
+            <div class="sc-thead min-w-[880px] [--sc-cols:88px_1.3fr_150px_80px_70px_84px_1fr] sticky top-0 z-10">
+                <div>{% trans "Horodatage" %}</div>
+                <div>{% trans "Phase" %}</div>
+                <div>{% trans "Type" %}</div>
+                <div class="text-right">{% trans "Tokens" %}</div>
+                <div class="text-right">{% trans "Items" %}</div>
+                <div class="text-right">{% trans "Durée" %}</div>
+                <div>{% trans "Modèle" %}</div>
+            </div>
+            {% for ev in events %}
+            <div class="sc-trow min-w-[880px]" data-event-row data-event-type="{{ ev.event_type }}">
+                <div class="sc-tr [--sc-cols:88px_1.3fr_150px_80px_70px_84px_1fr]">
+                    <div class="sc-td-meta num">{{ ev.timestamp|date:"H:i:s" }}</div>
+                    <div class="sc-td-primary">{{ ev.phase_trace.phase_label }}</div>
+                    <div class="min-w-0">
+                        <span class="sc-tag {% if 'llm' in ev.event_type %}sc-tag--llm{% elif 'vec' in ev.event_type %}sc-tag--info{% endif %}">{{ ev.get_event_type_display }}</span>
+                    </div>
+                    <div class="sc-td-num">{% if ev.total_tokens %}{{ ev.total_tokens }}{% else %}—{% endif %}</div>
+                    <div class="sc-td-num">{% if ev.item_count %}{{ ev.item_count }}{% elif ev.result_count %}{{ ev.result_count }}{% else %}—{% endif %}</div>
+                    <div class="sc-td-num">{{ ev.duration_seconds|floatformat:3 }}s</div>
+                    <div class="sc-td-meta">{{ ev.model_name|default:"—" }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="sc-card">
+            <div class="sc-empty">
+                <div class="sc-empty-title">{% trans "Journal vide" %}</div>
+                <div class="sc-empty-detail">{% trans "Aucun appel au modèle ni à l'index vectoriel n'a été enregistré pour cette analyse." %}</div>
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
 {% endif %}
 {% endblock %}
 
 {% block extra_js %}
 {% if trace %}
+{{ phase_timeline_json|json_script:"phase-timeline-data" }}
+{{ token_dist_json|json_script:"token-dist-data" }}
 <script>
 (function() {
-    // Format duration KPI
+    // Tracé aux valeurs empilées : l'axe garde la lecture d'un coup d'œil au-delà du millier.
+    function compact(value) {
+        return value >= 1000 ? Math.round(value / 100) / 10 + "k" : value;
+    }
+
+    // Base commune aux deux tracés : survol par catégorie, curseur en bandeau.
+    function axisBase() {
+        var base = scChart.base();
+        base.tooltip.trigger = "axis";
+        base.tooltip.axisPointer = { type: "shadow" };
+        return base;
+    }
+
+    // Durée lisible au-delà de la minute.
     var durEl = document.getElementById("kpi-duration");
     if (durEl) {
-        var secs = {{ trace.total_duration_seconds|stringformat:".1f" }};
+        var secs = parseFloat(durEl.textContent);
         if (secs >= 60) {
-            var m = Math.floor(secs / 60);
-            var s = Math.round(secs % 60);
-            durEl.textContent = m + "m " + s + "s";
+            durEl.textContent = Math.floor(secs / 60) + "m " + Math.round(secs % 60) + "s";
         }
     }
 
-    var labelColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim() || "#f8f8f8";
-    var mutedColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-text-muted").trim() || "#6c717e";
-    var gridColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-500").trim() || "#37383a";
-    var tooltipStyle = { backgroundColor: "#27282a", borderColor: "#37383a", textStyle: { color: "#f8f8f8", fontSize: 11 } };
+    function readJson(id) {
+        var el = document.getElementById(id);
+        if (!el) return [];
+        var raw = JSON.parse(el.textContent);
+        return typeof raw === "string" ? JSON.parse(raw) : raw;
+    }
 
-    var statusColors = { completed: "#34d399", failed: "#dc3545", skipped: "#6c717e", running: "#0d6efd" };
+    function note(el, message) {
+        var div = document.createElement("div");
+        div.className = "sc-viz-note";
+        div.textContent = message;
+        el.appendChild(div);
+    }
 
-    // ── Waterfall chart ──
-    var waterfallData = JSON.parse('{{ phase_timeline_json|escapejs }}');
+    // ── Durée par phase ──
+    var waterfallData = readJson("phase-timeline-data");
     var wfEl = document.getElementById("chart-waterfall");
     if (wfEl && !waterfallData.length) {
-        wfEl.innerHTML = '<p style="text-align:center;padding-top:120px;font-size:12px;color:var(--ds-text-muted);">Aucune donn\u00e9e de dur\u00e9e disponible</p>';
-    }
-    if (wfEl && waterfallData.length) {
+        note(wfEl, "{% trans "Aucune durée enregistrée." %}");
+    } else if (wfEl && window.echarts) {
         var wfChart = echarts.init(wfEl, null, { renderer: "canvas" });
-        wfChart.setOption({
-            backgroundColor: "transparent",
-            tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" } }, tooltipStyle, {
-                formatter: function(params) {
-                    var d = params[0];
-                    return d.name + "<br>" + d.value + "s";
-                }
-            }),
-            grid: { top: 10, bottom: 0, left: 0, right: 20, containLabel: true },
-            xAxis: {
-                type: "value",
-                axisLabel: { color: mutedColor, fontSize: 10, formatter: "{value}s" },
-                splitLine: { lineStyle: { color: gridColor, type: "dashed" } },
-                axisLine: { show: false },
-            },
-            yAxis: {
-                type: "category",
-                data: waterfallData.map(function(d) { return d.label; }).reverse(),
-                axisLabel: { color: labelColor, fontSize: 11 },
-                axisLine: { show: false },
-                axisTick: { show: false },
-            },
-            series: [{
-                type: "bar",
-                data: waterfallData.map(function(d) {
-                    return {
-                        value: d.duration,
-                        itemStyle: { color: statusColors[d.status] || "#6c717e", borderRadius: [0, 3, 3, 0] },
-                    };
-                }).reverse(),
-                barMaxWidth: 18,
-                animationDuration: 600,
-            }],
-        });
-        window.addEventListener("resize", function() { wfChart.resize(); });
+
+        function drawWaterfall() {
+            var t = scChart.tokens();
+            var base = axisBase();
+            base.tooltip.formatter = function(params) { return params[0].name + "<br>" + params[0].value + "s"; };
+
+            wfChart.setOption(Object.assign(base, {
+                grid: { top: 10, bottom: 4, left: 0, right: 20, containLabel: true },
+                xAxis: scChart.valueAxis({
+                    axisLabel: { color: t.ink500, fontSize: 10, formatter: "{value} s" }
+                }),
+                yAxis: scChart.categoryAxis({
+                    data: waterfallData.map(function(d) { return d.label; }).reverse(),
+                    axisLine: { show: false }
+                }),
+                series: [{
+                    type: "bar",
+                    data: waterfallData.map(function(d) {
+                        return {
+                            value: d.duration,
+                            // Seul l'échec sort de l'accent : il doit se voir sans lire l'étiquette.
+                            itemStyle: {
+                                color: d.status === "failed" ? t.e : t.accent,
+                                borderRadius: [0, 3, 3, 0]
+                            }
+                        };
+                    }).reverse(),
+                    barMaxWidth: 18,
+                    animationDuration: 600
+                }]
+            }));
+        }
+
+        drawWaterfall();
+        scChart.autoResize(wfEl, wfChart);
+        scChart.onThemeChange(drawWaterfall);
     }
 
-    // ── Token distribution chart ──
-    var tokenData = JSON.parse('{{ token_dist_json|escapejs }}');
+    // ── Distribution des tokens ──
+    var tokenData = readJson("token-dist-data");
     var tkEl = document.getElementById("chart-tokens");
     if (tkEl && !tokenData.length) {
-        tkEl.innerHTML = '<p style="text-align:center;padding-top:120px;font-size:12px;color:var(--ds-text-muted);">Aucune donn\u00e9e de tokens disponible</p>';
-    }
-    if (tkEl && tokenData.length) {
+        note(tkEl, "{% trans "Aucun token consommé." %}");
+    } else if (tkEl && window.echarts) {
         var tkChart = echarts.init(tkEl, null, { renderer: "canvas" });
-        tkChart.setOption({
-            backgroundColor: "transparent",
-            tooltip: Object.assign({ trigger: "axis", axisPointer: { type: "shadow" } }, tooltipStyle),
-            legend: {
-                data: ["Prompt", "Completion"],
-                textStyle: { color: mutedColor, fontSize: 10 },
-                top: 0, right: 0,
-            },
-            grid: { top: 30, bottom: 0, left: 0, right: 0, containLabel: true },
-            xAxis: {
-                type: "category",
-                data: tokenData.map(function(d) { return d.label; }),
-                axisLabel: { color: mutedColor, fontSize: 9, rotate: 30, interval: 0 },
-                axisLine: { lineStyle: { color: gridColor } },
-                axisTick: { show: false },
-            },
-            yAxis: {
-                type: "value",
-                axisLabel: { color: mutedColor, fontSize: 10 },
-                splitLine: { lineStyle: { color: gridColor, type: "dashed" } },
-                axisLine: { show: false },
-            },
-            series: [
-                {
-                    name: "Prompt",
-                    type: "bar",
-                    stack: "tokens",
-                    data: tokenData.map(function(d) { return d.prompt; }),
-                    itemStyle: { color: "#0d6efd", borderRadius: [0, 0, 0, 0] },
-                    barMaxWidth: 28,
+
+        function drawTokens() {
+            var t = scChart.tokens();
+
+            tkChart.setOption(Object.assign(axisBase(), {
+                legend: {
+                    data: ["{% trans "Prompt" %}", "{% trans "Complétion" %}"],
+                    textStyle: { color: t.ink500, fontSize: 10 },
+                    top: 0,
+                    right: 0,
+                    icon: "roundRect",
+                    itemWidth: 9,
+                    itemHeight: 9
                 },
-                {
-                    name: "Completion",
-                    type: "bar",
-                    stack: "tokens",
-                    data: tokenData.map(function(d) { return d.completion; }),
-                    itemStyle: { color: "#60a5fa", borderRadius: [3, 3, 0, 0] },
-                    barMaxWidth: 28,
-                },
-            ],
-            animationDuration: 600,
-        });
-        window.addEventListener("resize", function() { tkChart.resize(); });
+                grid: { top: 30, bottom: 4, left: 0, right: 4, containLabel: true },
+                xAxis: scChart.categoryAxis({
+                    data: tokenData.map(function(d) { return d.label; }),
+                    axisLabel: { color: t.ink500, fontSize: 9, rotate: 30, interval: 0 }
+                }),
+                yAxis: scChart.valueAxis({
+                    axisLabel: { color: t.ink500, fontSize: 10, formatter: compact }
+                }),
+                series: [
+                    {
+                        name: "{% trans "Prompt" %}",
+                        type: "bar",
+                        stack: "tokens",
+                        data: tokenData.map(function(d) { return d.prompt; }),
+                        itemStyle: { color: t.accent },
+                        barMaxWidth: 28
+                    },
+                    {
+                        name: "{% trans "Complétion" %}",
+                        type: "bar",
+                        stack: "tokens",
+                        data: tokenData.map(function(d) { return d.completion; }),
+                        itemStyle: { color: t.b, borderRadius: [3, 3, 0, 0] },
+                        barMaxWidth: 28
+                    }
+                ],
+                animationDuration: 600
+            }));
+        }
+
+        drawTokens();
+        scChart.autoResize(tkEl, tkChart);
+        scChart.onThemeChange(drawTokens);
     }
 
-    // ── Event type filter ──
+    // ── Filtre du journal ──
     var filterEl = document.getElementById("event-type-filter");
-    var tbody = document.getElementById("events-tbody");
     var countEl = document.getElementById("events-count");
+    var rows = document.querySelectorAll("[data-event-row]");
 
-    // Populate filter options from event type badges in the table
-    if (filterEl && tbody) {
-        var seen = {};
-        tbody.querySelectorAll("tr[data-event-type]").forEach(function(row) {
-            var et = row.getAttribute("data-event-type");
-            if (et && !seen[et]) {
-                var badge = row.querySelector(".badge-type");
-                var label = badge ? badge.textContent.trim() : et;
-                var opt = document.createElement("option");
-                opt.value = et;
-                opt.textContent = label;
-                filterEl.appendChild(opt);
-                seen[et] = true;
-            }
-        });
-
+    if (filterEl && rows.length) {
         filterEl.addEventListener("change", function() {
-            var val = this.value;
-            var rows = tbody.querySelectorAll("tr");
+            var value = this.value;
             var visible = 0;
             rows.forEach(function(row) {
-                if (!val || row.getAttribute("data-event-type") === val) {
-                    row.style.display = "";
-                    visible++;
-                } else {
-                    row.style.display = "none";
-                }
+                var match = !value || row.getAttribute("data-event-type") === value;
+                row.hidden = !match;
+                if (match) visible++;
             });
-            if (countEl) countEl.textContent = visible + " \u00e9v\u00e9nement" + (visible !== 1 ? "s" : "");
+            if (countEl) {
+                countEl.textContent = visible + " " + (visible === 1 ? "{% trans "événement" %}" : "{% trans "événements" %}");
+            }
         });
     }
 })();

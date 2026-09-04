@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 
+from score.cachekit import cached
 from score.utils import parse_json_body
 
 from analysis.models import (
@@ -13,13 +14,19 @@ from analysis.models import (
     TopicCluster,
     TreeNode,
 )
-from analysis.semantic_graph import load_graph
+from analysis.semantic_graph import graph_mtime, load_graph
 
 
 @login_required
 def clusters_json(request, pk):
     """JSON endpoint for cluster/graph visualization."""
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
+    return JsonResponse(
+        cached("clusters-json", request.project, lambda: _clusters_payload(job), job.id)
+    )
+
+
+def _clusters_payload(job):
     clusters = TopicCluster.objects.filter(analysis_job=job)
 
     nodes = []
@@ -89,61 +96,81 @@ def clusters_json(request, pk):
             }
         )
 
-    return JsonResponse(
-        {
-            "nodes": nodes,
-            "edges": edges,
-            "gaps": gap_nodes,
-        }
-    )
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "gaps": gap_nodes,
+    }
 
 
 @login_required
 def tree_json(request, pk):
     """JSON endpoint for tree visualization."""
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
+    root_name = request.project.name if request.project else request.tenant.name
 
-    def build_tree(parent=None):
+    def build():
+        # Un seul chargement puis assemblage en mémoire : la version récursive
+        # émettait une requête par nœud de l'arbre.
         nodes = (
-            TreeNode.objects.filter(analysis_job=job, parent=parent)
+            TreeNode.objects.filter(analysis_job=job)
             .select_related("cluster", "document")
             .order_by("sort_order")
         )
 
-        children = []
+        children_by_parent = {}
         for node in nodes:
-            child = {
+            payload = {
                 "id": str(node.id),
                 "name": node.label,
                 "type": node.node_type,
-                "children": build_tree(parent=node),
+                "children": [],
             }
-            if node.document:
-                child["doc_id"] = str(node.document_id)
-                child["doc_url"] = node.document.source_url
-            if node.cluster:
-                child["content_purpose"] = node.cluster.content_purpose or ""
-                child["key_concepts"] = node.cluster.key_concepts or []
-            children.append(child)
-        return children
+            if node.document_id:
+                payload["doc_id"] = str(node.document_id)
+                payload["doc_url"] = node.document.source_url
+            if node.cluster_id:
+                payload["content_purpose"] = node.cluster.content_purpose or ""
+                payload["key_concepts"] = node.cluster.key_concepts or []
+            parent_key = str(node.parent_id) if node.parent_id else None
+            children_by_parent.setdefault(parent_key, []).append(payload)
 
-    tree = {
-        "id": "root",
-        "name": request.project.name if request.project else request.tenant.name,
-        "type": "root",
-        "children": build_tree(parent=None),
-    }
+        def attach(payload, node_id):
+            payload["children"] = children_by_parent.get(node_id, [])
+            for child in payload["children"]:
+                attach(child, child["id"])
+            return payload
 
-    return JsonResponse(tree)
+        return {
+            "id": "root",
+            "name": root_name,
+            "type": "root",
+            "children": [attach(child, child["id"]) for child in children_by_parent.get(None, [])],
+        }
+
+    return JsonResponse(cached("tree-json", request.project, build, job.id))
 
 
 @login_required
 def concept_graph_json(request, pk):
     """GET — return top-150 nodes overview of the concept graph."""
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
+    mtime = graph_mtime(str(job.project_id))
+    if mtime is None:
+        return JsonResponse({"error": "Graph not found"}, status=404)
+
+    # La sortie est déterministe pour un graphe donné : sur un hit, load_graph()
+    # — qui relit le disque et reconstruit l'index vectoriel — n'est jamais appelé.
+    payload = cached("concept-graph", request.project, lambda: _concept_graph_payload(job), mtime)
+    if payload is None:
+        return JsonResponse({"error": "Graph not found"}, status=404)
+    return JsonResponse(payload)
+
+
+def _concept_graph_payload(job):
     nsg = load_graph(str(job.project_id))
     if nsg is None:
-        return JsonResponse({"error": "Graph not found"}, status=404)
+        return None
 
     G = nsg.graph
     total_nodes = G.number_of_nodes()
@@ -163,35 +190,25 @@ def concept_graph_json(request, pk):
             }
         )
 
-    edge_agg = {}
+    # Pas d'``evidence`` ici : trois extraits de ~550 caractères par arête pesaient
+    # 13,9 Mo sur 14,5 Mo de réponse, pour n'alimenter qu'une infobulle de survol.
+    # Le sous-graphe de recherche (concept_graph_query) la renvoie toujours.
+    edge_weights = {}
     for s, t, d in sub.edges(data=True):
         key = (s, t) if s <= t else (t, s)
-        if key not in edge_agg:
-            edge_agg[key] = {"weight": 0, "evidence": []}
-        edge_agg[key]["weight"] += d.get("weight", 1.0)
-        ev = d.get("evidence", [])
-        if ev and len(edge_agg[key]["evidence"]) < 3:
-            edge_agg[key]["evidence"].extend(ev[:2])
+        edge_weights[key] = edge_weights.get(key, 0) + d.get("weight", 1.0)
 
-    edges = []
-    for (s, t), agg in edge_agg.items():
-        edges.append(
-            {
-                "source": s,
-                "target": t,
-                "weight": round(agg["weight"], 2),
-                "evidence": agg["evidence"][:3],
-            }
-        )
+    edges = [
+        {"source": s, "target": t, "weight": round(weight, 2)}
+        for (s, t), weight in edge_weights.items()
+    ]
 
-    return JsonResponse(
-        {
-            "nodes": nodes,
-            "edges": edges,
-            "total_nodes": total_nodes,
-            "total_edges": total_edges,
-        }
-    )
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "total_nodes": total_nodes,
+        "total_edges": total_edges,
+    }
 
 
 @login_required

@@ -1,0 +1,739 @@
+@layer components {
+  /* Composants propres aux écrans « chat ». */
+
+  /* ── Grille à trois colonnes : agents, conversation, documents cités ── */
+  /* La hauteur est bornée pour que le fil défile seul, sans entraîner la page. */
+  .sc-chat {
+    display: grid;
+    grid-template-columns: 210px minmax(360px, 1fr) 300px;
+    gap: 14px;
+    height: calc(100vh - 200px);
+    min-height: 520px;
+  }
+
+  .sc-chat-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-18);
+    overflow: hidden;
+  }
+
+  /* Hauteur fixe : les trois en-têtes doivent s'aligner, qu'ils portent un
+     bouton ou non. */
+  .sc-chat-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    min-height: 49px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .sc-chat-head-title {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--text-12p5);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-chat-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  /* Bandeau de pied de colonne : modèle actif, compteur… */
+  .sc-chat-foot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    border-top: 1px solid var(--color-line);
+    font-size: var(--text-10p5);
+    color: var(--color-ink-500);
+  }
+
+  .sc-chat-foot-value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+    color: var(--color-ink-700);
+  }
+
+  /* ── Agents de récupération (colonne de gauche) ── */
+  .sc-agent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: var(--radius-9);
+    background: transparent;
+    color: var(--color-ink-700);
+    font-family: inherit;
+    font-size: var(--text-12);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .sc-agent:hover {
+    background: var(--color-surface-100);
+    color: var(--color-ink-700);
+    text-decoration: none;
+  }
+
+  .sc-agent.is-active {
+    background: var(--color-ok-bg-warm);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  .sc-agent-icon {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    opacity: 0.7;
+  }
+
+  .sc-agent.is-active .sc-agent-icon {
+    opacity: 1;
+  }
+
+  .sc-agent-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* La coche n'apparaît qu'une fois l'agent retenu : pas de réserve visuelle. */
+  .sc-agent-check {
+    width: 11px;
+    height: 11px;
+    flex: 0 0 auto;
+    opacity: 0;
+  }
+
+  .sc-agent.is-active .sc-agent-check {
+    opacity: 1;
+  }
+
+  /* ── Fil de conversation ── */
+  .sc-thread {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 20px;
+  }
+
+  .sc-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-width: 78%;
+    animation: rise 0.35s var(--ease-expo) both;
+  }
+
+  .sc-msg--user {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  .sc-msg--assistant {
+    align-self: flex-start;
+  }
+
+  .sc-bubble {
+    padding: 13px 16px;
+    font-size: var(--text-13p5);
+    line-height: var(--leading-bubble);
+    text-wrap: pretty;
+    overflow-wrap: anywhere;
+  }
+
+  /* Le coin plat désigne l'émetteur ; il change de côté selon le rôle. */
+  .sc-msg--user .sc-bubble {
+    background: var(--color-ink);
+    color: var(--color-surface);
+    border-radius: 14px 14px 4px 14px;
+  }
+
+  .sc-msg--assistant .sc-bubble {
+    background: var(--color-surface-50);
+    border: 1px solid var(--color-line);
+    border-radius: 14px 14px 14px 4px;
+  }
+
+  /* ── Markdown rendu dans une bulle ── */
+  .sc-bubble > :first-child {
+    margin-top: 0;
+  }
+
+  .sc-bubble > :last-child {
+    margin-bottom: 0;
+  }
+
+  .sc-bubble p {
+    margin: 0 0 10px;
+  }
+
+  .sc-bubble ul,
+  .sc-bubble ol {
+    margin: 8px 0;
+    padding-left: 20px;
+    list-style: revert;
+  }
+
+  .sc-bubble li {
+    margin-bottom: 4px;
+  }
+
+  .sc-bubble strong {
+    font-weight: 600;
+  }
+
+  .sc-bubble h1,
+  .sc-bubble h2,
+  .sc-bubble h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: var(--leading-snug);
+    margin: 16px 0 7px;
+  }
+
+  .sc-bubble h1 {
+    font-size: var(--text-17);
+  }
+
+  .sc-bubble h2 {
+    font-size: var(--text-15);
+  }
+
+  .sc-bubble h3 {
+    font-size: var(--text-14);
+  }
+
+  .sc-bubble hr {
+    border: 0;
+    border-top: 1px solid var(--color-line);
+    margin: 16px 0;
+  }
+
+  .sc-bubble code {
+    padding: 1px 5px;
+    border-radius: var(--radius-4);
+    background: var(--color-surface-200);
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    font-size: var(--text-12);
+  }
+
+  .sc-bubble pre {
+    margin: 10px 0;
+    padding: 12px 14px;
+    border-radius: var(--radius-10);
+    background: var(--color-surface-200);
+    overflow-x: auto;
+  }
+
+  .sc-bubble pre code {
+    padding: 0;
+    background: none;
+  }
+
+  .sc-bubble blockquote {
+    margin: 10px 0;
+    padding: 2px 14px;
+    border-left: 2px solid var(--color-line-300);
+    color: var(--color-ink-500);
+  }
+
+  .sc-bubble table {
+    width: 100%;
+    margin: 10px 0;
+    border-collapse: collapse;
+    font-size: var(--text-12p5);
+  }
+
+  .sc-bubble th,
+  .sc-bubble td {
+    border: 1px solid var(--color-line);
+    padding: 6px 10px;
+    text-align: left;
+  }
+
+  .sc-bubble th {
+    background: var(--color-surface-100);
+    font-weight: 600;
+  }
+
+  /* Sur fond encre l'accent ne passe pas : le lien reprend la couleur du texte. */
+  .sc-msg--user .sc-bubble a {
+    color: inherit;
+    text-decoration: underline;
+  }
+
+  /* Référence [Titre] repérée dans la réponse : ouvre le lecteur de document. */
+  .sc-bubble-ref {
+    border: 0;
+    padding: 0;
+    background: none;
+    font: inherit;
+    color: var(--color-accent);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-underline-offset: 2px;
+  }
+
+  .sc-bubble-ref:hover {
+    color: var(--color-accent-hover);
+  }
+
+  /* ── Citations en pilules sous une réponse ── */
+  .sc-cites {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .sc-cite {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: var(--color-surface-50);
+    color: var(--color-ink-700);
+    font-family: inherit;
+    font-size: var(--text-11p5);
+    cursor: pointer;
+  }
+
+  .sc-cite:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .sc-cite-n {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-4);
+    background: var(--color-surface-300);
+    color: var(--color-ink-700);
+    font-size: var(--text-8p5);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-cite:hover .sc-cite-n {
+    background: var(--color-ok-bg);
+    color: var(--color-accent);
+  }
+
+  .sc-cite-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Composeur ── */
+  .sc-composer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 0 0 auto;
+    margin: 0 16px 16px;
+    padding: 11px 11px 11px 14px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-14);
+    background: var(--color-surface);
+    transition: border-color 0.15s ease;
+  }
+
+  .sc-composer:focus-within {
+    border-color: var(--color-line-400);
+  }
+
+  .sc-composer.is-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .sc-composer-input {
+    width: 100%;
+    max-height: 132px;
+    border: 0;
+    outline: none;
+    resize: none;
+    background: none;
+    font-family: inherit;
+    font-size: var(--text-13p5);
+    line-height: var(--leading-bubble);
+    color: var(--color-ink);
+  }
+
+  .sc-composer-input::placeholder {
+    color: var(--color-ink-400);
+  }
+
+  .sc-composer-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sc-composer-hint {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--text-10p5);
+    color: var(--color-ink-400);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Documents cités (colonne de droite) ── */
+  .sc-cited-doc {
+    display: flex;
+    gap: 9px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-12);
+    background: var(--color-surface);
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .sc-cited-doc + .sc-cited-doc {
+    margin-top: 6px;
+  }
+
+  .sc-cited-doc:hover {
+    border-color: var(--color-accent);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .sc-cited-doc-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* `display: block` explicite : les deux lignes sont des <span>, sans quoi
+     la troncature n'aurait aucune prise. */
+  .sc-cited-doc-title {
+    display: block;
+    font-size: var(--text-12p5);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-cited-doc-meta {
+    display: block;
+    margin-top: 2px;
+    font-size: var(--text-10p5);
+    color: var(--color-ink-500);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Historique des conversations, posé sur le rail ── */
+  /* Tout se règle sur les jetons du rail : la bascule de contraste doit suivre. */
+  .sc-conv {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+  }
+
+  .sc-conv-head {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 4px 0 10px;
+  }
+
+  .sc-conv-title {
+    flex: 1;
+    font-size: var(--text-10);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    opacity: 0.45;
+  }
+
+  .sc-conv-btn {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: var(--radius-7);
+    background: transparent;
+    color: var(--color-rail-nav-ink);
+    cursor: pointer;
+  }
+
+  .sc-conv-btn:hover {
+    background: var(--color-rail-nav-hover-bg);
+    color: var(--color-rail-nav-active-ink);
+  }
+
+  .sc-conv-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .sc-conv-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border-radius: var(--radius-9);
+    border: 1px solid var(--color-rail-line);
+    background: var(--color-rail-soft);
+  }
+
+  .sc-conv-search[hidden] {
+    display: none;
+  }
+
+  .sc-conv-search svg {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    opacity: 0.5;
+  }
+
+  .sc-conv-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: none;
+    font-family: inherit;
+    font-size: var(--text-12);
+    color: var(--color-rail-ink);
+  }
+
+  .sc-conv-search input::placeholder {
+    color: var(--color-rail-nav-ink);
+  }
+
+  .sc-conv-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 210px;
+    overflow-y: auto;
+  }
+
+  .sc-conv-item {
+    display: block;
+    width: 100%;
+    /* L'ellipsis impose overflow:hidden, qui ramène min-height:auto à 0 : sans
+       flex-shrink:0 les titres s'écrasent les uns sur les autres au lieu de
+       faire défiler la liste. */
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: var(--radius-8);
+    background: transparent;
+    color: var(--color-rail-nav-ink);
+    font-family: inherit;
+    font-size: var(--text-12);
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-conv-item:hover {
+    background: var(--color-rail-nav-hover-bg);
+    color: var(--color-rail-nav-active-ink);
+    text-decoration: none;
+  }
+
+  .sc-conv-item.is-active {
+    background: var(--color-rail-nav-active-bg);
+    color: var(--color-rail-nav-active-ink);
+    font-weight: 500;
+  }
+
+  .sc-conv-item[hidden] {
+    display: none;
+  }
+
+  .sc-conv-empty {
+    padding: 6px 10px;
+    font-size: var(--text-11p5);
+    opacity: 0.45;
+  }
+
+  /* ── Éditeur du prompt système ── */
+  .sc-prompt-editor-wrap {
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-12);
+    background: var(--color-surface-50);
+    overflow: hidden;
+  }
+
+  .sc-prompt-editor-wrap:focus-within {
+    border-color: var(--color-accent);
+  }
+
+  .sc-prompt-editor {
+    min-height: 230px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 13px 15px;
+    font-size: var(--text-13);
+    line-height: var(--leading-excerpt);
+    outline: none;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  .sc-prompt-editor:empty::before {
+    content: attr(data-placeholder);
+    color: var(--color-ink-400);
+    pointer-events: none;
+  }
+
+  /* Jeton non éditable : la variable doit survivre à n'importe quelle frappe. */
+  .sc-prompt-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 9px;
+    margin: 0 2px;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: var(--color-llm-bg);
+    color: var(--color-llm-ink);
+    font-size: var(--text-11p5);
+    font-weight: 600;
+    line-height: var(--leading-bubble);
+    vertical-align: baseline;
+    user-select: all;
+    -webkit-user-modify: read-only;
+  }
+
+  .sc-prompt-pill svg {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+  }
+
+  .sc-prompt-var {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border: 1px dashed var(--color-line-300);
+    border-radius: var(--radius-7);
+    background: transparent;
+    color: var(--color-ink-500);
+    font-family: inherit;
+    font-size: var(--text-11p5);
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .sc-prompt-var:hover {
+    border-color: var(--color-llm-ink);
+    background: var(--color-llm-bg);
+    color: var(--color-llm-ink);
+  }
+
+  .sc-prompt-var svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .sc-prompt-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 13px;
+    border-top: 1px solid var(--color-line);
+    background: var(--color-surface);
+    font-size: var(--text-11);
+    color: var(--color-ink-500);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-prompt-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+  }
+
+  .sc-prompt-flag svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .sc-prompt-flag--ok {
+    color: var(--color-accent);
+  }
+
+  .sc-prompt-flag--missing {
+    color: var(--color-danger-ink);
+  }
+
+  /* ── Repli : les colonnes latérales cèdent avant le fil ── */
+  @media (max-width: 1180px) {
+    .sc-chat {
+      grid-template-columns: 210px minmax(360px, 1fr);
+    }
+
+    .sc-chat--docs {
+      display: none;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .sc-chat {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sc-chat--agents {
+      display: none;
+    }
+  }
+}
