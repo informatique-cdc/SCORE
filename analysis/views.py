@@ -739,6 +739,7 @@ from analysis.views_reports import (  # noqa: F401, E402
     hallucination_batch_resolve,
     hallucination_report,
     hallucination_resolve,
+    knowledge_graph_view,
     knowledge_map_view,
     trace_view,
     tree_view,
@@ -746,11 +747,12 @@ from analysis.views_reports import (  # noqa: F401, E402
 
 
 # JSON API views moved to analysis/views_json.py:
-# clusters_json, tree_json, concept_graph_json, concept_graph_query
+# clusters_json, tree_json, concept_graph_json, concept_graph_query, kg_overview_json
 from analysis.views_json import (  # noqa: F401, E402
     clusters_json,
     concept_graph_json,
     concept_graph_query,
+    kg_overview_json,
     tree_json,
 )
 

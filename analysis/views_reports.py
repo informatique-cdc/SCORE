@@ -15,6 +15,7 @@ from analysis.models import (
     DuplicateGroup,
     GapReport,
     HallucinationReport,
+    KnowledgeGraphRun,
     PhaseTrace,
     PipelineTrace,
     TopicCluster,
@@ -444,5 +445,20 @@ def knowledge_map_view(request, pk):
         {
             "job": job,
             "has_graph": graph_path.exists(),
+        },
+    )
+
+
+@login_required
+def knowledge_graph_view(request, pk):
+    """HTML page for the knowledge graph (typed, sourced relations)."""
+    job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
+    run = KnowledgeGraphRun.objects.filter(analysis_job=job).order_by("-created_at").first()
+    return render(
+        request,
+        "analysis/knowledge_graph.html",
+        {
+            "job": job,
+            "run": run,
         },
     )

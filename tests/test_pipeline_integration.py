@@ -188,6 +188,10 @@ _PATCH_MODULES = [
     "analysis.clustering",
     "analysis.contradictions",
     "analysis.gaps",
+    # Missing here, the semantic graph phase embedded its concepts against the
+    # real endpoint: the suite only passed when spaCy happened to be unavailable
+    # and the phase was skipped.
+    "analysis.semantic_graph",
     "llm.client",
     "vectorstore.store",
 ]

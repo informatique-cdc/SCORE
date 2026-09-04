@@ -11,6 +11,9 @@ from analysis.models import (
     AnalysisJob,
     ClusterMembership,
     GapReport,
+    KGEntity,
+    KGRelation,
+    KnowledgeGraphRun,
     TopicCluster,
     TreeNode,
 )
@@ -236,3 +239,95 @@ def concept_graph_query(request, pk):
 
     result = nsg.query_subgraph(query, top_k=top_k, hops=hops, max_nodes=max_nodes)
     return JsonResponse(result)
+
+
+@login_required
+def kg_overview_json(request, pk):
+    """GET — the knowledge graph, capped at the most central entities.
+
+    Positions, degree and centrality were computed once at build time and are
+    served as stored columns: the page renders in one frame, with no simulation
+    in the browser and the same map on every visit.
+    """
+    job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
+    run = KnowledgeGraphRun.objects.filter(analysis_job=job).order_by("-created_at").first()
+    if run is None:
+        return JsonResponse({"error": "No knowledge graph for this analysis"}, status=404)
+
+    return JsonResponse(cached("kg-overview", request.project, lambda: _kg_payload(run), run.id))
+
+
+def _kg_payload(run):
+    limit = (run.config_snapshot or {}).get("layout", {}).get("max_render_nodes", 400)
+
+    entities = list(
+        KGEntity.objects.filter(run=run)
+        .select_related("main_cluster")
+        .order_by("-centrality", "-frequency")[:limit]
+    )
+    shown = {e.id for e in entities}
+
+    nodes = [
+        {
+            "id": str(e.id),
+            "label": e.label,
+            "x": e.pos_x,
+            "y": e.pos_y,
+            "frequency": e.frequency,
+            "degree": e.degree,
+            "centrality": round(e.centrality, 4),
+            "cluster": str(e.main_cluster_id) if e.main_cluster_id else None,
+            "bridge": e.cluster_count > 1,
+            "cluster_count": e.cluster_count,
+            "doc_count": e.doc_count,
+            "aliases": e.aliases or [],
+        }
+        for e in entities
+    ]
+
+    edges = [
+        {
+            "source": str(r.subject_id),
+            "target": str(r.object_id),
+            "predicate": r.predicate,
+            "weight": r.weight,
+            "inferred": r.inferred,
+            "kind": r.inference_kind,
+            "confidence": round(r.confidence, 2),
+            "evidence": r.evidence or [],
+        }
+        for r in KGRelation.objects.filter(
+            run=run, subject_id__in=shown, object_id__in=shown
+        ).only(
+            "subject_id",
+            "object_id",
+            "predicate",
+            "weight",
+            "inferred",
+            "inference_kind",
+            "confidence",
+            "evidence",
+        )
+    ]
+
+    # Only clusters that actually carry a rendered entity reach the legend.
+    used = {e.main_cluster for e in entities if e.main_cluster_id}
+    clusters = [
+        {"id": str(c.id), "label": c.label, "level": c.level}
+        for c in sorted(used, key=lambda c: c.label)
+    ]
+
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "clusters": clusters,
+        "stats": {
+            "entities": run.entity_count,
+            "relations": run.relation_count,
+            "inferred": run.inferred_count,
+            "bridges": run.bridge_count,
+            "clusters": run.cluster_count,
+            "shown_nodes": len(nodes),
+            "shown_edges": len(edges),
+        },
+    }

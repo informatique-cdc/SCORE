@@ -39,6 +39,11 @@ urlpatterns = [
     ),
     path("<uuid:pk>/tree/", views.tree_view, name="analysis-tree"),
     path("<uuid:pk>/knowledge-map/", views.knowledge_map_view, name="analysis-knowledge-map"),
+    path(
+        "<uuid:pk>/knowledge-graph/",
+        views.knowledge_graph_view,
+        name="analysis-knowledge-graph",
+    ),
     path("<uuid:pk>/trace/", views.trace_view, name="analysis-trace"),
     path("<uuid:pk>/audit/", views.analysis_audit_overview, name="analysis-audit-overview"),
     path("<uuid:pk>/_progress/", views.analysis_progress_partial, name="analysis-progress-partial"),
@@ -63,6 +68,7 @@ urlpatterns = [
     path("<uuid:pk>/api/clusters/", views.clusters_json, name="api-clusters"),
     path("<uuid:pk>/api/tree/", views.tree_json, name="api-tree"),
     path("<uuid:pk>/api/concept-graph/", views.concept_graph_json, name="api-concept-graph"),
+    path("<uuid:pk>/api/knowledge-graph/", views.kg_overview_json, name="api-knowledge-graph"),
     path(
         "<uuid:pk>/api/concept-graph/query/",
         views.concept_graph_query,

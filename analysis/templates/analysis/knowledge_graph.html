@@ -1,0 +1,428 @@
+{% extends "dashboard/base.html" %}
+{% load i18n analysis_ui %}
+
+{% block title %}{% trans "Graphe de connaissances" %} - SCORE{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'analysis-list' %}">{% trans "Analyses" %}<span class="sc-crumb-sep">/</span></a>
+    <a class="sc-crumb" href="{% url 'analysis-detail' job.pk %}">#{{ job.pk }}<span class="sc-crumb-sep">/</span></a>
+    <span class="sc-crumb is-current">{% trans "Graphe de connaissances" %}</span>
+{% endblock %}
+
+{% block page_title %}{% trans "Graphe de connaissances" %}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Entités du corpus et relations nommées qui les unissent, regroupées par thématique. Contrairement à la carte des concepts, chaque lien porte un prédicat et remonte aux documents qui l'attestent." %}</p>
+{% endblock %}
+
+{% block page_tabs %}{% analysis_tabs job "clusters" %}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-3.5">
+
+    <div class="flex flex-wrap items-center gap-2">
+        <a class="sc-pill" href="{% url 'analysis-clusters' job.pk %}">{% trans "Graphe des clusters" %}</a>
+        <a class="sc-pill" href="{% url 'analysis-tree' job.pk %}">{% trans "Arbre taxonomique" %}</a>
+        <a class="sc-pill" href="{% url 'analysis-knowledge-map' job.pk %}">{% trans "Carte des concepts" %}</a>
+        <a class="sc-pill is-active" href="{% url 'analysis-knowledge-graph' job.pk %}">{% trans "Graphe de connaissances" %}</a>
+    </div>
+
+    {% if not run %}
+    <div class="sc-card">
+        <div class="sc-empty">
+            <div class="sc-empty-title">{% trans "Aucun graphe de connaissances" %}</div>
+            <div class="sc-empty-detail">{% trans "Cette phase n'a pas été exécutée pour cette analyse. Activez « knowledge_graph » dans la configuration, puis relancez une analyse." %}</div>
+        </div>
+    </div>
+    {% else %}
+
+    <div class="sc-card flex flex-wrap items-center gap-2 py-3">
+        <label class="sr-only" for="kg-search">{% trans "Rechercher une entité" %}</label>
+        <input id="kg-search" type="text" class="sc-input sc-input--search sc-input--sm"
+               placeholder="{% trans "Rechercher une entité…" %}" autocomplete="off">
+
+        <label class="sr-only" for="kg-predicate">{% trans "Filtrer par relation" %}</label>
+        <select id="kg-predicate" class="sc-select w-52">
+            <option value="">{% trans "Toutes les relations" %}</option>
+        </select>
+
+        <label class="flex w-fit items-center gap-2 text-12 text-ink-500">
+            <input type="checkbox" class="sc-check" id="kg-hide-inferred">
+            <span>{% trans "Masquer les déduites" %}</span>
+        </label>
+
+        <label class="flex w-fit items-center gap-2 text-12 text-ink-500">
+            <input type="checkbox" class="sc-check" id="kg-bridges-only">
+            <span>{% trans "Entités-pont seules" %}</span>
+        </label>
+
+        <button id="kg-reset" type="button" class="sc-btn sc-btn--secondary sc-btn--sm" hidden>{% trans "Réinitialiser" %}</button>
+        <span id="kg-stats" class="ml-auto text-11p5 text-ink-500 num"></span>
+    </div>
+
+    <div class="sc-viz h-[660px]">
+        <div id="kg-graph" class="h-full w-full"></div>
+
+        <div class="sc-viz-legend">
+            <div class="sc-viz-legend-title">{% trans "Thématiques" %}</div>
+            <div id="kg-legend"></div>
+            <div class="sc-viz-legend-sep"></div>
+            <div class="sc-viz-legend-row">
+                <span class="sc-dot sc-dot--seed"></span>
+                <span class="sc-viz-legend-label">{% trans "Entité-pont" %}</span>
+            </div>
+        </div>
+
+        <div id="kg-panel" class="sc-viz-panel" hidden></div>
+
+        <div class="sc-viz-tools">
+            <button id="kg-zoom-in" type="button" class="sc-icon-btn sc-icon-btn--30" title="{% trans "Zoom avant" %}" aria-label="{% trans "Zoom avant" %}">+</button>
+            <button id="kg-zoom-out" type="button" class="sc-icon-btn sc-icon-btn--30" title="{% trans "Zoom arrière" %}" aria-label="{% trans "Zoom arrière" %}">−</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if run %}
+<script>
+(function() {
+    var container = document.getElementById("kg-graph");
+    if (!container || !window.echarts) return;
+
+    var chart = echarts.init(container, null, { renderer: "canvas" });
+    var statsEl = document.getElementById("kg-stats");
+    var legendEl = document.getElementById("kg-legend");
+    var panelEl = document.getElementById("kg-panel");
+    var searchEl = document.getElementById("kg-search");
+    var predicateEl = document.getElementById("kg-predicate");
+    var hideInferredEl = document.getElementById("kg-hide-inferred");
+    var bridgesOnlyEl = document.getElementById("kg-bridges-only");
+    var resetEl = document.getElementById("kg-reset");
+
+    var graph = null;              // charge utile brute
+    var clusterColor = {};         // id de cluster -> teinte
+    var nodeById = {};
+    var mutedClusters = {};        // cluster masqué depuis la légende
+    var selectedId = null;
+    var currentZoom = 1;
+
+    var LABELS = {
+        entities: "{% trans "entités" %}",
+        relations: "{% trans "relations" %}",
+        shown: "{% trans "affichées" %}",
+        inferred: "{% trans "déduite" %}",
+        bridge: "{% trans "entité-pont" %}",
+        cluster: "{% trans "Thématique" %}",
+        frequency: "{% trans "Occurrences" %}",
+        degree: "{% trans "Relations" %}",
+        docs: "{% trans "Documents" %}",
+        aliases: "{% trans "Variantes absorbées" %}",
+        outgoing: "{% trans "Relations sortantes" %}",
+        incoming: "{% trans "Relations entrantes" %}",
+        confidence: "{% trans "confiance" %}",
+        empty: "{% trans "Aucune entité ne correspond aux filtres." %}",
+        loading: "{% trans "Chargement…" %}",
+        error: "{% trans "Erreur de chargement" %}"
+    };
+
+    // ── Filtrage, entièrement côté client : la charge utile est déjà là ──
+    function visibleNodes() {
+        var query = searchEl.value.trim().toLowerCase();
+        var bridgesOnly = bridgesOnlyEl.checked;
+        return graph.nodes.filter(function(n) {
+            if (bridgesOnly && !n.bridge) return false;
+            if (n.cluster && mutedClusters[n.cluster]) return false;
+            if (query && n.label.toLowerCase().indexOf(query) === -1) return false;
+            return true;
+        });
+    }
+
+    function visibleEdges(nodeIds) {
+        var predicate = predicateEl.value;
+        var hideInferred = hideInferredEl.checked;
+        return graph.edges.filter(function(e) {
+            if (hideInferred && e.inferred) return false;
+            if (predicate && e.predicate !== predicate) return false;
+            return nodeIds[e.source] && nodeIds[e.target];
+        });
+    }
+
+    function render() {
+        var tokens = scChart.tokens();
+        var nodes = visibleNodes();
+        var ids = {};
+        nodes.forEach(function(n) { ids[n.id] = true; });
+        var edges = visibleEdges(ids);
+
+        if (!nodes.length) {
+            chart.clear();
+            statsEl.textContent = LABELS.empty;
+            return;
+        }
+
+        var maxFreq = nodes.reduce(function(m, n) { return Math.max(m, n.frequency || 1); }, 1);
+        // Le libellé n'apparaît qu'au-delà d'un seuil de centralité : au-delà,
+        // le graphe devient un mur de texte illisible.
+        var labelCut = nodes.length > 60 ? 0.02 : 0;
+
+        var seriesNodes = nodes.map(function(n) {
+            var size = 9 + Math.sqrt((n.frequency || 1) / maxFreq) * 26;
+            var isSelected = n.id === selectedId;
+            return {
+                id: n.id,
+                name: n.label,
+                x: n.x * 500,
+                y: n.y * 500,
+                symbolSize: n.bridge ? size * 1.25 : size,
+                itemStyle: {
+                    color: n.cluster ? clusterColor[n.cluster] : tokens.ink400,
+                    borderColor: n.bridge ? tokens.accent : tokens.surface,
+                    borderWidth: n.bridge ? 2.5 : 1
+                },
+                label: {
+                    show: isSelected || n.bridge || (n.centrality || 0) >= labelCut,
+                    position: "right",
+                    distance: 4,
+                    fontSize: n.bridge ? 11.5 : 10,
+                    fontWeight: n.bridge ? 600 : 450,
+                    color: tokens.ink700
+                },
+                _raw: n
+            };
+        });
+
+        var maxWeight = edges.reduce(function(m, e) { return Math.max(m, e.weight || 1); }, 1);
+        var seriesEdges = edges.map(function(e) {
+            return {
+                source: e.source,
+                target: e.target,
+                lineStyle: {
+                    width: 0.6 + (e.weight || 1) / maxWeight * 2.2,
+                    color: e.inferred ? tokens.line400 : tokens.line,
+                    opacity: e.inferred ? 0.75 : 0.95,
+                    type: e.inferred ? "dashed" : "solid",
+                    curveness: 0.08
+                },
+                _raw: e
+            };
+        });
+
+        var option = scChart.base();
+        option.tooltip.trigger = "item";
+        option.tooltip.confine = true;
+        option.tooltip.formatter = function(params) {
+            if (params.dataType === "edge") {
+                var e = params.data._raw;
+                var html = "<strong>" + esc(nodeById[e.source].label) + "</strong> "
+                    + "<em>" + esc(e.predicate) + "</em> "
+                    + "<strong>" + esc(nodeById[e.target].label) + "</strong>";
+                if (e.inferred) {
+                    html += "<br>" + LABELS.inferred + " · " + LABELS.confidence + " " + e.confidence;
+                }
+                (e.evidence || []).slice(0, 2).forEach(function(ev) {
+                    html += "<br><em>" + esc(ev.text || "") + "</em>";
+                });
+                return html;
+            }
+            var n = params.data._raw;
+            var out = "<strong>" + esc(n.label) + "</strong>";
+            out += "<br>" + LABELS.frequency + " : " + n.frequency;
+            out += "<br>" + LABELS.degree + " : " + n.degree;
+            if (n.bridge) out += "<br>" + LABELS.bridge + " (" + n.cluster_count + ")";
+            return out;
+        };
+
+        chart.setOption(Object.assign(option, {
+            series: [{
+                type: "graph",
+                layout: "none",          // positions calculées au build, cf. plan D5
+                data: seriesNodes,
+                links: seriesEdges,
+                roam: true,
+                draggable: false,
+                zoom: currentZoom,
+                emphasis: {
+                    focus: "adjacency",
+                    itemStyle: { borderColor: tokens.ink, borderWidth: 2 },
+                    lineStyle: { width: 3, color: tokens.ink400 }
+                },
+                animation: false
+            }]
+        }), true);
+
+        statsEl.textContent = nodes.length + " / " + graph.stats.entities + " " + LABELS.entities
+            + " · " + edges.length + " / " + graph.stats.relations + " " + LABELS.relations
+            + " · " + graph.stats.inferred + " " + LABELS.inferred + "s";
+
+        resetEl.hidden = !isFiltered();
+    }
+
+    function isFiltered() {
+        return !!(searchEl.value.trim() || predicateEl.value || hideInferredEl.checked
+            || bridgesOnlyEl.checked || Object.keys(mutedClusters).length);
+    }
+
+    function esc(s) {
+        return String(s).replace(/[&<>"]/g, function(c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+        });
+    }
+
+    // ── Légende : une thématique par ligne, cliquable pour l'isoler ──
+    function buildLegend() {
+        var palette = scChart.palette();
+        legendEl.innerHTML = "";
+        graph.clusters.forEach(function(c, i) {
+            clusterColor[c.id] = palette[i % palette.length];
+            var row = document.createElement("button");
+            row.type = "button";
+            row.className = "sc-viz-legend-row sc-viz-legend-row--button";
+            row.style.setProperty("--sc-dot", clusterColor[c.id]);
+            row.innerHTML = '<span class="sc-dot"></span>'
+                + '<span class="sc-viz-legend-label">' + esc(c.label) + "</span>";
+            row.addEventListener("click", function() {
+                if (mutedClusters[c.id]) delete mutedClusters[c.id];
+                else mutedClusters[c.id] = true;
+                row.classList.toggle("is-muted", !!mutedClusters[c.id]);
+                render();
+            });
+            legendEl.appendChild(row);
+        });
+    }
+
+    function buildPredicateFilter() {
+        var counts = {};
+        graph.edges.forEach(function(e) { counts[e.predicate] = (counts[e.predicate] || 0) + 1; });
+        Object.keys(counts)
+            .sort(function(a, b) { return counts[b] - counts[a]; })
+            .slice(0, 40)
+            .forEach(function(p) {
+                var opt = document.createElement("option");
+                opt.value = p;
+                opt.textContent = p + " (" + counts[p] + ")";
+                predicateEl.appendChild(opt);
+            });
+    }
+
+    // ── Fiche d'une entité, avec sa provenance ──
+    function showPanel(node) {
+        var out = [];
+        var rel = { in: [], out: [] };
+        graph.edges.forEach(function(e) {
+            if (e.source === node.id) rel.out.push(e);
+            else if (e.target === node.id) rel.in.push(e);
+        });
+
+        out.push('<div class="sc-viz-panel-title">' + esc(node.label) + "</div>");
+
+        out.push('<div class="sc-viz-panel-section">');
+        if (node.cluster) {
+            var label = (graph.clusters.find(function(c) { return c.id === node.cluster; }) || {}).label;
+            out.push('<div class="sc-viz-panel-row"><span>' + LABELS.cluster + "</span><strong>" + esc(label || "—") + "</strong></div>");
+        }
+        out.push('<div class="sc-viz-panel-row"><span>' + LABELS.frequency + "</span><strong>" + node.frequency + "</strong></div>");
+        out.push('<div class="sc-viz-panel-row"><span>' + LABELS.degree + "</span><strong>" + node.degree + "</strong></div>");
+        out.push('<div class="sc-viz-panel-row"><span>' + LABELS.docs + "</span><strong>" + node.doc_count + "</strong></div>");
+        out.push("</div>");
+
+        if (node.aliases && node.aliases.length) {
+            out.push('<div class="sc-viz-panel-section">');
+            out.push('<div class="sc-viz-panel-eyebrow">' + LABELS.aliases + "</div>");
+            out.push(esc(node.aliases.join(" · ")));
+            out.push("</div>");
+        }
+
+        [["out", LABELS.outgoing], ["in", LABELS.incoming]].forEach(function(pair) {
+            var list = rel[pair[0]];
+            if (!list.length) return;
+            out.push('<div class="sc-viz-panel-section">');
+            out.push('<div class="sc-viz-panel-eyebrow">' + pair[1] + " (" + list.length + ")</div>");
+            list.slice(0, 12).forEach(function(e) {
+                var other = nodeById[e.source === node.id ? e.target : e.source];
+                out.push('<div class="sc-viz-rel"><span class="sc-viz-rel-predicate">'
+                    + esc(e.predicate) + "</span> " + esc(other ? other.label : "?")
+                    + (e.inferred ? " <span class=\"sc-viz-rel-predicate\">(" + LABELS.inferred + ")</span>" : "")
+                    + "</div>");
+            });
+            out.push("</div>");
+        });
+
+        panelEl.innerHTML = out.join("");
+        panelEl.hidden = false;
+    }
+
+    // ── Chargement ──
+    statsEl.textContent = LABELS.loading;
+    fetch("{% url 'api-knowledge-graph' job.pk %}")
+        .then(function(r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            graph = data;
+            graph.nodes.forEach(function(n) { nodeById[n.id] = n; });
+            buildLegend();
+            buildPredicateFilter();
+            render();
+        })
+        .catch(function(err) {
+            statsEl.textContent = "";
+            container.innerHTML = '<div class="sc-viz-note sc-viz-note--error"></div>';
+            container.firstChild.textContent = LABELS.error + " : " + err.message;
+        });
+
+    chart.on("click", function(params) {
+        if (params.dataType === "node") {
+            selectedId = params.data.id;
+            showPanel(params.data._raw);
+            render();
+        }
+    });
+
+    chart.getZr().on("click", function(event) {
+        if (!event.target) {
+            selectedId = null;
+            panelEl.hidden = true;
+            render();
+        }
+    });
+
+    var searchTimer = null;
+    searchEl.addEventListener("input", function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(render, 200);
+    });
+    predicateEl.addEventListener("change", render);
+    hideInferredEl.addEventListener("change", render);
+    bridgesOnlyEl.addEventListener("change", render);
+
+    resetEl.addEventListener("click", function() {
+        searchEl.value = "";
+        predicateEl.value = "";
+        hideInferredEl.checked = false;
+        bridgesOnlyEl.checked = false;
+        mutedClusters = {};
+        selectedId = null;
+        panelEl.hidden = true;
+        legendEl.querySelectorAll(".is-muted").forEach(function(el) { el.classList.remove("is-muted"); });
+        render();
+    });
+
+    document.getElementById("kg-zoom-in").addEventListener("click", function() {
+        currentZoom *= 1.3;
+        chart.setOption({ series: [{ zoom: currentZoom }] });
+    });
+    document.getElementById("kg-zoom-out").addEventListener("click", function() {
+        currentZoom *= 0.7;
+        chart.setOption({ series: [{ zoom: currentZoom }] });
+    });
+
+    scChart.autoResize(container, chart);
+    scChart.onThemeChange(function() { if (graph) render(); });
+})();
+</script>
+{% endif %}
+{% endblock %}
