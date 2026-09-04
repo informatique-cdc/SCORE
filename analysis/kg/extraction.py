@@ -12,6 +12,7 @@ progress is reported as one stream — same approach as ClaimsExtractor.
 import json
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 from nsg.stopwords import STOPWORDS_ALL
@@ -47,6 +48,17 @@ def normalize(term: str) -> str:
     """Canonical form used to match entity variants."""
     words = [w for w in re.findall(r"\w+", term.lower(), re.UNICODE) if w not in STOPWORDS_ALL]
     return " ".join(words)
+
+
+def fold_accents(text: str) -> str:
+    """Strip diacritics, for the search key the assistant matches against.
+
+    SQLite has no unaccent, so folding has to happen on both sides at write
+    time. Without it "conge de paternite" finds nothing, and questions are
+    routinely typed without accents.
+    """
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
 def _clean(value, max_len: int) -> str:

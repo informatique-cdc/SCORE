@@ -192,6 +192,7 @@ _PATCH_MODULES = [
     # real endpoint: the suite only passed when spaCy happened to be unavailable
     # and the phase was skipped.
     "analysis.semantic_graph",
+    "analysis.kg.builder",
     "llm.client",
     "vectorstore.store",
 ]

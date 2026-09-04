@@ -7,8 +7,12 @@ in the Outils dropdown. They are composed by the orchestrator in rag.py.
 
 import json
 import logging
+import re
+
+from django.db.models import Q
 
 from llm.prompt_loader import get_prompt
+from nsg.stopwords import STOPWORDS_ALL
 
 logger = logging.getLogger(__name__)
 
@@ -214,12 +218,130 @@ def synthesize_sub_results(question, sub_questions, sub_results, history, llm):
 # ---------------------------------------------------------------------------
 
 
-def graph_rag_context(question, project):
-    """Extract concept context from the semantic graph.
+MAX_GRAPH_SEEDS = 8
+MAX_GRAPH_RELATIONS = 20
 
-    Cost: 0 extra LLM (NSG handles embedding internally).
-    Returns a formatted context string, or "" if unavailable.
+
+def graph_rag_context(question, project, sources=None):
+    """Extract relational context from the knowledge graph.
+
+    Cost: 0 extra LLM — seeding is lexical and topological, never embedded.
+
+    Seeds come from two directions. The question supplies lexical anchors, and
+    the documents that vector search already returned supply grounded ones. That
+    second path is what makes this GraphRAG rather than a lookup running beside
+    retrieval: it surfaces relations about the very documents being cited.
+
+    Falls back to the nsg concept graph for projects analysed before the
+    knowledge graph existed. Returns "" when neither is available.
     """
+    from analysis.models import KGRelation, KnowledgeGraphRun
+
+    run = KnowledgeGraphRun.objects.filter(project=project).order_by("-created_at").first()
+    if run is None:
+        return _concept_graph_context(question, project)
+
+    seeds = _graph_seeds(run, question, sources)
+    if not seeds:
+        return ""
+
+    candidates = (
+        KGRelation.objects.filter(run=run)
+        .filter(Q(subject__in=seeds) | Q(object__in=seeds))
+        .select_related("subject", "object")
+        # Observed first, then heaviest: an inferred edge must never crowd out
+        # something the corpus actually states.
+        .order_by("inferred", "-weight", "-confidence")[: MAX_GRAPH_RELATIONS * 6]
+    )
+    relations = _spread_over_seeds(candidates, {e.id for e in seeds})
+    if not relations:
+        return ""
+
+    lines = [
+        f"  {r.subject.label} —[{r.predicate}]→ {r.object.label}"
+        f"{' (déduite)' if r.inferred else ''}"
+        for r in relations
+    ]
+    logger.debug(
+        "Graph RAG: %d seeds, %d relations for project %s",
+        len(seeds),
+        len(relations),
+        project.id,
+    )
+    return get_prompt("KG_GRAPH_CONTEXT").format(
+        entities=", ".join(e.label for e in seeds),
+        relationships="\n".join(lines),
+    )
+
+
+def _spread_over_seeds(candidates, seed_ids, per_seed=3):
+    """Cap how many relations each seed contributes.
+
+    Without this a hub swallows the whole budget: "Caisse des Dépôts" carries
+    718 edges, so a question about health cover came back with its postal
+    address. Capping per seed keeps the narrower entities in the answer.
+    """
+    used = {}
+    kept = []
+    for relation in candidates:
+        anchors = [e for e in (relation.subject_id, relation.object_id) if e in seed_ids]
+        if any(used.get(a, 0) >= per_seed for a in anchors):
+            continue
+        for a in anchors:
+            used[a] = used.get(a, 0) + 1
+        kept.append(relation)
+        if len(kept) >= MAX_GRAPH_RELATIONS:
+            break
+    return kept
+
+
+def _graph_seeds(run, question, sources):
+    """Entities to start from: those named in the question, those in the sources."""
+    from analysis.models import KGEntity
+
+    seeds = {}
+
+    # Lexical anchors first: what the question actually names is more relevant
+    # than whatever happens to be most central in the retrieved documents.
+    from analysis.kg.extraction import fold_accents
+
+    # search_key is stored accent-folded, so the query has to be folded too.
+    tokens = [
+        w
+        for w in re.findall(r"\w{4,}", fold_accents(question), re.UNICODE)
+        if w not in STOPWORDS_ALL
+    ][:6]
+    if tokens:
+        matcher = Q()
+        for token in tokens:
+            matcher |= Q(search_key__icontains=token)
+        for entity in (
+            KGEntity.objects.filter(run=run)
+            .filter(matcher)
+            .order_by("-centrality")[:MAX_GRAPH_SEEDS]
+        ):
+            seeds[entity.id] = entity
+
+    # Grounded anchors: entities carried by the documents already retrieved.
+    doc_ids = [s["document_id"] for s in (sources or []) if s.get("document_id")]
+    if doc_ids:
+        grounded = (
+            KGEntity.objects.filter(run=run)
+            .filter(
+                Q(relations_out__documents__id__in=doc_ids)
+                | Q(relations_in__documents__id__in=doc_ids)
+            )
+            .distinct()
+            .order_by("-centrality")[:MAX_GRAPH_SEEDS]
+        )
+        for entity in grounded:
+            seeds[entity.id] = entity
+
+    return list(seeds.values())[: MAX_GRAPH_SEEDS * 2]
+
+
+def _concept_graph_context(question, project):
+    """Legacy path: the nsg co-occurrence graph, whose edges carry no predicate."""
     try:
         from analysis.semantic_graph import load_graph
 

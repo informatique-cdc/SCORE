@@ -47,6 +47,13 @@
             <option value="">{% trans "Toutes les relations" %}</option>
         </select>
 
+        <label class="sr-only" for="kg-density">{% trans "Nombre d'entités affichées" %}</label>
+        <select id="kg-density" class="sc-select w-40">
+            <option value="100">{% trans "100 entités" %}</option>
+            <option value="200" selected>{% trans "200 entités" %}</option>
+            <option value="400">{% trans "400 entités" %}</option>
+        </select>
+
         <label class="flex w-fit items-center gap-2 text-12 text-ink-500">
             <input type="checkbox" class="sc-check" id="kg-hide-inferred">
             <span>{% trans "Masquer les déduites" %}</span>
@@ -61,7 +68,7 @@
         <span id="kg-stats" class="ml-auto text-11p5 text-ink-500 num"></span>
     </div>
 
-    <div class="sc-viz h-[660px]">
+    <div class="sc-viz h-[760px]">
         <div id="kg-graph" class="h-full w-full"></div>
 
         <div class="sc-viz-legend">
@@ -98,6 +105,7 @@
     var panelEl = document.getElementById("kg-panel");
     var searchEl = document.getElementById("kg-search");
     var predicateEl = document.getElementById("kg-predicate");
+    var densityEl = document.getElementById("kg-density");
     var hideInferredEl = document.getElementById("kg-hide-inferred");
     var bridgesOnlyEl = document.getElementById("kg-bridges-only");
     var resetEl = document.getElementById("kg-reset");
@@ -108,6 +116,7 @@
     var mutedClusters = {};        // cluster masqué depuis la légende
     var selectedId = null;
     var currentZoom = 1;
+    var PLOT_MARGIN = 30;
 
     var LABELS = {
         entities: "{% trans "entités" %}",
@@ -128,11 +137,50 @@
         error: "{% trans "Erreur de chargement" %}"
     };
 
+    // Le layout serveur est calculé sur les 6134 entités, mais on n'affiche que
+    // les plus centrales : elles occupent le cœur dense du graphe et se
+    // superposent. On rend la densité uniforme par surface — le rang radial
+    // devient le rayon, en racine carrée puisque l'aire croît comme r².
+    // L'angle est conservé, donc les thématiques restent groupées en secteurs.
+    function spreadPositions(nodes) {
+        if (!nodes.length) return;
+        var cx = 0, cy = 0;
+        nodes.forEach(function(n) { cx += n.x; cy += n.y; });
+        cx /= nodes.length;
+        cy /= nodes.length;
+
+        var polar = nodes.map(function(n) {
+            var dx = n.x - cx, dy = n.y - cy;
+            return { node: n, r: Math.sqrt(dx * dx + dy * dy), a: Math.atan2(dy, dx) };
+        });
+        polar.sort(function(p, q) { return p.r - q.r; });
+        polar.forEach(function(p, i) {
+            p.node.pr = Math.sqrt((i + 1) / polar.length);
+            p.node.pa = p.a;
+        });
+    }
+
+    // Le système « view » d'ECharts ajuste la boîte des données à la zone de
+    // tracé avec des facteurs X et Y indépendants : un nuage circulaire dans un
+    // cadre large est étiré, et les symboles avec lui. On pré-déforme donc le
+    // nuage au rapport d'aspect du conteneur pour que l'ajustement soit neutre.
+    function applyAspect(nodes) {
+        var w = Math.max(container.clientWidth - 2 * PLOT_MARGIN, 1);
+        var h = Math.max(container.clientHeight - 2 * PLOT_MARGIN, 1);
+        var aspect = w / h;
+        nodes.forEach(function(n) {
+            n.x = n.pr * Math.cos(n.pa) * aspect;
+            n.y = n.pr * Math.sin(n.pa);
+        });
+    }
+
     // ── Filtrage, entièrement côté client : la charge utile est déjà là ──
     function visibleNodes() {
         var query = searchEl.value.trim().toLowerCase();
         var bridgesOnly = bridgesOnlyEl.checked;
+        var limit = parseInt(densityEl.value, 10);
         return graph.nodes.filter(function(n) {
+            if (n.rank >= limit) return false;
             if (bridgesOnly && !n.bridge) return false;
             if (n.cluster && mutedClusters[n.cluster]) return false;
             if (query && n.label.toLowerCase().indexOf(query) === -1) return false;
@@ -152,6 +200,7 @@
 
     function render() {
         var tokens = scChart.tokens();
+        applyAspect(graph.nodes);
         var nodes = visibleNodes();
         var ids = {};
         nodes.forEach(function(n) { ids[n.id] = true; });
@@ -164,12 +213,16 @@
         }
 
         var maxFreq = nodes.reduce(function(m, n) { return Math.max(m, n.frequency || 1); }, 1);
-        // Le libellé n'apparaît qu'au-delà d'un seuil de centralité : au-delà,
-        // le graphe devient un mur de texte illisible.
-        var labelCut = nodes.length > 60 ? 0.02 : 0;
+        // Plafond de libellés plutôt que seuil de centralité : le nombre de
+        // textes à l'écran reste borné quelle que soit la densité choisie.
+        var labelBudget = Math.min(nodes.length, 80);
+        var labelled = {};
+        nodes.slice().sort(function(a, b) { return a.rank - b.rank; })
+            .slice(0, labelBudget)
+            .forEach(function(n) { labelled[n.id] = true; });
 
         var seriesNodes = nodes.map(function(n) {
-            var size = 9 + Math.sqrt((n.frequency || 1) / maxFreq) * 26;
+            var size = 8 + Math.sqrt((n.frequency || 1) / maxFreq) * 22;
             var isSelected = n.id === selectedId;
             return {
                 id: n.id,
@@ -183,7 +236,7 @@
                     borderWidth: n.bridge ? 2.5 : 1
                 },
                 label: {
-                    show: isSelected || n.bridge || (n.centrality || 0) >= labelCut,
+                    show: isSelected || labelled[n.id],
                     position: "right",
                     distance: 4,
                     fontSize: n.bridge ? 11.5 : 10,
@@ -239,6 +292,13 @@
             series: [{
                 type: "graph",
                 layout: "none",          // positions calculées au build, cf. plan D5
+                // Marge de respiration : sans elle les nœuds extrêmes sont
+                // rognés au bord du canvas, libellé compris. Même valeur que
+                // celle retirée du rapport d'aspect dans applyAspect.
+                left: PLOT_MARGIN,
+                right: PLOT_MARGIN,
+                top: PLOT_MARGIN,
+                bottom: PLOT_MARGIN,
                 data: seriesNodes,
                 links: seriesEdges,
                 roam: true,
@@ -262,7 +322,8 @@
 
     function isFiltered() {
         return !!(searchEl.value.trim() || predicateEl.value || hideInferredEl.checked
-            || bridgesOnlyEl.checked || Object.keys(mutedClusters).length);
+            || bridgesOnlyEl.checked || Object.keys(mutedClusters).length
+            || densityEl.value !== "200");
     }
 
     function esc(s) {
@@ -363,7 +424,13 @@
         })
         .then(function(data) {
             graph = data;
-            graph.nodes.forEach(function(n) { nodeById[n.id] = n; });
+            // Rang de centralité figé une fois : le sélecteur de densité masque
+            // des nœuds sans déplacer ceux qui restent.
+            graph.nodes.forEach(function(n, i) {
+                n.rank = i;
+                nodeById[n.id] = n;
+            });
+            spreadPositions(graph.nodes);
             buildLegend();
             buildPredicateFilter();
             render();
@@ -396,12 +463,14 @@
         searchTimer = setTimeout(render, 200);
     });
     predicateEl.addEventListener("change", render);
+    densityEl.addEventListener("change", render);
     hideInferredEl.addEventListener("change", render);
     bridgesOnlyEl.addEventListener("change", render);
 
     resetEl.addEventListener("click", function() {
         searchEl.value = "";
         predicateEl.value = "";
+        densityEl.value = "200";
         hideInferredEl.checked = false;
         bridgesOnlyEl.checked = false;
         mutedClusters = {};
@@ -421,6 +490,9 @@
     });
 
     scChart.autoResize(container, chart);
+    // Le rapport d'aspect change avec la fenêtre : sans re-tracé, les nœuds
+    // redeviendraient elliptiques après un redimensionnement.
+    new ResizeObserver(function() { if (graph) render(); }).observe(container);
     scChart.onThemeChange(function() { if (graph) render(); });
 })();
 </script>

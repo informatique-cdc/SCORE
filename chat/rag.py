@@ -6,7 +6,7 @@ and calls the LLM with conversation history.
 
 Supports 8 composable RAG techniques via the ``tools`` parameter:
   Phase 1 (query expansion):  decomposition > rag-fusion > hyde  (mutually exclusive)
-  Phase 2 (retrieval):        standard vector search; graph-rag adds concept context
+  Phase 2 (retrieval):        standard vector search; graph-rag adds knowledge graph relations
   Phase 3 (post-retrieval):   crag → reranking → self-rag  (stacks in order)
   Phase 4 (generation):       standard, or agentic-rag overrides everything
 """
@@ -238,8 +238,14 @@ def ask_documents(
     # Standard pipeline with optional techniques
     pipeline_result = _retrieval_pipeline(question, tid, pid, tools, llm, vec_store)
 
-    # Graph RAG context (independent, composable)
-    concept_ctx = graph_rag_context(question, project) if "graph-rag" in tools else ""
+    # Graph RAG context (independent, composable). The retrieved sources are
+    # handed over so the graph expands what was actually found, rather than
+    # answering a parallel question of its own.
+    concept_ctx = (
+        graph_rag_context(question, project, sources=pipeline_result["sources"])
+        if "graph-rag" in tools
+        else ""
+    )
 
     return _generate_answer(
         question,

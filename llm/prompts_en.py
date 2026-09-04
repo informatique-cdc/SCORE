@@ -272,6 +272,22 @@ Returning an empty list is a correct answer.
 Respond with a JSON object: \
 {{"relations": [{{"subject": "...", "predicate": "...", "object": "...", "confidence": 0.0}}]}}"""
 
+KG_GRAPH_CONTEXT = """\
+Context from the corpus knowledge graph.
+These relations were extracted from the documents; they complement the passages \
+below rather than replace them.
+
+Entities involved: {entities}
+
+Relations:
+{relationships}
+
+Instructions:
+- Relations marked "inferred" were not written as such in the documents: they were \
+deduced. Never present them as a quotation, and state the uncertainty if you rely on them.
+- Where a relation contradicts the document passages, the passages prevail.
+- Only draw on this graph when it genuinely informs the question."""
+
 CONCEPT_CONTEXT = """\
 Conceptual context from the semantic graph:
 The following concepts are related to the user's question, along with their relationships.

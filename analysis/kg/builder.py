@@ -13,7 +13,7 @@ from django.conf import settings
 from django.db import transaction
 
 from analysis.kg import layout
-from analysis.kg.extraction import extract_triples, normalize
+from analysis.kg.extraction import extract_triples, fold_accents, normalize
 from analysis.kg.inference import infer
 from analysis.kg.standardize import standardize
 from analysis.models import KGEntity, KGRelation, KnowledgeGraphRun, TopicCluster
@@ -41,12 +41,12 @@ class KnowledgeGraphBuilder:
         clusters = self._clusters()
         if not clusters:
             logger.warning("[kg] No clusters for project %s — empty graph", self.project.id)
-            return self._persist([], {}, [], clusters, time.monotonic() - started)
+            return self._persist({}, {}, [], clusters, time.monotonic() - started)
 
         logger.info("[kg] Step 1/5: extracting triples from %d clusters...", len(clusters))
         triples = extract_triples(self.llm, clusters, self.config, on_progress=self.on_progress)
         if not triples:
-            return self._persist([], {}, [], clusters, time.monotonic() - started)
+            return self._persist({}, {}, [], clusters, time.monotonic() - started)
 
         logger.info("[kg] Step 2/5: standardising %d triples...", len(triples))
         mapping = standardize(triples, self.llm, self.config)
@@ -214,7 +214,7 @@ class KnowledgeGraphBuilder:
                     canonical=key[:300],
                     label=data["label"][:300],
                     aliases=aliases[:20],
-                    search_key=" ".join([key, *aliases])[:1000],
+                    search_key=fold_accents(" ".join([key, data["label"], *aliases]))[:1000],
                     frequency=data["frequency"],
                     degree=data.get("degree", 0),
                     centrality=data.get("centrality", 0.0),

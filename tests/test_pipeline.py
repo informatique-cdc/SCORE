@@ -213,9 +213,18 @@ class TestKnowledgeGraphPhase:
         assert "knowledge_graph" in skipped
         assert "tree" not in skipped
 
-    def test_disabled_by_default_in_shipped_config(self, settings):
-        """Shipped configuration must leave the existing pipeline untouched."""
-        assert settings.ANALYSIS_CONFIG["knowledge_graph"]["enabled"] is False
+    def test_mechanical_inference_rules_stay_off(self, settings):
+        """Measured on the reference corpus, both add volume without structure.
+
+        Transitive inference produced 94% of all inferred edges under a single
+        vague predicate, doubling average degree while leaving the component
+        count untouched — it would corrupt degree as a quality signal.
+        """
+        inference = settings.ANALYSIS_CONFIG["knowledge_graph"]["inference"]
+
+        assert inference["enabled"] is True
+        assert inference["transitive"] is False
+        assert inference["lexical_similarity"] is False
 
     def test_cleanup_removes_run_and_cascades(self, tenant, project, analysis_job):
         run = KnowledgeGraphRun.objects.create(

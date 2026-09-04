@@ -273,6 +273,23 @@ Renvoyer une liste vide est une réponse correcte.
 Réponds avec un objet JSON : \
 {{"relations": [{{"subject": "...", "predicate": "...", "object": "...", "confidence": 0.0}}]}}"""
 
+KG_GRAPH_CONTEXT = """\
+Contexte issu du graphe de connaissances du corpus.
+Ces relations ont été extraites des documents ; elles complètent les passages \
+ci-dessous sans s'y substituer.
+
+Entités concernées : {entities}
+
+Relations :
+{relationships}
+
+Consignes :
+- Les relations marquées « déduite » n'ont pas été écrites telles quelles dans les \
+documents : elles ont été inférées. Ne les présente jamais comme une citation, et \
+mentionne l'incertitude si tu t'appuies dessus.
+- Si une relation contredit les passages documentaires, ce sont les passages qui font foi.
+- N'invoque ce graphe que s'il éclaire réellement la question."""
+
 CONCEPT_CONTEXT = """\
 Contexte conceptuel issu du graphe sémantique :
 Les concepts suivants sont liés à la question de l'utilisateur, avec leurs relations.
