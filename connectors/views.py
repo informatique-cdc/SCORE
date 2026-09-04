@@ -2,9 +2,11 @@
 
 import logging
 import mimetypes
+import zipfile
 from pathlib import Path
 
 from django.contrib.auth.decorators import login_required
+from django.core.files.storage import storages
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Count, Sum
@@ -82,16 +84,32 @@ def connector_create(request):
         return redirect("connector-list")
 
     if request.method == "POST":
+        connector_type = request.POST["connector_type"]
+        config = {
+            k.removeprefix("config_"): v
+            for k, v in request.POST.items()
+            if k.startswith("config_") and v
+        }
+
+        if connector_type == ConnectorConfig.ConnectorType.ZIPUPLOAD:
+            upload, error = _store_zip_upload(request.FILES.get("zip_file"))
+            if error:
+                return render(
+                    request,
+                    "connectors/create.html",
+                    {
+                        "connector_types": ConnectorConfig.ConnectorType.choices,
+                        "error": error,
+                    },
+                )
+            config.update(upload)
+
         connector = ConnectorConfig.objects.create(
             tenant=request.tenant,
             project=request.project,
             name=request.POST["name"],
-            connector_type=request.POST["connector_type"],
-            config={
-                k.removeprefix("config_"): v
-                for k, v in request.POST.items()
-                if k.startswith("config_") and v
-            },
+            connector_type=connector_type,
+            config=config,
             credential_ref=request.POST.get("credential_ref", ""),
         )
         secret_value = request.POST.get("secret_value", "")
@@ -107,6 +125,27 @@ def connector_create(request):
             "connector_types": ConnectorConfig.ConnectorType.choices,
         },
     )
+
+
+def _store_zip_upload(uploaded):
+    """Valide et enregistre l'archive, puis renvoie ``(config, erreur)``.
+
+    L'archive est relue depuis le stockage par ``ZipUploadConnector`` à chaque
+    synchronisation : elle est conservée telle quelle, pas décompressée ici.
+    """
+    if uploaded is None:
+        return None, _("Sélectionnez une archive ZIP à importer.")
+
+    try:
+        with zipfile.ZipFile(uploaded) as archive:
+            if archive.testzip() is not None:
+                raise zipfile.BadZipFile
+    except zipfile.BadZipFile:
+        return None, _("Ce fichier n’est pas une archive ZIP valide.")
+
+    uploaded.seek(0)
+    stored_path = storages["uploads"].save(uploaded.name, uploaded)
+    return {"upload_path": stored_path, "original_filename": uploaded.name}, None
 
 
 def _connector_source_path(connector):

@@ -24,6 +24,7 @@ class ConnectorConfig(ProjectScopedModel):
         CONFLUENCE = "confluence", _("Confluence")
         ELASTICSEARCH = "elasticsearch", _("Elasticsearch")
         GENERIC = "generic", _("Générique (Fichier/HTTP)")
+        ZIPUPLOAD = "zipupload", _("Import ZIP")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)

@@ -215,6 +215,10 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# --- Media ---
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
 # --- Static ---
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -230,13 +234,15 @@ STORAGES = {
             else "whitenoise.storage.CompressedManifestStaticFilesStorage"
         ),
     },
+    # Archives déposées par le connecteur « Import ZIP », hors de MEDIA_ROOT
+    # racine pour ne pas les mélanger aux fichiers extraits des documents.
+    "uploads": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": str(MEDIA_ROOT / "uploads")},
+    },
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# --- Media ---
-MEDIA_ROOT = BASE_DIR / "media"
-MEDIA_URL = "/media/"
 
 # --- Celery ---
 CELERY_BROKER_BACKEND = env("CELERY_BROKER_BACKEND")
