@@ -1,0 +1,4 @@
+{% load i18n %}
+<turbo-frame id="analysis-graph-stats" target="_top">
+{% if graph_stats %}<span class="text-11p5 text-ink-400 num">{{ graph_stats.total_nodes }} {% trans "concepts" %} · {{ graph_stats.total_edges }} {% trans "liens" %}</span>{% endif %}
+</turbo-frame>

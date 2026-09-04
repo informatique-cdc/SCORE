@@ -1,119 +1,120 @@
 {% load i18n %}
-<!-- SCORE Detail Offcanvas -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="score-panel" style="width:50vw;min-width:400px;">
-    <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title">{% trans "D&eacute;tails SCORE" %}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body" id="score-panel-body">
-        <div class="text-center py-5" id="score-loading">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted mt-2">{% trans "Chargement des d&eacute;tails du score..." %}</p>
+{# Panneau de détail du SCORE : les 7 dimensions expliquées et leurs recommandations. #}
+{# Ouvert par tout élément portant data-overlay-open="scorePanel". #}
+
+<div class="sc-panel-scrim" data-overlay="scorePanel" hidden>
+<aside class="sc-panel" data-overlay-dialog role="dialog" aria-modal="true" aria-labelledby="score-panel-title">
+    <div class="sc-panel-head">
+        <div>
+            <h2 class="sc-panel-title" id="score-panel-title">{% trans "Détail du SCORE" %}</h2>
+            <p class="sc-modal-sub">{% trans "Ce que mesure chaque dimension, et comment la faire progresser." %}</p>
         </div>
-        <div id="score-content" class="d-none"></div>
-        <div id="score-error" class="d-none">
-            <div class="alert alert-danger">{% trans "&Eacute;chec du chargement des d&eacute;tails du score." %}</div>
+        <button type="button" class="sc-icon-btn sc-icon-btn--30" data-overlay-close aria-label="{% trans "Fermer" %}">✕</button>
+    </div>
+
+    <div class="sc-panel-body" data-scroll="1">
+        <div class="sc-doc-loading" data-score-loading>
+            <div class="sc-spinner" role="status"></div>
+            <p>{% trans "Chargement du détail…" %}</p>
+        </div>
+        <div data-score-content hidden></div>
+        <div class="sc-card sc-card--danger text-12p5" data-score-error hidden>
+            {% trans "Échec du chargement du détail du score." %}
         </div>
     </div>
+</aside>
 </div>
 
 <script>
 (function() {
-    const trigger = document.getElementById('score-trigger');
-    const panel = document.getElementById('score-panel');
-    if (!trigger || !panel) return;
+    var scrim = document.querySelector('[data-overlay="scorePanel"]');
+    if (!scrim) return;
 
-    let loaded = false;
-    panel.addEventListener('show.bs.offcanvas', function() {
+    var loading = scrim.querySelector('[data-score-loading]');
+    var content = scrim.querySelector('[data-score-content]');
+    var error   = scrim.querySelector('[data-score-error]');
+    var loaded  = false;
+
+    // Barème colorFor, identique au filtre score_color côté Python.
+    function band(score) {
+        if (score >= 70) return 'a';
+        if (score >= 55) return 'b';
+        if (score >= 40) return 'c';
+        if (score >= 25) return 'd';
+        return 'e';
+    }
+
+    function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+    }
+
+    function render(data) {
+        var h = '';
+
+        h += '<div class="sc-card sc-card--roomy">';
+        h += '<div class="flex items-baseline gap-3">';
+        h += '<span class="sc-metric sc-ink--' + band(data.score) + '">' + esc(data.score) + '</span>';
+        h += '<span class="text-13 text-ink-500">/ 100 — {% trans "Note" %} ' + esc(data.grade) + '</span>';
+        h += '</div>';
+        h += '<p class="mt-2 mb-0 text-13 leading-normal text-ink-700 pretty">' + esc(data.summary) + '</p>';
+        h += '</div>';
+
+        if (data.top_recommendations && data.top_recommendations.length) {
+            h += '<div class="sc-card mt-3">';
+            h += '<div class="sc-eyebrow mb-3.5">{% trans "Recommandations principales" %}</div>';
+            h += '<ul class="grid list-none gap-2 p-0">';
+            data.top_recommendations.forEach(function(rec) {
+                h += '<li class="text-12p5 leading-normal text-ink-700">' + esc(rec.text) + '</li>';
+            });
+            h += '</ul></div>';
+        }
+
+        (data.dimensions || []).forEach(function(dim) {
+            var b = band(dim.score);
+            h += '<div class="sc-card mt-3">';
+            h += '<div class="mb-2 flex items-center justify-between gap-3">';
+            h += '<strong class="text-13">' + esc(dim.name) + '</strong>';
+            h += '<span class="sc-tag sc-ink--' + b + '">' + esc(dim.score) + ' / 100</span>';
+            h += '</div>';
+            h += '<div class="sc-dim-track mb-3"><div class="sc-dim-fill sc-fill--' + b + '" style="--sc-fill: ' + Number(dim.score) + '%"></div></div>';
+            h += '<p class="mb-2 text-11p5 text-ink-500">' + esc(dim.description) + '</p>';
+            h += '<p class="mb-0 text-12p5 leading-normal text-ink-700 pretty">' + esc(dim.details) + '</p>';
+            if (dim.recommendations && dim.recommendations.length) {
+                h += '<div class="mt-3 border-t border-surface-200 pt-3">';
+                h += '<div class="sc-eyebrow mb-2">{% trans "Comment améliorer" %}</div>';
+                h += '<ul class="grid list-none gap-1.5 p-0">';
+                dim.recommendations.forEach(function(rec) {
+                    h += '<li class="text-12 leading-normal text-ink-700">' + esc(rec) + '</li>';
+                });
+                h += '</ul></div>';
+            }
+            h += '</div>';
+        });
+
+        return h;
+    }
+
+    // Chargé à la première ouverture seulement : le détail est coûteux à calculer.
+    scrim.addEventListener('overlay:open', function() {
         if (loaded) return;
-        const loading = document.getElementById('score-loading');
-        const content = document.getElementById('score-content');
-        const error = document.getElementById('score-error');
-
-        loading.classList.remove('d-none');
-        content.classList.add('d-none');
-        error.classList.add('d-none');
+        loading.hidden = false;
+        content.hidden = true;
+        error.hidden = true;
 
         fetch('{% url "dashboard-score-detail" %}')
-            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-            .then(data => {
-                loading.classList.add('d-none');
-                content.classList.remove('d-none');
-                content.innerHTML = renderDetail(data);
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(function(data) {
+                content.innerHTML = render(data);
+                loading.hidden = true;
+                content.hidden = false;
                 loaded = true;
             })
-            .catch(() => {
-                loading.classList.add('d-none');
-                error.classList.remove('d-none');
+            .catch(function() {
+                loading.hidden = true;
+                error.hidden = false;
             });
     });
-
-    function scoreBg(score) {
-        if (score >= 70) return 'success';
-        if (score >= 40) return 'warning';
-        return 'danger';
-    }
-
-    const icons = {
-        'copy': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
-        'alert-triangle': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-        'target': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
-        'layers': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-        'heart': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>',
-        'plus-circle': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
-        'play-circle': '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>',
-    };
-
-    function icon(name) { return icons[name] || ''; }
-
-    function renderDetail(data) {
-        let html = '';
-        html += '<div class="alert alert-light border mb-4">';
-        html += '<div class="d-flex align-items-center gap-3 mb-2">';
-        html += '<span class="score-number score-color-' + data.grade + '">' + data.score + '</span>';
-        html += '<span class="fs-5 fw-bold">/ 100 &mdash; {% trans "Note" %} ' + data.grade + '</span>';
-        html += '</div>';
-        html += '<p class="mb-0">' + data.summary + '</p>';
-        html += '</div>';
-
-        if (data.top_recommendations && data.top_recommendations.length > 0) {
-            html += '<div class="card mb-4 border-primary">';
-            html += '<div class="card-header bg-primary text-white fw-bold">{% trans "Recommandations principales" %}</div>';
-            html += '<ul class="list-group list-group-flush">';
-            data.top_recommendations.forEach(function(rec) {
-                html += '<li class="list-group-item d-flex align-items-start gap-2">';
-                html += '<span class="text-primary mt-1">' + icon(rec.icon) + '</span>';
-                html += '<span>' + rec.text + '</span>';
-                html += '</li>';
-            });
-            html += '</ul></div>';
-        }
-
-        if (data.dimensions && data.dimensions.length > 0) {
-            data.dimensions.forEach(function(dim) {
-                var bg = scoreBg(dim.score);
-                html += '<div class="card mb-3">';
-                html += '<div class="card-header d-flex justify-content-between align-items-center">';
-                html += '<strong>' + dim.name + '</strong>';
-                html += '<span class="badge bg-' + bg + '">' + dim.score + ' / 100</span>';
-                html += '</div>';
-                html += '<div class="card-body">';
-                html += '<p class="text-muted small mb-2">' + dim.description + '</p>';
-                html += '<div class="progress mb-3" style="height:8px;">';
-                html += '<div class="progress-bar bg-' + bg + '" style="width:' + dim.score + '%"></div>';
-                html += '</div>';
-                html += '<p class="mb-2">' + dim.details + '</p>';
-                if (dim.recommendations && dim.recommendations.length > 0) {
-                    html += '<div class="mt-2">';
-                    html += '<small class="text-muted fw-bold">{% trans "Comment am&eacute;liorer :" %}</small>';
-                    html += '<ul class="mb-0 mt-1 small">';
-                    dim.recommendations.forEach(function(rec) { html += '<li>' + rec + '</li>'; });
-                    html += '</ul></div>';
-                }
-                html += '</div></div>';
-            });
-        }
-        return html;
-    }
 })();
 </script>

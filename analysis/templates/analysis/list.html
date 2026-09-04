@@ -1,645 +1,407 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Analyses" %} — SCORE{% endblock %}
-{% block nav_analysis %}active{% endblock %}
+
+{% block title %}{% trans "Analyses" %} - SCORE{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    {% if current_tenant %}<span class="sc-crumb">{{ current_tenant.name }}<span class="sc-crumb-sep">/</span></span>{% endif %}
+    <span class="sc-crumb is-current">{% trans "Analyses" %}</span>
+{% endblock %}
+
+{% block page_title %}{% trans "Historique des analyses" %}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Chaque ligne est un instantané de votre base de connaissances. Comparez les scores d'une exécution à l'autre pour mesurer vos progrès et repérer les régressions." %}</p>
+{% endblock %}
+
+{% block page_actions %}
+    {% if can_run_analysis %}
+    <button type="button" class="sc-btn sc-btn--primary" data-overlay-open="analysisConfig"{% if not membership.can_edit %} disabled{% endif %}>
+        <svg class="size-3 shrink-0" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7.5L10.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        {% trans "Lancer une analyse" %}
+    </button>
+    {% elif analysis_block_reason == "no_changes" %}
+    <span class="text-12 text-ink-500">{% trans "Synchronisez vos connecteurs pour lancer une nouvelle analyse." %}</span>
+    {% elif analysis_block_reason == "running" %}
+    <span class="text-12 text-ink-500">{% trans "Une analyse est déjà en cours." %}</span>
+    {% elif analysis_block_reason == "no_docs" %}
+    <span class="text-12 text-ink-500">{% trans "Ajoutez des documents pour lancer une analyse." %}</span>
+    {% endif %}
+{% endblock %}
 
 {% block content %}
-<!-- Page header -->
-<div class="analysis-history-header mb-4">
-    <div class="d-flex justify-content-between align-items-start">
-        <div class="d-flex align-items-start gap-3" style="max-width:720px;">
-            <div class="analysis-header-icon">
-                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 8v4l3 3"/>
-                    <circle cx="12" cy="12" r="10"/>
-                </svg>
-            </div>
+<div class="flex flex-col gap-3.5">
+    {% include "analysis/_jobs_table.html" %}
+</div>
+
+{% if can_run_analysis and membership.can_edit %}
+<div class="sc-scrim" data-overlay="analysisConfig" hidden>
+    <div class="sc-modal" data-overlay-dialog role="dialog" aria-modal="true" aria-labelledby="analysisConfigTitle">
+        <div class="sc-modal-head">
             <div>
-                <h2 class="mb-1" style="font-size:1.35rem;font-weight:700;">{% trans "Historique des analyses" %}</h2>
-                <p class="mb-0" style="color:var(--ds-text-muted);font-size:0.875rem;line-height:1.55;">
-                    {% trans "Chaque ligne est un snapshot de votre base de connaissances. Comparez les scores entre versions pour mesurer vos progr&egrave;s au fil du temps et identifier les r&eacute;gressions." %}
-                </p>
+                <h2 class="sc-modal-title" id="analysisConfigTitle">{% trans "Configuration de l'analyse" %}</h2>
+                <p class="sc-modal-sub" data-ac-sub>{% trans "Choisissez comment configurer cette analyse." %}</p>
             </div>
+            <button type="button" class="sc-icon-btn sc-icon-btn--30" data-overlay-close aria-label="{% trans "Fermer" %}">✕</button>
         </div>
-        {% if can_run_analysis %}
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                data-bs-target="#analysisConfigModal" {% if not membership.can_edit %}disabled{% endif %}>
-            <svg style="width:14px;height:14px;margin-right:4px" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7.5L10.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-            {% trans "Lancer une analyse" %}
-        </button>
-        {% elif analysis_block_reason == "no_changes" %}
-        <span class="text-muted" style="font-size:13px;">{% trans "Synchronisez vos connecteurs pour lancer une nouvelle analyse." %}</span>
-        {% elif analysis_block_reason == "running" %}
-        <span class="text-muted" style="font-size:13px;">{% trans "Une analyse est d&eacute;j&agrave; en cours." %}</span>
-        {% elif analysis_block_reason == "no_docs" %}
-        <span class="text-muted" style="font-size:13px;">{% trans "Ajoutez des documents pour lancer une analyse." %}</span>
-        {% endif %}
-    </div>
-</div>
 
-<!-- Jobs table -->
-<div class="card">
-    <div class="card-body p-0">
-        {% include "analysis/_jobs_table.html" %}
-    </div>
-</div>
+        <form method="post" action="{% url 'analysis-run' %}" data-turbo-frame="_top" id="ac-form">
+            {% csrf_token %}
+            <input type="hidden" name="config_overrides" id="ac-overrides-input" value="">
 
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!-- Analysis Configuration Modal                                -->
-<!-- ═══════════════════════════════════════════════════════════ -->
-<div class="modal fade" id="analysisConfigModal" tabindex="-1" aria-hidden="true">
-<div class="modal-dialog modal-dialog-centered" style="max-width:600px;">
-<div class="modal-content" style="background:var(--ds-grey-800);border:1px solid var(--ds-grey-500);border-radius:16px;">
-
-    <!-- ── Step 1 : Choice ── -->
-    <div id="ac-step-choice" class="ac-step">
-        <div class="modal-body" style="padding:32px 32px 28px;">
-            <!-- Icon -->
-            <div class="ac-modal-icon mb-3">
-                <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                </svg>
-            </div>
-            <h5 style="font-weight:700;margin-bottom:4px;">{% trans "Configuration de l'analyse" %}</h5>
-            <p style="color:var(--ds-text-muted);font-size:13px;margin-bottom:20px;">{% trans "Choisissez comment configurer cette analyse." %}</p>
-
-            <div class="ac-choice-grid">
-                <div class="ac-choice-card" data-choice="default">
-                    <div class="ac-choice-icon" style="background:rgba(13,110,253,0.12);color:#6ea8fe;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/>
-                            <path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/>
-                            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
-                            <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
-                        </svg>
-                    </div>
-                    <div class="ac-choice-label">{% trans "Configuration par d&eacute;faut" %}</div>
-                    <div class="ac-choice-desc">{% trans "Utiliser les param&egrave;tres optimis&eacute;s de config.yaml" %}</div>
-                </div>
-                <div class="ac-choice-card" data-choice="manual">
-                    <div class="ac-choice-icon" style="background:rgba(167,139,250,0.12);color:#a78bfa;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-                            <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-                            <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-                            <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
-                            <line x1="17" y1="16" x2="23" y2="16"/>
-                        </svg>
-                    </div>
-                    <div class="ac-choice-label">{% trans "Configuration manuelle" %}</div>
-                    <div class="ac-choice-desc">{% trans "Ajuster les seuils, poids et algorithmes" %}</div>
+            <div class="sc-modal-body" data-ac-step="1">
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" class="sc-choice" data-ac-choice="default">
+                        <span class="sc-choice-title">{% trans "Configuration par défaut" %}</span>
+                        <span class="sc-choice-sub">{% trans "Utiliser les paramètres validés de config.yaml." %}</span>
+                    </button>
+                    <button type="button" class="sc-choice" data-ac-choice="manual">
+                        <span class="sc-choice-title">{% trans "Configuration manuelle" %}</span>
+                        <span class="sc-choice-sub">{% trans "Ajuster les seuils, poids et algorithmes." %}</span>
+                    </button>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer" style="border-top:1px solid var(--ds-grey-600);padding:16px 32px;">
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">{% trans "Annuler" %}</button>
-            <button type="button" class="btn btn-sm btn-primary" id="ac-btn-choice" disabled>{% trans "Lancer" %}</button>
-        </div>
-    </div>
 
-    <!-- ── Step 2 : Manual config ── -->
-    <div id="ac-step-config" class="ac-step" style="display:none;">
-        <div class="modal-header" style="border-bottom:1px solid var(--ds-grey-600);padding:16px 24px;">
-            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 me-2" id="ac-back-btn" style="color:var(--ds-text-muted);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
-            <h6 class="modal-title mb-0" style="font-weight:700;font-size:15px;">{% trans "Configuration manuelle" %}</h6>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body" style="padding:16px 24px;max-height:60vh;overflow-y:auto;">
-            <div class="accordion ac-accordion" id="acAccordion">
+            <div class="sc-modal-body grid gap-1.5" data-ac-step="2" hidden>
 
-                <!-- Doublons -->
-                <div class="accordion-item ac-accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button ac-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ac-sec-duplicate">
-                            {% trans "Doublons" %}
-                            <span class="ac-section-badge" id="ac-badge-duplicate"></span>
-                        </button>
-                    </h2>
-                    <div id="ac-sec-duplicate" class="accordion-collapse collapse" data-bs-parent="#acAccordion">
-                        <div class="accordion-body ac-accordion-body">
-                            <div class="ac-param-row">
-                                <label>{% trans "Poids s&eacute;mantique" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="duplicate" data-key="semantic_weight">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Poids lexical" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="duplicate" data-key="lexical_weight">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Poids m&eacute;tadonn&eacute;es" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="duplicate" data-key="metadata_weight">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil s&eacute;mantique" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="duplicate" data-key="semantic_threshold">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil combin&eacute;" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="duplicate" data-key="combined_threshold">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil cross-encoder" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="duplicate" data-key="cross_encoder_threshold">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil v&eacute;rification LLM" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="duplicate" data-key="llm_verify_threshold">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil LSH" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="duplicate" data-key="lsh_threshold">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Taille batch LLM" %}</label>
-                                <input type="number" min="1" max="50" data-section="duplicate" data-key="llm_batch_size">
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "MinHash num_perm" %}</label>
-                                <input type="number" min="16" max="256" data-section="duplicate" data-key="minhash_num_perm">
-                            </div>
+                <div class="sc-cfg-section">
+                    <button type="button" class="sc-disclosure" data-disclosure="ac-duplicate" data-disclosure-group="config" aria-expanded="false">
+                        <span>{% trans "Doublons" %}</span>
+                        <span class="sc-tag sc-tag--info" data-ac-badge="duplicate" hidden></span>
+                        <svg class="sc-disclosure-chevron size-3" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="sc-cfg-panel" data-disclosure-panel="ac-duplicate" hidden>
+                        {% trans "Poids sémantique" as l_semantic_weight %}
+                        {% include "analysis/_config_slider.html" with label=l_semantic_weight section="duplicate" key="semantic_weight" %}
+                        {% trans "Poids lexical" as l_lexical_weight %}
+                        {% include "analysis/_config_slider.html" with label=l_lexical_weight section="duplicate" key="lexical_weight" %}
+                        {% trans "Poids métadonnées" as l_metadata_weight %}
+                        {% include "analysis/_config_slider.html" with label=l_metadata_weight section="duplicate" key="metadata_weight" %}
+                        {% trans "Seuil sémantique" as l_semantic_threshold %}
+                        {% include "analysis/_config_slider.html" with label=l_semantic_threshold section="duplicate" key="semantic_threshold" %}
+                        {% trans "Seuil combiné" as l_combined_threshold %}
+                        {% include "analysis/_config_slider.html" with label=l_combined_threshold section="duplicate" key="combined_threshold" %}
+                        {% trans "Seuil cross-encoder" as l_cross_encoder %}
+                        {% include "analysis/_config_slider.html" with label=l_cross_encoder section="duplicate" key="cross_encoder_threshold" %}
+                        {% trans "Seuil de vérification LLM" as l_llm_verify %}
+                        {% include "analysis/_config_slider.html" with label=l_llm_verify section="duplicate" key="llm_verify_threshold" %}
+                        {% trans "Seuil LSH" as l_lsh %}
+                        {% include "analysis/_config_slider.html" with label=l_lsh section="duplicate" key="lsh_threshold" %}
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-duplicate-llm_batch_size">{% trans "Taille de lot LLM" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="1" max="50" id="ac-duplicate-llm_batch_size" data-section="duplicate" data-key="llm_batch_size">
+                            <span></span>
+                        </div>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-duplicate-minhash_num_perm">{% trans "MinHash num_perm" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="16" max="256" id="ac-duplicate-minhash_num_perm" data-section="duplicate" data-key="minhash_num_perm">
+                            <span></span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Contradictions -->
-                <div class="accordion-item ac-accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button ac-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ac-sec-contradiction">
-                            {% trans "Contradictions" %}
-                            <span class="ac-section-badge" id="ac-badge-contradiction"></span>
-                        </button>
-                    </h2>
-                    <div id="ac-sec-contradiction" class="accordion-collapse collapse" data-bs-parent="#acAccordion">
-                        <div class="accordion-body ac-accordion-body">
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil de confiance" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="contradiction" data-key="confidence_threshold">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil de similarit&eacute;" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="contradiction" data-key="similarity_threshold">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Max voisins" %}</label>
-                                <input type="number" min="1" max="20" data-section="contradiction" data-key="max_neighbors">
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Claims par chunk" %}</label>
-                                <input type="number" min="1" max="10" data-section="contradiction" data-key="max_claims_per_chunk">
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil obsolescence (jours)" %}</label>
-                                <input type="number" min="30" max="730" data-section="contradiction" data-key="staleness_days">
-                            </div>
+                <div class="sc-cfg-section">
+                    <button type="button" class="sc-disclosure" data-disclosure="ac-contradiction" data-disclosure-group="config" aria-expanded="false">
+                        <span>{% trans "Contradictions" %}</span>
+                        <span class="sc-tag sc-tag--info" data-ac-badge="contradiction" hidden></span>
+                        <svg class="sc-disclosure-chevron size-3" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="sc-cfg-panel" data-disclosure-panel="ac-contradiction" hidden>
+                        {% trans "Seuil de confiance" as l_confidence %}
+                        {% include "analysis/_config_slider.html" with label=l_confidence section="contradiction" key="confidence_threshold" %}
+                        {% trans "Seuil de similarité" as l_similarity %}
+                        {% include "analysis/_config_slider.html" with label=l_similarity section="contradiction" key="similarity_threshold" %}
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-contradiction-max_neighbors">{% trans "Voisins maximum" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="1" max="20" id="ac-contradiction-max_neighbors" data-section="contradiction" data-key="max_neighbors">
+                            <span></span>
+                        </div>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-contradiction-max_claims_per_chunk">{% trans "Affirmations par chunk" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="1" max="10" id="ac-contradiction-max_claims_per_chunk" data-section="contradiction" data-key="max_claims_per_chunk">
+                            <span></span>
+                        </div>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-contradiction-staleness_days">{% trans "Seuil d'obsolescence" %} <span class="sc-cfg-note">({% trans "jours" %})</span></label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="30" max="730" id="ac-contradiction-staleness_days" data-section="contradiction" data-key="staleness_days">
+                            <span></span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Clustering -->
-                <div class="accordion-item ac-accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button ac-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ac-sec-clustering">
-                            {% trans "Clustering" %}
-                            <span class="ac-section-badge" id="ac-badge-clustering"></span>
-                        </button>
-                    </h2>
-                    <div id="ac-sec-clustering" class="accordion-collapse collapse" data-bs-parent="#acAccordion">
-                        <div class="accordion-body ac-accordion-body">
-                            <div class="ac-param-row">
-                                <label>{% trans "Algorithme" %}</label>
-                                <select data-section="clustering" data-key="algorithm" class="form-select form-select-sm" style="width:auto;background:var(--ds-grey-700);color:var(--ds-grey-100);border-color:var(--ds-grey-500);">
-                                    <option value="hdbscan">HDBSCAN</option>
-                                    <option value="kmeans">KMeans</option>
-                                </select>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Taille min cluster" %}</label>
-                                <input type="number" min="2" max="50" data-section="clustering" data-key="min_cluster_size">
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Min samples" %}</label>
-                                <input type="number" min="1" max="20" data-section="clustering" data-key="min_samples">
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "KMeans k" %} <span class="text-muted" style="font-size:10px;">{% trans "(vide = auto)" %}</span></label>
-                                <input type="number" min="2" max="100" data-section="clustering" data-key="kmeans_k" placeholder="auto">
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Subcluster min membres" %}</label>
-                                <input type="number" min="2" max="50" data-section="clustering" data-key="subcluster_min_members">
-                            </div>
+                <div class="sc-cfg-section">
+                    <button type="button" class="sc-disclosure" data-disclosure="ac-clustering" data-disclosure-group="config" aria-expanded="false">
+                        <span>{% trans "Clustering" %}</span>
+                        <span class="sc-tag sc-tag--info" data-ac-badge="clustering" hidden></span>
+                        <svg class="sc-disclosure-chevron size-3" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="sc-cfg-panel" data-disclosure-panel="ac-clustering" hidden>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-clustering-algorithm">{% trans "Algorithme" %}</label>
+                            <select class="sc-select sc-input--sm" id="ac-clustering-algorithm" data-section="clustering" data-key="algorithm">
+                                <option value="hdbscan">HDBSCAN</option>
+                                <option value="kmeans">KMeans</option>
+                            </select>
+                            <span></span>
+                        </div>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-clustering-min_cluster_size">{% trans "Taille minimale de cluster" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="2" max="50" id="ac-clustering-min_cluster_size" data-section="clustering" data-key="min_cluster_size">
+                            <span></span>
+                        </div>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-clustering-min_samples">{% trans "Échantillons minimum" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="1" max="20" id="ac-clustering-min_samples" data-section="clustering" data-key="min_samples">
+                            <span></span>
+                        </div>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-clustering-kmeans_k">{% trans "KMeans k" %} <span class="sc-cfg-note">({% trans "vide = auto" %})</span></label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="2" max="100" id="ac-clustering-kmeans_k" data-section="clustering" data-key="kmeans_k" placeholder="auto">
+                            <span></span>
+                        </div>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-clustering-subcluster_min_members">{% trans "Membres minimum par sous-cluster" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="2" max="50" id="ac-clustering-subcluster_min_members" data-section="clustering" data-key="subcluster_min_members">
+                            <span></span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Lacunes -->
-                <div class="accordion-item ac-accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button ac-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ac-sec-gap_detection">
-                            {% trans "Lacunes" %}
-                            <span class="ac-section-badge" id="ac-badge-gap_detection"></span>
-                        </button>
-                    </h2>
-                    <div id="ac-sec-gap_detection" class="accordion-collapse collapse" data-bs-parent="#acAccordion">
-                        <div class="accordion-body ac-accordion-body">
-                            <div class="ac-param-row">
-                                <label>{% trans "Questions par cluster" %}</label>
-                                <input type="number" min="1" max="10" data-section="gap_detection" data-key="coverage_question_count">
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Seuil de confiance" %}</label>
-                                <input type="range" min="0" max="1" step="0.01" data-section="gap_detection" data-key="confidence_threshold">
-                                <span class="ac-slider-value"></span>
-                            </div>
-                            <div class="ac-param-row">
-                                <label>{% trans "Taille max cluster orphelin" %}</label>
-                                <input type="number" min="1" max="10" data-section="gap_detection" data-key="orphan_cluster_max_size">
-                            </div>
+                <div class="sc-cfg-section">
+                    <button type="button" class="sc-disclosure" data-disclosure="ac-gap_detection" data-disclosure-group="config" aria-expanded="false">
+                        <span>{% trans "Lacunes" %}</span>
+                        <span class="sc-tag sc-tag--info" data-ac-badge="gap_detection" hidden></span>
+                        <svg class="sc-disclosure-chevron size-3" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="sc-cfg-panel" data-disclosure-panel="ac-gap_detection" hidden>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-gap_detection-coverage_question_count">{% trans "Questions par cluster" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="1" max="10" id="ac-gap_detection-coverage_question_count" data-section="gap_detection" data-key="coverage_question_count">
+                            <span></span>
+                        </div>
+                        {% trans "Seuil de confiance" as l_gap_confidence %}
+                        {% include "analysis/_config_slider.html" with label=l_gap_confidence section="gap_detection" key="confidence_threshold" %}
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-gap_detection-orphan_cluster_max_size">{% trans "Taille max. d'un cluster orphelin" %}</label>
+                            <input class="sc-input sc-input--sm w-24 num" type="number" min="1" max="10" id="ac-gap_detection-orphan_cluster_max_size" data-section="gap_detection" data-key="orphan_cluster_max_size">
+                            <span></span>
                         </div>
                     </div>
                 </div>
 
-                <!-- G&eacute;n&eacute;ral -->
-                <div class="accordion-item ac-accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button ac-accordion-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ac-sec-general">
-                            {% trans "G&eacute;n&eacute;ral" %}
-                            <span class="ac-section-badge" id="ac-badge-general"></span>
-                        </button>
-                    </h2>
-                    <div id="ac-sec-general" class="accordion-collapse collapse" data-bs-parent="#acAccordion">
-                        <div class="accordion-body ac-accordion-body">
-                            <div class="ac-param-row">
-                                <label>{% trans "Batch API" %}</label>
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" role="switch" data-section="use_batch_api" data-key="_toggle" id="ac-batch-api-toggle">
-                                </div>
-                            </div>
+                <div class="sc-cfg-section">
+                    <button type="button" class="sc-disclosure" data-disclosure="ac-general" data-disclosure-group="config" aria-expanded="false">
+                        <span>{% trans "Général" %}</span>
+                        <span class="sc-tag sc-tag--info" data-ac-badge="use_batch_api" hidden></span>
+                        <svg class="sc-disclosure-chevron size-3" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="sc-cfg-panel" data-disclosure-panel="ac-general" hidden>
+                        <div class="sc-cfg-row">
+                            <label class="sc-cfg-label" for="ac-batch-api-toggle">{% trans "API par lots" %} <span class="sc-cfg-note">({% trans "moins cher, plus lent" %})</span></label>
+                            <span class="sc-switch">
+                                <input class="sc-switch-input" type="checkbox" role="switch" id="ac-batch-api-toggle" data-section="use_batch_api" data-key="_toggle">
+                                <span class="sc-switch-ui"></span>
+                            </span>
+                            <span></span>
                         </div>
                     </div>
                 </div>
 
             </div>
-        </div>
-        <div class="modal-footer" style="border-top:1px solid var(--ds-grey-600);padding:16px 24px;">
-            <form method="post" action="{% url 'analysis-run' %}" data-turbo-frame="_top" id="ac-form">
-                {% csrf_token %}
-                <input type="hidden" name="config_overrides" id="ac-overrides-input" value="">
-                <button type="submit" class="btn btn-sm btn-primary">
-                    <svg style="width:14px;height:14px;margin-right:4px" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7.5L10.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-                    {% trans "Lancer l'analyse" %}
-                </button>
-            </form>
-        </div>
+
+            <div class="sc-modal-foot">
+                <button type="button" class="sc-btn sc-btn--secondary flex-1" data-ac-back hidden>{% trans "Retour" %}</button>
+                <button type="button" class="sc-btn sc-btn--secondary flex-1" data-overlay-close data-ac-cancel>{% trans "Annuler" %}</button>
+                <button type="submit" class="sc-btn sc-btn--primary flex-1" data-ac-submit disabled>{% trans "Lancer" %}</button>
+            </div>
+        </form>
     </div>
-
 </div>
-</div>
-</div>
+{% endif %}
+{% endblock %}
 
-<style>
-.analysis-history-header {
-    padding: 20px 24px;
-    background: var(--bs-card-bg);
-    border: 1px solid var(--bs-card-border-color);
-    border-radius: var(--ds-radius);
-}
-.analysis-header-icon {
-    flex-shrink: 0;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    background: rgba(13, 110, 253, 0.08);
-    color: #0d6efd;
-}
-[data-bs-theme="dark"] .analysis-header-icon {
-    background: rgba(110, 168, 254, 0.1);
-    color: #6ea8fe;
-}
-
-/* Inline mini score in table */
-.score-inline {
-    display: inline-flex;
-    align-items: center;
-    gap: 1px;
-}
-.score-inline .ds-letter {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    font-weight: 700;
-    font-size: 8px;
-    color: #fff;
-    opacity: 0.2;
-    transition: all 0.15s;
-}
-.score-inline .ds-letter.active {
-    width: 22px;
-    height: 22px;
-    font-size: 12px;
-    opacity: 1;
-    box-shadow: 0 1px 4px var(--ds-shadow);
-}
-.score-inline .ds-letter.ds-A { background: #038141; }
-.score-inline .ds-letter.ds-B { background: #85bb2f; }
-.score-inline .ds-letter.ds-C { background: #fecb02; color: #333; }
-.score-inline .ds-letter.ds-D { background: #ee8100; }
-.score-inline .ds-letter.ds-E { background: #e63e11; }
-
-/* ═══ Analysis Config Modal ═══ */
-.ac-modal-icon {
-    width: 56px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(13,110,253,0.15), rgba(167,139,250,0.15));
-    color: #6ea8fe;
-}
-.ac-choice-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-.ac-choice-card {
-    background: var(--ds-grey-700);
-    border: 2px solid var(--ds-grey-500);
-    border-radius: 12px;
-    padding: 18px 16px;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-}
-.ac-choice-card:hover {
-    border-color: #6c717e;
-}
-.ac-choice-card.selected {
-    border-color: #0d6efd;
-    background: rgba(13,110,253,0.06);
-}
-.ac-choice-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 10px;
-}
-.ac-choice-label {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ds-grey-100);
-    margin-bottom: 2px;
-}
-.ac-choice-desc {
-    font-size: 11px;
-    color: var(--ds-text-muted);
-    line-height: 1.4;
-}
-
-/* Accordion overrides */
-.ac-accordion-item {
-    background: var(--ds-grey-700) !important;
-    border: 1px solid var(--ds-grey-500) !important;
-    border-radius: 8px !important;
-    margin-bottom: 6px !important;
-    overflow: hidden;
-}
-.ac-accordion-btn {
-    background: var(--ds-grey-700) !important;
-    color: var(--ds-grey-100) !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    padding: 10px 16px !important;
-    box-shadow: none !important;
-}
-.ac-accordion-btn::after {
-    filter: invert(0.7);
-}
-.ac-accordion-body {
-    background: var(--ds-grey-800);
-    padding: 12px 16px !important;
-}
-.ac-section-badge {
-    margin-left: auto;
-    margin-right: 8px;
-    font-size: 10px;
-    font-weight: 600;
-    color: #6ea8fe;
-    background: rgba(13,110,253,0.12);
-    border-radius: 4px;
-    padding: 1px 6px;
-    display: none;
-}
-.ac-section-badge.visible {
-    display: inline-block;
-}
-
-/* Parameter rows */
-.ac-param-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-.ac-param-row:last-child { margin-bottom: 0; }
-.ac-param-row label {
-    font-size: 12px;
-    color: var(--ds-text-muted);
-    min-width: 140px;
-    flex-shrink: 0;
-    margin-bottom: 0;
-}
-.ac-param-row input[type="range"] {
-    flex: 1;
-    min-width: 80px;
-    accent-color: #0d6efd;
-}
-.ac-param-row input[type="number"] {
-    width: 80px;
-    background: var(--ds-grey-700);
-    color: var(--ds-grey-100);
-    border: 1px solid var(--ds-grey-500);
-    border-radius: 6px;
-    padding: 4px 8px;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-}
-.ac-param-row input[type="number"]:focus {
-    border-color: #0d6efd;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(13,110,253,0.25);
-}
-.ac-slider-value {
-    width: 48px;
-    text-align: right;
-    font-size: 12px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--ds-grey-100);
-    flex-shrink: 0;
-}
-</style>
-
+{% block extra_js %}
+{% if can_run_analysis and membership.can_edit %}
+{{ analysis_config_json|json_script:"analysis-config-defaults" }}
 <script>
 (function() {
-    var defaults = JSON.parse('{{ analysis_config_json|escapejs }}');
-    var modal = document.getElementById("analysisConfigModal");
-    var stepChoice = document.getElementById("ac-step-choice");
-    var stepConfig = document.getElementById("ac-step-config");
-    var btnChoice = document.getElementById("ac-btn-choice");
-    var backBtn = document.getElementById("ac-back-btn");
-    var selectedChoice = null;
+    var scrim = document.querySelector('[data-overlay="analysisConfig"]');
+    var raw = document.getElementById("analysis-config-defaults");
+    if (!scrim || !raw) return;
 
-    // ── Choice cards ──
-    var cards = stepChoice.querySelectorAll(".ac-choice-card");
-    cards.forEach(function(card) {
-        card.addEventListener("click", function() {
-            cards.forEach(function(c) { c.classList.remove("selected"); });
-            card.classList.add("selected");
-            selectedChoice = card.getAttribute("data-choice");
-            btnChoice.disabled = false;
-            btnChoice.textContent = selectedChoice === "default" ? "Lancer" : "Suivant";
-        });
-    });
+    // analysis_config_json est déjà une chaîne JSON : json_script la sérialise une seconde fois.
+    var defaults = JSON.parse(JSON.parse(raw.textContent));
+    var form = document.getElementById("ac-form");
+    var overridesInput = document.getElementById("ac-overrides-input");
+    var back = scrim.querySelector("[data-ac-back]");
+    var cancel = scrim.querySelector("[data-ac-cancel]");
+    var submit = scrim.querySelector("[data-ac-submit]");
+    var sub = scrim.querySelector("[data-ac-sub]");
+    var inputs = scrim.querySelectorAll("[data-section][data-key]");
 
-    // ── Choice button action ──
-    btnChoice.addEventListener("click", function() {
-        if (selectedChoice === "default") {
-            // Submit with empty overrides
-            var form = document.getElementById("ac-form");
-            document.getElementById("ac-overrides-input").value = "";
-            form.submit();
-        } else if (selectedChoice === "manual") {
-            stepChoice.style.display = "none";
-            stepConfig.style.display = "block";
+    var subs = {
+        1: "{% trans "Choisissez comment configurer cette analyse." %}",
+        2: "{% trans "Les valeurs affichées sont celles de config.yaml ; le repère sur chaque piste marque le défaut validé." %}"
+    };
+
+    function defaultFor(section, key) {
+        if (section === "use_batch_api") return defaults["use_batch_api"];
+        var data = defaults[section];
+        return data ? data[key] : undefined;
+    }
+
+    function ratio(input, value) {
+        var min = parseFloat(input.min);
+        var max = parseFloat(input.max);
+        return (value - min) / (max - min) * 100;
+    }
+
+    function paint(input) {
+        var slider = input.closest("[data-slider]");
+        var row = input.closest(".sc-cfg-row");
+        if (!slider) return;
+        slider.style.setProperty("--sc-fill", ratio(input, parseFloat(input.value)) + "%");
+        var value = row && row.querySelector("[data-slider-value]");
+        if (value) value.textContent = parseFloat(input.value).toFixed(2);
+    }
+
+    // Repère du défaut config.yaml : rend l'écart visible sans le chiffrer deux fois.
+    function paintReference(input) {
+        var slider = input.closest("[data-slider]");
+        var row = input.closest(".sc-cfg-row");
+        if (!slider) return;
+        var ref = defaultFor(input.getAttribute("data-section"), input.getAttribute("data-key"));
+        var hint = row && row.querySelector("[data-slider-hint]");
+        if (typeof ref !== "number") {
+            slider.style.removeProperty("--sc-at");
+            if (hint) hint.textContent = "";
+            return;
         }
-    });
+        slider.style.setProperty("--sc-at", ratio(input, ref) + "%");
+        if (hint) hint.textContent = "{% trans "défaut" %} " + ref.toFixed(2);
+    }
 
-    // ── Back button ──
-    backBtn.addEventListener("click", function() {
-        stepConfig.style.display = "none";
-        stepChoice.style.display = "block";
-    });
+    function isModified(input) {
+        var section = input.getAttribute("data-section");
+        var key = input.getAttribute("data-key");
+        var ref = defaultFor(section, key);
+        if (input.type === "checkbox") return input.checked !== !!ref;
+        if (input.type === "range") return Math.abs(parseFloat(input.value) - ref) >= 0.001;
+        if (input.type === "number") {
+            if (input.value === "") return !(ref === null || ref === undefined);
+            return Number(input.value) !== ref;
+        }
+        return input.value !== ref;
+    }
 
-    // ── Pre-fill inputs from defaults on modal show ──
-    modal.addEventListener("show.bs.modal", function() {
-        // Reset to step 1
-        stepChoice.style.display = "block";
-        stepConfig.style.display = "none";
-        cards.forEach(function(c) { c.classList.remove("selected"); });
-        selectedChoice = null;
-        btnChoice.disabled = true;
-        btnChoice.textContent = "Lancer";
-
-        // Fill all config inputs
-        var inputs = modal.querySelectorAll("[data-section][data-key]");
+    function refreshBadges() {
+        var counts = {};
         inputs.forEach(function(input) {
             var section = input.getAttribute("data-section");
-            var key = input.getAttribute("data-key");
-            var val;
+            if (isModified(input)) counts[section] = (counts[section] || 0) + 1;
+        });
+        scrim.querySelectorAll("[data-ac-badge]").forEach(function(badge) {
+            var n = counts[badge.getAttribute("data-ac-badge")] || 0;
+            badge.hidden = n === 0;
+            badge.textContent = n + " {% trans "modifié" %}";
+        });
+    }
 
-            // Handle the use_batch_api toggle (flat key, not nested)
-            if (section === "use_batch_api" && key === "_toggle") {
-                val = defaults["use_batch_api"];
-                input.checked = !!val;
-                return;
-            }
-
-            var sectionData = defaults[section];
-            if (!sectionData) return;
-            val = sectionData[key];
-
-            if (input.type === "range") {
-                input.value = val != null ? val : 0;
-                var span = input.parentElement.querySelector(".ac-slider-value");
-                if (span) span.textContent = parseFloat(input.value).toFixed(2);
+    function fill() {
+        inputs.forEach(function(input) {
+            var value = defaultFor(input.getAttribute("data-section"), input.getAttribute("data-key"));
+            if (input.type === "checkbox") {
+                input.checked = !!value;
+            } else if (input.type === "range") {
+                input.value = value != null ? value : 0;
+                paintReference(input);
+                paint(input);
             } else if (input.type === "number") {
-                input.value = val != null ? val : "";
-            } else if (input.tagName === "SELECT") {
-                input.value = val || input.options[0].value;
+                input.value = value != null ? value : "";
+            } else {
+                input.value = value || input.options[0].value;
             }
         });
+        refreshBadges();
+    }
 
-        // Reset all badges
-        modal.querySelectorAll(".ac-section-badge").forEach(function(b) { b.classList.remove("visible"); b.textContent = ""; });
+    var choice = "";
+
+    function show(step) {
+        scrim.querySelectorAll("[data-ac-step]").forEach(function(el) {
+            el.hidden = el.getAttribute("data-ac-step") !== String(step);
+        });
+        sub.textContent = subs[step];
+        back.hidden = step === 1;
+        cancel.hidden = step !== 1;
+        submit.textContent = step === 1 ? "{% trans "Lancer" %}" : "{% trans "Lancer l'analyse" %}";
+        submit.disabled = step === 1 && choice !== "default";
+    }
+
+    scrim.querySelectorAll("[data-ac-choice]").forEach(function(card) {
+        card.addEventListener("click", function() {
+            choice = card.getAttribute("data-ac-choice");
+            scrim.querySelectorAll("[data-ac-choice]").forEach(function(c) {
+                c.classList.toggle("is-active", c === card);
+            });
+            show(choice === "manual" ? 2 : 1);
+        });
     });
 
-    // ── Slider live display ──
-    modal.addEventListener("input", function(e) {
-        if (e.target.type === "range") {
-            var span = e.target.parentElement.querySelector(".ac-slider-value");
-            if (span) span.textContent = parseFloat(e.target.value).toFixed(2);
-        }
+    back.addEventListener("click", function() {
+        choice = "";
+        scrim.querySelectorAll("[data-ac-choice]").forEach(function(c) { c.classList.remove("is-active"); });
+        show(1);
     });
 
-    // ── Collect overrides on submit ──
-    var form = document.getElementById("ac-form");
+    scrim.addEventListener("input", function(e) {
+        if (e.target.type === "range") paint(e.target);
+        if (e.target.hasAttribute("data-section")) refreshBadges();
+    });
+    scrim.addEventListener("change", refreshBadges);
+
+    // Les overrides ne portent que les écarts au défaut : le backend fusionne le reste.
     form.addEventListener("submit", function() {
         var overrides = {};
-        var inputs = modal.querySelectorAll("[data-section][data-key]");
         inputs.forEach(function(input) {
+            if (!isModified(input)) return;
             var section = input.getAttribute("data-section");
             var key = input.getAttribute("data-key");
-
-            // use_batch_api toggle
-            if (section === "use_batch_api" && key === "_toggle") {
-                var defVal = !!defaults["use_batch_api"];
-                if (input.checked !== defVal) {
-                    overrides["use_batch_api"] = input.checked;
-                }
+            if (section === "use_batch_api") {
+                overrides["use_batch_api"] = input.checked;
                 return;
             }
-
-            var sectionDefaults = defaults[section];
-            if (!sectionDefaults) return;
-            var defaultVal = sectionDefaults[key];
-
-            var currentVal;
+            var value;
             if (input.type === "range") {
-                currentVal = parseFloat(input.value);
-                if (typeof defaultVal === "number" && Math.abs(currentVal - defaultVal) < 0.001) return;
+                value = parseFloat(input.value);
             } else if (input.type === "number") {
-                if (input.value === "" || input.value === null) {
-                    // Empty = null (auto for kmeans_k)
-                    if (defaultVal === null || defaultVal === undefined) return;
-                    currentVal = null;
-                } else {
-                    currentVal = Number(input.value);
-                    if (currentVal === defaultVal) return;
-                }
-            } else if (input.tagName === "SELECT") {
-                currentVal = input.value;
-                if (currentVal === defaultVal) return;
-            } else if (input.type === "checkbox") {
-                return; // handled above
+                value = input.value === "" ? null : Number(input.value);
+            } else {
+                value = input.value;
             }
-
             if (!overrides[section]) overrides[section] = {};
-            overrides[section][key] = currentVal;
+            overrides[section][key] = value;
         });
-
-        document.getElementById("ac-overrides-input").value = Object.keys(overrides).length ? JSON.stringify(overrides) : "";
+        overridesInput.value = Object.keys(overrides).length ? JSON.stringify(overrides) : "";
     });
+
+    scrim.addEventListener("overlay:open", function() {
+        choice = "";
+        scrim.querySelectorAll("[data-ac-choice]").forEach(function(c) { c.classList.remove("is-active"); });
+        scrim.querySelectorAll("[data-disclosure-group='config']").forEach(function(toggle) {
+            toggle.classList.remove("is-open");
+            toggle.setAttribute("aria-expanded", "false");
+            var panel = document.querySelector('[data-disclosure-panel="' + toggle.getAttribute("data-disclosure") + '"]');
+            if (panel) panel.hidden = true;
+        });
+        fill();
+        show(1);
+    });
+
+    fill();
+    show(1);
 })();
 </script>
+{% endif %}
 {% endblock %}

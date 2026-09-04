@@ -834,7 +834,7 @@ _RADAR_AXES = [
     ("coverage", "Couverture"),
     ("structure", "Structure"),
     ("health", "Santé"),
-    ("retrievability", "Retrievability"),
+    ("retrievability", "Repérabilité"),
     ("governance", "Gouvernance"),
 ]
 
@@ -846,6 +846,17 @@ def build_breakdown_json(breakdown):
     return json.dumps(
         [{"axis": str(_(label)), "score": breakdown.get(key) or 0} for key, label in _RADAR_AXES]
     )
+
+
+def build_breakdown_rows(breakdown):
+    """Labelled per-dimension rows for the dashboard bars.
+
+    `value` stays None when a dimension could not be measured, so the template can
+    say so rather than draw a zero-length bar that reads as a very bad score.
+    """
+    return [
+        {"key": key, "label": _(label), "value": breakdown.get(key)} for key, label in _RADAR_AXES
+    ]
 
 
 def compute_penalty_score(

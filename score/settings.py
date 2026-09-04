@@ -102,6 +102,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.i18n",
                 "tenants.context_processors.tenant_context",
             ],
         },
@@ -123,6 +124,19 @@ DATABASES = {
 }
 # For PostgreSQL in production, set CONN_MAX_AGE to enable persistent connections:
 # CONN_MAX_AGE = 600  # seconds
+
+# --- Cache ---
+# Table en base plutôt que mémoire locale : les 4 workers gunicorn doivent partager
+# les mêmes entrées. La table est créée par la migration tenants.0007, pas par
+# createcachetable, pour que la base de test de pytest-django la reçoive aussi.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "score_cache",
+        "TIMEOUT": 60 * 60 * 24,
+        "OPTIONS": {"MAX_ENTRIES": 5000, "CULL_FREQUENCY": 4},
+    }
+}
 
 # --- Auth ---
 AUTH_PASSWORD_VALIDATORS = [
@@ -201,21 +215,34 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# --- Media ---
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
 # --- Static ---
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "dashboard" / "static"]
+# Le stockage à manifeste lève une exception sur tout fichier absent du manifeste.
+# En développement et en CI le CSS Tailwind peut ne pas avoir été compilé : on préfère
+# un 404 sur la feuille de style à une erreur au rendu de chaque gabarit.
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
+    },
+    # Archives déposées par le connecteur « Import ZIP », hors de MEDIA_ROOT
+    # racine pour ne pas les mélanger aux fichiers extraits des documents.
+    "uploads": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": str(MEDIA_ROOT / "uploads")},
     },
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# --- Media ---
-MEDIA_ROOT = BASE_DIR / "media"
-MEDIA_URL = "/media/"
 
 # --- Celery ---
 CELERY_BROKER_BACKEND = env("CELERY_BROKER_BACKEND")

@@ -6,6 +6,7 @@ from django.shortcuts import redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
+from score.cachekit import cached
 from score.issues import build_analysis_issues
 from score.utils import parse_json_body
 
@@ -19,10 +20,14 @@ from analysis.models import (
 )
 from connectors.models import ConnectorConfig
 from ingestion.models import Document, IngestionJob
-from reports.models import Report
 
 from .models import Feedback
-from .scoring import build_breakdown_json, compute_score, compute_score_detail
+from .scoring import (
+    build_breakdown_json,
+    build_breakdown_rows,
+    compute_score,
+    compute_score_detail,
+)
 
 
 def _has_active_jobs(project):
@@ -50,27 +55,66 @@ def _has_active_jobs(project):
 
 def _dashboard_stats_context(project):
     """Build context dict for dashboard stats partial."""
+    should_poll = _has_active_jobs(project)
+
+    def build():
+        latest_analysis = (
+            AnalysisJob.objects.filter(project=project).order_by("-created_at").first()
+        )
+        doc_count = (
+            Document.objects.filter(project=project).exclude(status=Document.Status.DELETED).count()
+        )
+        dup_count = 0
+        contra_count = 0
+        gap_count = 0
+        if latest_analysis:
+            dup_count = DuplicateGroup.objects.filter(analysis_job=latest_analysis).count()
+            contra_count = ContradictionPair.objects.filter(
+                analysis_job=latest_analysis,
+                classification__in=["contradiction", "outdated"],
+            ).count()
+            gap_count = GapReport.objects.filter(analysis_job=latest_analysis).count()
+        return {
+            "doc_count": doc_count,
+            "dup_count": dup_count,
+            "contra_count": contra_count,
+            "gap_count": gap_count,
+        }
+
+    ctx = build() if should_poll else cached("dashboard-stats", project, build)
+    return {**ctx, "should_poll": should_poll}
+
+
+def _dashboard_score_panel_context(project):
+    """Contexte du panneau de qualité : SCORE, sept dimensions, radar, encart corpus."""
     latest_analysis = AnalysisJob.objects.filter(project=project).order_by("-created_at").first()
-    doc_count = (
-        Document.objects.filter(project=project).exclude(status=Document.Status.DELETED).count()
+    should_poll = latest_analysis is not None and latest_analysis.status in (
+        AnalysisJob.Status.QUEUED,
+        AnalysisJob.Status.RUNNING,
     )
-    dup_count = 0
-    contra_count = 0
-    gap_count = 0
-    if latest_analysis:
-        dup_count = DuplicateGroup.objects.filter(analysis_job=latest_analysis).count()
-        contra_count = ContradictionPair.objects.filter(
-            analysis_job=latest_analysis,
-            classification__in=["contradiction", "outdated"],
-        ).count()
-        gap_count = GapReport.objects.filter(analysis_job=latest_analysis).count()
-    return {
-        "doc_count": doc_count,
-        "dup_count": dup_count,
-        "contra_count": contra_count,
-        "gap_count": gap_count,
-        "should_poll": _has_active_jobs(project),
-    }
+
+    def build():
+        ds = compute_score(project)
+        cluster_count = 0
+        latest_completed = (
+            AnalysisJob.objects.filter(project=project, status=AnalysisJob.Status.COMPLETED)
+            .order_by("-created_at")
+            .first()
+        )
+        if latest_completed:
+            cluster_count = TopicCluster.objects.filter(
+                analysis_job=latest_completed, level=0
+            ).count()
+        return {
+            "ds": ds,
+            "breakdown_json": build_breakdown_json(ds["breakdown"]),
+            "dimensions": build_breakdown_rows(ds["breakdown"]),
+            "connector_count": ConnectorConfig.objects.filter(project=project).count(),
+            "cluster_count": cluster_count,
+        }
+
+    ctx = build() if should_poll else cached("dashboard-score", project, build)
+    return {**ctx, "latest_analysis": latest_analysis, "should_poll": should_poll}
 
 
 def _dashboard_latest_analysis_context(project, membership):
@@ -222,38 +266,27 @@ def home(request):
 
     project = request.project
 
-    connector_count = ConnectorConfig.objects.filter(project=project).count()
-    report_count = Report.objects.filter(project=project).count()
-    cluster_count = 0
-    latest_completed = (
-        AnalysisJob.objects.filter(project=project, status=AnalysisJob.Status.COMPLETED)
-        .order_by("-created_at")
-        .first()
-    )
-    if latest_completed:
-        cluster_count = TopicCluster.objects.filter(analysis_job=latest_completed, level=0).count()
-
-    recent_analyses = AnalysisJob.objects.filter(project=project).order_by("-created_at")[:5]
-
-    # SCORE breakdown as JSON for radar chart
-    ds = compute_score(project)
-    breakdown_json = build_breakdown_json(ds["breakdown"])
-
-    context = {
-        "connector_count": connector_count,
-        "report_count": report_count,
-        "cluster_count": cluster_count,
-        "recent_analyses": recent_analyses,
-        "ds": ds,
-        "breakdown_json": breakdown_json,
-        "activity_feed": _build_activity_feed(project),
-        "top_issues": _build_top_issues(project),
-    }
+    # Le panneau de qualité, de loin le plus cher, est chargé par sa propre frame.
+    context = cached(
+        "dashboard-home",
+        project,
+        lambda: {
+            "activity_feed": _build_activity_feed(project),
+            "top_issues": _build_top_issues(project),
+        },
+    ).copy()
     context.update(_dashboard_stats_context(project))
     context.update(_dashboard_latest_analysis_context(project, request.membership))
-    context.update(_dashboard_recent_jobs_context(project))
 
     return render(request, "dashboard/home.html", context)
+
+
+@login_required
+def score_panel_partial(request):
+    if not request.tenant:
+        return redirect("tenant-select")
+    context = _dashboard_score_panel_context(request.project)
+    return render(request, "dashboard/_score_panel.html", context)
 
 
 @login_required
@@ -284,7 +317,7 @@ def recent_jobs_partial(request):
 def score_detail_json(request):
     if not request.tenant:
         return JsonResponse({"error": str(_("Aucun espace sélectionné"))}, status=400)
-    data = compute_score_detail(request.project)
+    data = cached("score-detail", request.project, lambda: compute_score_detail(request.project))
     return JsonResponse(data)
 
 

@@ -1,0 +1,233 @@
+@layer components {
+  /* Composants propres aux écrans « auth ».
+     Ces pages n'ont ni rail ni en-tête : la carte centrée porte toute la mise
+     en page. Les champs réutilisent .sc-field / .sc-label / .sc-input du design
+     system ; les sélecteurs d'éléments en fin de fichier ne servent qu'aux
+     champs qu'allauth rend lui-même, sans classe. */
+
+  .sc-auth {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 40px 20px;
+    background: var(--color-page);
+  }
+
+  .sc-auth-card {
+    width: min(420px, 100%);
+    padding: 32px 30px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-18);
+    box-shadow: var(--shadow-lift);
+    animation: rise 0.5s var(--ease-expo) both;
+  }
+
+  /* Même signature que le rail : Space Grotesk 700 / 20px / -0.02em. */
+  .sc-auth-brand {
+    justify-content: center;
+  }
+
+  .sc-auth-sub {
+    margin: 6px 0 24px;
+    text-align: center;
+    font-size: var(--text-13);
+    color: var(--color-ink-500);
+  }
+
+  .sc-auth-form {
+    display: grid;
+    gap: 14px;
+  }
+
+  .sc-auth-form > .sc-btn {
+    margin-top: 4px;
+  }
+
+  /* Séparateur « ou » entre le SSO et le formulaire local. */
+  .sc-auth-sep {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    font-size: var(--text-12);
+    color: var(--color-ink-500);
+  }
+
+  .sc-auth-sep::before,
+  .sc-auth-sep::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--color-line);
+  }
+
+  .sc-auth-text {
+    margin-bottom: 18px;
+    font-size: var(--text-13);
+    line-height: var(--leading-snug);
+    color: var(--color-ink-500);
+  }
+
+  .sc-auth-text p {
+    margin: 0 0 10px;
+  }
+
+  .sc-auth-text p:last-child {
+    margin-bottom: 0;
+  }
+
+  .sc-auth-section {
+    margin: 22px 0 12px;
+    font-size: var(--text-13);
+    font-weight: 600;
+  }
+
+  /* ── Erreurs ── */
+  .sc-auth-alert {
+    display: grid;
+    gap: 3px;
+    margin-bottom: 16px;
+    padding: 11px 13px;
+    border-radius: var(--radius-10);
+    background: var(--color-danger-bg);
+    border: 1px solid var(--color-danger-line-strong);
+    color: var(--color-danger-ink);
+    font-size: var(--text-12p5);
+    line-height: var(--leading-snug);
+  }
+
+  .sc-auth-alert a {
+    color: var(--color-danger-ink);
+    text-decoration: underline;
+  }
+
+  .sc-auth-alert a:hover {
+    color: var(--color-danger-ink);
+  }
+
+  /* ── Pied de carte ── */
+  .sc-auth-foot {
+    margin-top: 20px;
+    text-align: center;
+    font-size: var(--text-12p5);
+    color: var(--color-ink-500);
+  }
+
+  .sc-auth-foot a {
+    color: var(--color-accent);
+  }
+
+  .sc-auth-foot-sep {
+    margin: 0 8px;
+    color: var(--color-line-300);
+  }
+
+  /* ── Liste des adresses email ── */
+  .sc-auth-list {
+    margin-bottom: 4px;
+  }
+
+  .sc-auth-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--color-line);
+    font-size: var(--text-13);
+  }
+
+  .sc-auth-list-email {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-auth-list-tags {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Repli sur le balisage rendu par allauth ──
+     Certaines vues (confirmation, reconnexion, codes) rendent le formulaire
+     elles-mêmes, sans classe utilitaire. On les rattrape ici plutôt que de
+     réécrire les gabarits internes de la bibliothèque. */
+  .sc-auth input[type="text"],
+  .sc-auth input[type="email"],
+  .sc-auth input[type="password"],
+  .sc-auth input[type="url"],
+  .sc-auth input[type="tel"],
+  .sc-auth input[type="number"],
+  .sc-auth select,
+  .sc-auth textarea {
+    width: 100%;
+    padding: 10px 13px;
+    border-radius: var(--radius-10);
+    border: 1px solid var(--color-line);
+    background: var(--color-surface-50);
+    font-family: inherit;
+    font-size: var(--text-13);
+    color: var(--color-ink);
+    outline: none;
+  }
+
+  .sc-auth input:focus,
+  .sc-auth select:focus,
+  .sc-auth textarea:focus {
+    border-color: var(--color-accent);
+  }
+
+  .sc-auth input::placeholder,
+  .sc-auth textarea::placeholder {
+    color: var(--color-ink-400);
+  }
+
+  .sc-auth label {
+    font-size: var(--text-12);
+    font-weight: 500;
+  }
+
+  .sc-auth p {
+    font-size: var(--text-13);
+  }
+
+  .sc-auth .helptext {
+    display: block;
+    margin-top: 4px;
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+  }
+
+  .sc-auth .errorlist {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+    font-size: var(--text-11p5);
+    color: var(--color-danger-ink);
+  }
+
+  /* Les boutons rendus par allauth sont des <button> nus : on leur donne
+     l'aspect de l'action principale du design system. */
+  .sc-auth form button[type="submit"]:not([class]) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 9px 15px;
+    border: 0;
+    border-radius: var(--radius-10);
+    background: var(--color-accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: var(--text-12p5);
+    font-weight: 600;
+    box-shadow: var(--shadow-accent);
+    cursor: pointer;
+  }
+}

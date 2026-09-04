@@ -48,6 +48,17 @@ urlpatterns = [
         name="analysis-progress-full-partial",
     ),
     path("<uuid:pk>/_results/", views.analysis_results_partial, name="analysis-results-partial"),
+    path("<uuid:pk>/_score/", views.analysis_score_partial, name="analysis-score-partial"),
+    path(
+        "<uuid:pk>/_recommendations/",
+        views.analysis_recommendations_partial,
+        name="analysis-recommendations-partial",
+    ),
+    path(
+        "<uuid:pk>/_graph-stats/",
+        views.analysis_graph_stats_partial,
+        name="analysis-graph-stats-partial",
+    ),
     # JSON API endpoints for D3.js visualizations
     path("<uuid:pk>/api/clusters/", views.clusters_json, name="api-clusters"),
     path("<uuid:pk>/api/tree/", views.tree_json, name="api-tree"),

@@ -15,6 +15,7 @@ from django.views.decorators.http import require_POST
 from analysis.constants import AXIS_ICONS, AXIS_LABELS, AXIS_ORDER
 from analysis.models import AuditAxisResult, AuditJob
 from analysis.views import analysis_number
+from score.cachekit import invalidate_project
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,7 @@ def audit_retry(request, pk):
     task = run_audit.delay(str(job.id))
     job.celery_task_id = task.id
     job.save()
+    invalidate_project(request.project)
     return redirect("audit-detail", pk=pk)
 
 
@@ -99,6 +101,7 @@ def audit_delete(request, pk):
         return redirect("audit-list")
     job = get_object_or_404(AuditJob, pk=pk, project=request.project)
     job.delete()
+    invalidate_project(request.project)
     return redirect("analysis-list")
 
 

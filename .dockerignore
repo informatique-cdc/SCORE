@@ -11,3 +11,4 @@ staticfiles/
 .ruff_cache
 node_modules
 *.egg-info
+Refonte interface SCORE/

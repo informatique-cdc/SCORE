@@ -1,25 +1,38 @@
 {% extends "dashboard/base.html" %}
-{% load i18n %}
-{% block title %}{% trans "Arbre taxonomique des documents" %} - SCORE{% endblock %}
-{% block nav_analysis %}active{% endblock %}
+{% load i18n analysis_ui %}
+
+{% block title %}{% trans "Arbre taxonomique" %} - SCORE{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'analysis-list' %}">{% trans "Analyses" %}<span class="sc-crumb-sep">/</span></a>
+    <a class="sc-crumb" href="{% url 'analysis-detail' job.pk %}">#{{ job.pk }}<span class="sc-crumb-sep">/</span></a>
+    <span class="sc-crumb is-current">{% trans "Arbre taxonomique" %}</span>
+{% endblock %}
+
+{% block page_title %}{% trans "Arbre taxonomique" %}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Hiérarchie du corpus, des grandes catégories jusqu'aux documents. Cliquez sur un nœud pour le déplier, sur un document pour l'ouvrir." %}</p>
+{% endblock %}
+
+{% block page_tabs %}{% analysis_tabs job "clusters" %}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>{% trans "Arbre taxonomique des documents" %}</h2>
-    <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Retour" %}</a>
-</div>
+<div class="flex flex-col gap-3.5">
 
-<div class="card">
-    <div class="card-body p-0 position-relative" style="min-height: 800px;">
-        <div id="tree-viz" style="width:100%;height:800px;"></div>
+    <div class="flex flex-wrap items-center gap-2">
+        <a class="sc-pill" href="{% url 'analysis-clusters' job.pk %}">{% trans "Graphe des clusters" %}</a>
+        <a class="sc-pill is-active" href="{% url 'analysis-tree' job.pk %}">{% trans "Arbre taxonomique" %}</a>
+        <a class="sc-pill" href="{% url 'analysis-knowledge-map' job.pk %}">{% trans "Carte des concepts" %}</a>
+    </div>
 
-        <!-- Legend overlay -->
-        <div id="tree-legend" style="position:absolute;bottom:16px;left:16px;z-index:10;display:flex;gap:16px;align-items:center;background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:8px;padding:8px 14px;"></div>
-
-        <!-- Zoom controls -->
-        <div style="position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:2px;z-index:10;">
-            <button id="tree-zoom-in" type="button" style="width:36px;height:36px;border:1px solid var(--ds-grey-500);border-radius:8px 8px 0 0;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom avant">+</button>
-            <button id="tree-zoom-out" type="button" style="width:36px;height:36px;border:1px solid var(--ds-grey-500);border-radius:0 0 8px 8px;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom arri&egrave;re">&minus;</button>
+    <div class="sc-viz h-[720px]">
+        <div id="tree-viz" class="h-full w-full"></div>
+        <div id="tree-legend" class="sc-viz-legend" hidden></div>
+        <div class="sc-viz-tools">
+            <button id="tree-zoom-in" type="button" class="sc-icon-btn sc-icon-btn--30" title="{% trans "Zoom avant" %}" aria-label="{% trans "Zoom avant" %}">+</button>
+            <button id="tree-zoom-out" type="button" class="sc-icon-btn sc-icon-btn--30" title="{% trans "Zoom arrière" %}" aria-label="{% trans "Zoom arrière" %}">−</button>
         </div>
     </div>
 </div>
@@ -27,145 +40,170 @@
 
 {% block extra_js %}
 <script>
-fetch("{% url 'api-tree' job.pk %}")
-    .then(r => r.json())
-    .then(data => {
-        const container = document.getElementById("tree-viz");
+(function() {
+    var container = document.getElementById("tree-viz");
+    if (!container || !window.echarts) return;
 
-        if (!data.children || !data.children.length) {
-            container.innerHTML = '<p class="text-muted text-center mt-5">Aucune donn\u00e9e d\'arbre \u00e0 afficher</p>';
-            return;
-        }
+    var SIZE_MAP = { root: 15, category: 13, cluster: 11, subcluster: 9, document: 8, section: 6 };
 
-        const chart = echarts.init(container, null, { renderer: "canvas" });
-        const labelColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim() || "#f8f8f8";
-
-        const colorMap = {root: "#6c757d", category: "#8b5cf6", cluster: "#0d6efd", subcluster: "#60a5fa", document: "#198754", section: "#ffc107"};
-        const sizeMap = {root: 16, category: 14, cluster: 12, subcluster: 10, document: 8, section: 6};
-
-        function transformNode(node) {
-            const item = {
-                name: node.name,
-                value: node.type,
-                itemStyle: { color: colorMap[node.type] || "#6c757d", borderColor: "rgba(255,255,255,0.15)", borderWidth: 1 },
-                symbolSize: sizeMap[node.type] || 8,
-                label: {
-                    fontSize: node.type === "category" || node.type === "root" ? 13 : node.type === "cluster" || node.type === "subcluster" ? 12 : 11,
-                    fontWeight: (node.type === "category" || node.type === "cluster" || node.type === "subcluster") ? "bold" : "normal",
-                },
-                _raw: node,
-            };
-            if (node.children && node.children.length) {
-                item.children = node.children.map(transformNode);
-            }
-            return item;
-        }
-
-        const treeData = transformNode(data);
-
-        const option = {
-            backgroundColor: "transparent",
-            tooltip: {
-                trigger: "item",
-                confine: true,
-                backgroundColor: "#27282a",
-                borderColor: "#37383a",
-                textStyle: { color: "#f8f8f8", fontSize: 12 },
-                extraCssText: "max-width:320px;white-space:normal;word-break:break-word;",
-                formatter: function(params) {
-                    const raw = params.data._raw || {};
-                    let html = '<strong>' + params.name + '</strong><br>Type : ' + (raw.type || '');
-                    if (raw.content_purpose) html += '<br><em>' + raw.content_purpose + '</em>';
-                    if (raw.key_concepts && raw.key_concepts.length) html += '<br>Concepts : ' + raw.key_concepts.join(', ');
-                    if (raw.doc_url) html += '<br><em>Cliquer pour ouvrir</em>';
-                    return html;
-                }
-            },
-            series: [{
-                type: "tree",
-                data: [treeData],
-                layout: "orthogonal",
-                orient: "LR",
-                initialTreeDepth: 3,
-                roam: "move",
-                symbol: "circle",
-                animationDuration: 550,
-                animationDurationUpdate: 750,
-                lineStyle: {
-                    color: "#37383a",
-                    width: 1.5,
-                    curveness: 0.5,
-                },
-                label: {
-                    position: "right",
-                    verticalAlign: "middle",
-                    align: "left",
-                    color: labelColor,
-                    formatter: function(params) {
-                        const name = params.name || "";
-                        return name.length > 50 ? name.slice(0, 47) + "..." : name;
-                    }
-                },
-                leaves: {
-                    label: {
-                        position: "right",
-                        verticalAlign: "middle",
-                        align: "left",
-                    }
-                },
-                emphasis: {
-                    focus: "descendant",
-                    itemStyle: {
-                        borderColor: "#fff",
-                        borderWidth: 2,
-                        shadowBlur: 10,
-                        shadowColor: "rgba(13,110,253,0.4)",
-                    }
-                },
-                expandAndCollapse: true,
-            }],
+    // Le niveau d'un nœud est une identité de série : la palette suffit, seule
+    // la racine reste neutre parce qu'elle ne désigne aucune catégorie.
+    function typeColors(t) {
+        var p = scChart.palette();
+        return {
+            root: t.ink500,
+            category: p[2],
+            cluster: p[1],
+            subcluster: p[6],
+            document: p[0],
+            section: p[3]
         };
+    }
 
-        chart.setOption(option);
+    function note(message, isError) {
+        container.innerHTML = "";
+        var el = document.createElement("div");
+        el.className = "sc-viz-note" + (isError ? " sc-viz-note--error" : "");
+        el.textContent = message;
+        container.appendChild(el);
+    }
 
-        // Click to open document URL
-        chart.on("click", function(params) {
-            const raw = params.data._raw || {};
-            if (raw.doc_url) window.open(raw.doc_url, "_blank");
+    fetch("{% url 'api-tree' job.pk %}")
+        .then(function(r) {
+            if (!r.ok) throw new Error("HTTP " + r.status + " " + r.statusText);
+            return r.json();
+        })
+        .then(function(data) {
+            if (!data.children || !data.children.length) {
+                note("{% trans "Aucune donnée d'arbre à afficher." %}", false);
+                return;
+            }
+
+            var chart = echarts.init(container, null, { renderer: "canvas" });
+            var legendEl = document.getElementById("tree-legend");
+            var currentZoom = 1;
+
+            // ── Légende ──
+            function renderLegend(colors) {
+                legendEl.innerHTML = "";
+                var title = document.createElement("div");
+                title.className = "sc-viz-legend-title";
+                title.textContent = "{% trans "Niveaux" %}";
+                legendEl.appendChild(title);
+                [
+                    ["{% trans "Catégorie" %}", colors.category],
+                    ["{% trans "Thème" %}", colors.cluster],
+                    ["{% trans "Sous-thème" %}", colors.subcluster],
+                    ["{% trans "Document" %}", colors.document]
+                ].forEach(function(pair) {
+                    var row = document.createElement("div");
+                    row.className = "sc-viz-legend-row";
+                    var dot = document.createElement("span");
+                    dot.className = "sc-dot";
+                    dot.style.setProperty("--sc-dot", pair[1]);
+                    var text = document.createElement("span");
+                    text.className = "sc-viz-legend-label";
+                    text.textContent = pair[0];
+                    row.appendChild(dot);
+                    row.appendChild(text);
+                    legendEl.appendChild(row);
+                });
+                legendEl.hidden = false;
+            }
+
+            function draw() {
+                var t = scChart.tokens();
+                var colors = typeColors(t);
+                renderLegend(colors);
+
+                function transformNode(node) {
+                    var item = {
+                        name: node.name,
+                        value: node.type,
+                        itemStyle: {
+                            color: colors[node.type] || t.ink500,
+                            borderColor: "#fff",
+                            borderWidth: 1
+                        },
+                        symbolSize: SIZE_MAP[node.type] || 8,
+                        label: {
+                            fontSize: node.type === "category" || node.type === "root" ? 12.5 : node.type === "cluster" || node.type === "subcluster" ? 11.5 : 11,
+                            fontWeight: (node.type === "category" || node.type === "cluster" || node.type === "subcluster") ? 600 : 450
+                        },
+                        _raw: node
+                    };
+                    if (node.children && node.children.length) {
+                        item.children = node.children.map(transformNode);
+                    }
+                    return item;
+                }
+
+                var base = scChart.base();
+                base.tooltip.trigger = "item";
+                base.tooltip.confine = true;
+                base.tooltip.formatter = function(params) {
+                    var raw = params.data._raw || {};
+                    var html = "<strong>" + params.name + "</strong><br>{% trans "Type" %} : " + (raw.type || "");
+                    if (raw.content_purpose) html += "<br><em>" + raw.content_purpose + "</em>";
+                    if (raw.key_concepts && raw.key_concepts.length) html += "<br>{% trans "Concepts" %} : " + raw.key_concepts.join(", ");
+                    if (raw.doc_url) html += "<br><em>{% trans "Cliquer pour ouvrir" %}</em>";
+                    return html;
+                };
+
+                chart.setOption(Object.assign(base, {
+                    series: [{
+                        type: "tree",
+                        data: [transformNode(data)],
+                        layout: "orthogonal",
+                        orient: "LR",
+                        initialTreeDepth: 3,
+                        roam: "move",
+                        zoom: currentZoom,
+                        symbol: "circle",
+                        animationDuration: 550,
+                        animationDurationUpdate: 750,
+                        lineStyle: { color: t.line, width: 1.5, curveness: 0.5 },
+                        label: {
+                            position: "right",
+                            verticalAlign: "middle",
+                            align: "left",
+                            color: t.ink700,
+                            formatter: function(params) {
+                                var name = params.name || "";
+                                return name.length > 50 ? name.slice(0, 47) + "…" : name;
+                            }
+                        },
+                        leaves: { label: { position: "right", verticalAlign: "middle", align: "left" } },
+                        emphasis: {
+                            focus: "descendant",
+                            itemStyle: { borderColor: t.ink, borderWidth: 2 }
+                        },
+                        expandAndCollapse: true
+                    }]
+                }));
+            }
+
+            draw();
+            scChart.autoResize(container, chart);
+            scChart.onThemeChange(draw);
+
+            chart.on("click", function(params) {
+                var raw = params.data._raw || {};
+                if (raw.doc_url) window.open(raw.doc_url, "_blank");
+            });
+
+            document.getElementById("tree-zoom-in").addEventListener("click", function() {
+                currentZoom *= 1.3;
+                chart.setOption({ series: [{ zoom: currentZoom }] });
+            });
+            document.getElementById("tree-zoom-out").addEventListener("click", function() {
+                currentZoom *= 0.7;
+                chart.setOption({ series: [{ zoom: currentZoom }] });
+            });
+        })
+        .catch(function(err) {
+            note("{% trans "Erreur de chargement de l'arbre" %} : " + err.message, true);
         });
-
-        // Legend
-        const legendEl = document.getElementById("tree-legend");
-        legendEl.innerHTML = [
-            ["Cat\u00e9gorie", "#8b5cf6"],
-            ["Th\u00e8me", "#0d6efd"],
-            ["Sous-th\u00e8me", "#60a5fa"],
-            ["Document", "#198754"],
-        ].map(function(pair) {
-            return '<span style="display:inline-flex;align-items:center;gap:4px;">'
-                + '<span style="width:10px;height:10px;border-radius:50%;background:' + pair[1] + ';display:inline-block;"></span>'
-                + '<span style="font-size:12px;color:var(--ds-grey-100);">' + pair[0] + '</span></span>';
-        }).join('');
-
-        // Update label color on theme toggle
-        new MutationObserver(function() {
-            const newColor = getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim();
-            chart.setOption({ series: [{ label: { color: newColor } }] });
-        }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
-
-        // Zoom controls (programmatic via setOption, scroll zoom stays disabled)
-        let currentZoom = 1;
-        document.getElementById("tree-zoom-in").addEventListener("click", function() {
-            currentZoom *= 1.3;
-            chart.setOption({ series: [{ zoom: currentZoom }] });
-        });
-        document.getElementById("tree-zoom-out").addEventListener("click", function() {
-            currentZoom *= 0.7;
-            chart.setOption({ series: [{ zoom: currentZoom }] });
-        });
-
-        // Responsive
-        window.addEventListener("resize", function() { chart.resize(); });
-    });
+})();
 </script>
 {% endblock %}

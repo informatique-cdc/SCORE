@@ -1,0 +1,22 @@
+{% comment %}
+Ligne de seuil de la configuration d'analyse. Le curseur natif est transparent et
+posé sur la piste dessinée ; le repère marque la valeur validée dans config.yaml.
+Attend : label, section, key.
+{% endcomment %}
+<div class="sc-cfg-row">
+    <label class="sc-cfg-label" for="ac-{{ section }}-{{ key }}">{{ label }}</label>
+    <div>
+        <div class="sc-slider" data-slider>
+            <div class="sc-slider-track">
+                <div class="sc-slider-fill"></div>
+                <div class="sc-slider-ref"></div>
+                <div class="sc-slider-thumb"></div>
+            </div>
+            <input class="sc-slider-input" type="range" min="0" max="1" step="0.01"
+                   id="ac-{{ section }}-{{ key }}" data-section="{{ section }}" data-key="{{ key }}"
+                   aria-label="{{ label }}">
+        </div>
+        <div class="sc-slider-hint" data-slider-hint></div>
+    </div>
+    <span class="sc-cfg-value" data-slider-value></span>
+</div>

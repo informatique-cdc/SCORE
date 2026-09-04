@@ -1,227 +1,255 @@
 {% extends "dashboard/base.html" %}
-{% load i18n %}
+{% load i18n analysis_ui %}
+
 {% block title %}{% trans "Carte des concepts" %} - SCORE{% endblock %}
-{% block nav_analysis %}active{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'analysis-list' %}">{% trans "Analyses" %}<span class="sc-crumb-sep">/</span></a>
+    <a class="sc-crumb" href="{% url 'analysis-detail' job.pk %}">#{{ job.pk }}<span class="sc-crumb-sep">/</span></a>
+    <span class="sc-crumb is-current">{% trans "Carte des concepts" %}</span>
+{% endblock %}
+
+{% block page_title %}{% trans "Carte des concepts" %}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Graphe des concepts extraits du corpus et de leurs cooccurrences. Interrogez-le en langage naturel pour n'afficher que le voisinage d'un sujet." %}</p>
+{% endblock %}
+
+{% block page_tabs %}{% analysis_tabs job "clusters" %}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>{% trans "Carte des concepts" %}</h2>
-    <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Retour" %}</a>
-</div>
+<div class="flex flex-col gap-3.5">
 
-{% if not has_graph %}
-<div class="card">
-    <div class="card-body text-center py-5">
-        <svg style="width:40px;height:40px;color:var(--ds-text-muted);margin-bottom:12px;" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-        <p class="text-muted mb-0">{% trans "Le graphe s&eacute;mantique n'a pas &eacute;t&eacute; construit pour cette analyse." %}</p>
+    <div class="flex flex-wrap items-center gap-2">
+        <a class="sc-pill" href="{% url 'analysis-clusters' job.pk %}">{% trans "Graphe des clusters" %}</a>
+        <a class="sc-pill" href="{% url 'analysis-tree' job.pk %}">{% trans "Arbre taxonomique" %}</a>
+        <a class="sc-pill is-active" href="{% url 'analysis-knowledge-map' job.pk %}">{% trans "Carte des concepts" %}</a>
     </div>
-</div>
-{% else %}
 
-{% csrf_token %}
-
-<!-- Search bar -->
-<div class="card mb-3">
-    <div class="card-body py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;color:var(--ds-text-muted);"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input id="concept-query" type="text" class="form-control form-control-sm" style="max-width:360px;font-size:13px;" placeholder="{% trans "Rechercher un concept ou un sujet&hellip;" %}">
-        <button id="btn-search" type="button" class="btn btn-sm btn-primary" style="font-size:12px;">{% trans "Rechercher" %}</button>
-        <button id="btn-reset" type="button" class="btn btn-sm btn-outline-secondary" style="font-size:12px;display:none;">{% trans "R&eacute;initialiser" %}</button>
-        <span id="graph-stats" class="text-muted ms-auto" style="font-size:11px;"></span>
+    {% if not has_graph %}
+    <div class="sc-card">
+        <div class="sc-empty">
+            <div class="sc-empty-title">{% trans "Aucun graphe sémantique" %}</div>
+            <div class="sc-empty-detail">{% trans "Le graphe sémantique n'a pas été construit pour ce projet. Relancez une analyse avec l'extraction de concepts activée." %}</div>
+        </div>
     </div>
-</div>
+    {% else %}
 
-<!-- Graph card -->
-<div class="card">
-    <div class="card-body p-0 position-relative" style="min-height:700px;">
-        <div id="concept-graph" style="width:100%;height:700px;"></div>
+    {% csrf_token %}
 
-        <!-- Legend overlay -->
-        <div id="concept-legend" style="position:absolute;bottom:16px;left:16px;background:var(--ds-grey-700);border:1px solid var(--ds-grey-500);border-radius:8px;padding:10px 14px;font-size:12px;max-height:220px;overflow-y:auto;z-index:10;min-width:140px;">
-            <div style="font-weight:600;margin-bottom:6px;color:var(--ds-grey-100);">{% trans "L&eacute;gende" %}</div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;flex-shrink:0;"></span>
-                <span style="color:var(--ds-grey-100);">{% trans "Faible degr&eacute;" %}</span>
+    <div class="sc-card flex flex-wrap items-center gap-2 py-3">
+        <label class="sr-only" for="concept-query">{% trans "Rechercher un concept" %}</label>
+        <input id="concept-query" type="text" class="sc-input sc-input--search sc-input--sm"
+               placeholder="{% trans "Rechercher un concept ou un sujet…" %}">
+        <button id="btn-search" type="button" class="sc-btn sc-btn--primary sc-btn--sm">{% trans "Rechercher" %}</button>
+        <button id="btn-reset" type="button" class="sc-btn sc-btn--secondary sc-btn--sm" hidden>{% trans "Réinitialiser" %}</button>
+        <span id="graph-stats" class="ml-auto text-11p5 text-ink-500 num"></span>
+    </div>
+
+    <div class="sc-viz h-[620px]">
+        <div id="concept-graph" class="h-full w-full"></div>
+
+        <div class="sc-viz-legend">
+            <div class="sc-viz-legend-title">{% trans "Légende" %}</div>
+            <div class="sc-viz-legend-row">
+                <span class="sc-dot sc-dot--degree-low"></span>
+                <span class="sc-viz-legend-label">{% trans "Faible degré" %}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                <span style="width:10px;height:10px;border-radius:50%;background:#f97316;flex-shrink:0;"></span>
-                <span style="color:var(--ds-grey-100);">{% trans "Haut degr&eacute;" %}</span>
+            <div class="sc-viz-legend-row">
+                <span class="sc-dot sc-dot--degree-high"></span>
+                <span class="sc-viz-legend-label">{% trans "Haut degré" %}</span>
             </div>
-            <div id="legend-seed" style="display:none;">
-                <div style="border-top:1px solid var(--ds-grey-500);margin:6px 0;"></div>
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                    <span style="width:10px;height:10px;border-radius:50%;background:#eab308;flex-shrink:0;border:2px solid #fde047;"></span>
-                    <span style="color:var(--ds-grey-100);">{% trans "Concept recherch&eacute;" %}</span>
+            <div id="legend-seed" hidden>
+                <div class="sc-viz-legend-sep"></div>
+                <div class="sc-viz-legend-row">
+                    <span class="sc-dot sc-dot--seed"></span>
+                    <span class="sc-viz-legend-label">{% trans "Concept recherché" %}</span>
                 </div>
             </div>
         </div>
 
-        <!-- Zoom controls -->
-        <div style="position:absolute;bottom:16px;right:16px;display:flex;flex-direction:column;gap:2px;z-index:10;">
-            <button id="zoom-in" type="button" style="width:36px;height:36px;border:1px solid var(--ds-grey-500);border-radius:8px 8px 0 0;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom avant">+</button>
-            <button id="zoom-out" type="button" style="width:36px;height:36px;border:1px solid var(--ds-grey-500);border-radius:0 0 8px 8px;background:var(--ds-grey-700);color:var(--ds-grey-100);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Zoom arri&egrave;re">&minus;</button>
+        <div class="sc-viz-tools">
+            <button id="zoom-in" type="button" class="sc-icon-btn sc-icon-btn--30" title="{% trans "Zoom avant" %}" aria-label="{% trans "Zoom avant" %}">+</button>
+            <button id="zoom-out" type="button" class="sc-icon-btn sc-icon-btn--30" title="{% trans "Zoom arrière" %}" aria-label="{% trans "Zoom arrière" %}">−</button>
         </div>
     </div>
+    {% endif %}
 </div>
-
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 {% if has_graph %}
 <script>
 (function() {
-    const container = document.getElementById("concept-graph");
-    const chart = echarts.init(container, null, { renderer: "canvas" });
-    const statsEl = document.getElementById("graph-stats");
-    const btnSearch = document.getElementById("btn-search");
-    const btnReset = document.getElementById("btn-reset");
-    const queryInput = document.getElementById("concept-query");
-    const legendSeed = document.getElementById("legend-seed");
-    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+    var container = document.getElementById("concept-graph");
+    if (!container || !window.echarts) return;
 
-    let overviewCache = null;
-    let currentZoom = 1;
-    let isExplorer = false;
+    var chart = echarts.init(container, null, { renderer: "canvas" });
+    var statsEl = document.getElementById("graph-stats");
+    var btnSearch = document.getElementById("btn-search");
+    var btnReset = document.getElementById("btn-reset");
+    var queryInput = document.getElementById("concept-query");
+    var legendSeed = document.getElementById("legend-seed");
+    var csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
 
-    function getLabelColor() {
-        return getComputedStyle(document.documentElement).getPropertyValue("--ds-grey-100").trim() || "#f8f8f8";
+    var overviewCache = null;
+    var currentZoom = 1;
+    var current = null;
+
+    // Les deux extrémités de l'échelle de degré sont celles que la légende
+    // affiche en CSS : on lit les mêmes variables pour rester en phase.
+    function channels(color) {
+        var hex = String(color || "").trim();
+        if (hex.length === 4) hex = "#" + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+        var n = parseInt(hex.slice(1), 16);
+        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
     }
 
-    // Continuous color scale: blue (low degree) -> orange (high degree)
-    function degreeColor(degree, maxDegree) {
-        const t = maxDegree > 0 ? degree / maxDegree : 0;
-        const r = Math.round(59 + t * (249 - 59));
-        const g = Math.round(130 + t * (115 - 130));
-        const b = Math.round(246 + t * (22 - 246));
-        return "rgb(" + r + "," + g + "," + b + ")";
+    function degreeScale() {
+        var style = getComputedStyle(document.documentElement);
+        return {
+            low: channels(style.getPropertyValue("--color-info-ink")),
+            high: channels(scChart.tokens().d)
+        };
+    }
+
+    // Échelle continue : bleu ardoise (degré faible) → orange (degré fort).
+    function degreeColor(degree, maxDegree, scale) {
+        var ratio = maxDegree > 0 ? degree / maxDegree : 0;
+        var mixed = scale.low.map(function(channel, i) {
+            return Math.round(channel + ratio * (scale.high[i] - channel));
+        });
+        return "rgb(" + mixed.join(",") + ")";
     }
 
     function renderGraph(data, seeds) {
-        const isSeed = {};
-        if (seeds) {
-            seeds.forEach(function(s) { isSeed[s.concept] = s.score; });
-        }
+        var t = scChart.tokens();
+        var scale = degreeScale();
+        var isSeed = {};
+        if (seeds) seeds.forEach(function(s) { isSeed[s.concept] = s.score; });
 
-        const maxDegree = Math.max.apply(null, data.nodes.map(function(n) { return n.degree || 0; }).concat([1]));
-        const maxFreq = Math.max.apply(null, data.nodes.map(function(n) { return n.frequency || 1; }).concat([1]));
-        const labelColor = getLabelColor();
+        var maxDegree = Math.max.apply(null, data.nodes.map(function(n) { return n.degree || 0; }).concat([1]));
+        var maxFreq = Math.max.apply(null, data.nodes.map(function(n) { return n.frequency || 1; }).concat([1]));
 
-        const showAllLabels = !!seeds;
-        const degreeThreshold = showAllLabels ? 0 : Math.floor(maxDegree * 0.4);
+        var showAllLabels = !!seeds;
+        var degreeThreshold = showAllLabels ? 0 : Math.floor(maxDegree * 0.4);
 
-        // Sort by degree so high-degree nodes are spread evenly on the circle
+        // Tri par degré : les nœuds les plus connectés se répartissent sur le cercle.
         var sorted = data.nodes.slice().sort(function(a, b) { return (b.degree || 0) - (a.degree || 0); });
 
-        const nodes = sorted.map(function(n) {
-            const isSeedNode = isSeed[n.id] !== undefined;
-            const size = 8 + Math.sqrt((n.frequency || 1) / maxFreq) * 30;
+        var nodes = sorted.map(function(n) {
+            var isSeedNode = isSeed[n.id] !== undefined;
+            var size = 8 + Math.sqrt((n.frequency || 1) / maxFreq) * 28;
             return {
                 id: n.id,
                 name: n.id,
                 symbolSize: isSeedNode ? size * 1.4 : size,
                 itemStyle: {
-                    color: isSeedNode ? "#eab308" : degreeColor(n.degree || 0, maxDegree),
-                    borderColor: isSeedNode ? "#fde047" : "rgba(255,255,255,0.12)",
-                    borderWidth: isSeedNode ? 3 : 1,
-                    shadowBlur: isSeedNode ? 12 : 0,
-                    shadowColor: isSeedNode ? "rgba(234,179,8,0.5)" : undefined,
+                    color: isSeedNode ? t.accent : degreeColor(n.degree || 0, maxDegree, scale),
+                    borderColor: "#fff",
+                    borderWidth: isSeedNode ? 2.5 : 1
                 },
                 label: {
                     show: isSeedNode || (n.degree || 0) >= degreeThreshold,
                     position: "top",
                     distance: 5,
                     fontSize: isSeedNode ? 12 : 10,
-                    fontWeight: isSeedNode ? "bold" : "normal",
-                    color: labelColor,
+                    fontWeight: isSeedNode ? 600 : 450,
+                    color: t.ink700
                 },
-                _raw: n,
+                _raw: n
             };
         });
 
-        const maxWeight = Math.max.apply(null, data.edges.map(function(e) { return e.weight || 1; }).concat([1]));
-
-        const links = data.edges.map(function(e) {
+        var maxWeight = Math.max.apply(null, data.edges.map(function(e) { return e.weight || 1; }).concat([1]));
+        var links = data.edges.map(function(e) {
             return {
                 source: e.source,
                 target: e.target,
                 lineStyle: {
-                    width: 0.5 + (e.weight || 1) / maxWeight * 3,
-                    color: "#37383a",
-                    opacity: 0.5,
-                    curveness: 0.1,
+                    width: 0.5 + (e.weight || 1) / maxWeight * 2.5,
+                    color: t.line,
+                    opacity: 0.9,
+                    curveness: 0.1
                 },
-                _evidence: e.evidence,
+                _evidence: e.evidence
             };
         });
 
-        currentZoom = 1;
-        chart.setOption({
-            backgroundColor: "transparent",
-            tooltip: {
-                trigger: "item",
-                confine: true,
-                backgroundColor: "#27282a",
-                borderColor: "#37383a",
-                textStyle: { color: "#f8f8f8", fontSize: 12 },
-                extraCssText: "max-width:320px;white-space:normal;word-break:break-word;",
-                formatter: function(params) {
-                    if (params.dataType === "edge") {
-                        var ev = params.data._evidence || [];
-                        var html = "<strong>" + params.data.source + " &harr; " + params.data.target + "</strong>";
-                        if (ev.length) html += "<br><em>" + ev.slice(0, 2).join("<br>") + "</em>";
-                        return html;
-                    }
-                    var raw = params.data._raw || {};
-                    var html = "<strong>" + raw.id + "</strong>";
-                    html += "<br>Fr\u00e9quence : " + (raw.frequency || 1);
-                    html += "<br>Degr\u00e9 : " + (raw.degree || 0);
-                    if (isSeed[raw.id] !== undefined) {
-                        html += "<br>Score de similarit\u00e9 : " + isSeed[raw.id].toFixed(3);
-                    }
-                    return html;
-                },
-            },
+        var base = scChart.base();
+        base.tooltip.trigger = "item";
+        base.tooltip.confine = true;
+        base.tooltip.formatter = function(params) {
+            if (params.dataType === "edge") {
+                var ev = params.data._evidence || [];
+                var edgeHtml = "<strong>" + params.data.source + " ↔ " + params.data.target + "</strong>";
+                if (ev.length) edgeHtml += "<br><em>" + ev.slice(0, 2).join("<br>") + "</em>";
+                return edgeHtml;
+            }
+            var raw = params.data._raw || {};
+            var html = "<strong>" + raw.id + "</strong>";
+            html += "<br>{% trans "Fréquence" %} : " + (raw.frequency || 1);
+            html += "<br>{% trans "Degré" %} : " + (raw.degree || 0);
+            if (isSeed[raw.id] !== undefined) {
+                html += "<br>{% trans "Score de similarité" %} : " + isSeed[raw.id].toFixed(3);
+            }
+            return html;
+        };
+
+        chart.setOption(Object.assign(base, {
             series: [{
                 type: "graph",
                 layout: "circular",
-                circular: {
-                    rotateLabel: true,
-                },
+                circular: { rotateLabel: true },
                 data: nodes,
                 links: links,
                 roam: true,
                 draggable: true,
+                zoom: currentZoom,
                 emphasis: {
                     focus: "adjacency",
-                    itemStyle: {
-                        borderColor: "#fff",
-                        borderWidth: 3,
-                        shadowBlur: 15,
-                        shadowColor: "rgba(13,110,253,0.5)",
-                    },
-                    lineStyle: { width: 3, color: "#0d6efd" },
+                    itemStyle: { borderColor: t.ink, borderWidth: 2 },
+                    lineStyle: { width: 3, color: t.ink400 }
                 },
-                animationDuration: 800,
-            }],
-        }, true);
+                animationDuration: 800
+            }]
+        }), true);
 
-        // Stats
         if (data.total_nodes !== undefined) {
-            statsEl.textContent = data.nodes.length + " / " + data.total_nodes + " concepts \u00b7 " + data.edges.length + " / " + data.total_edges + " liens";
+            statsEl.textContent = data.nodes.length + " / " + data.total_nodes + " {% trans "concepts" %} · " + data.edges.length + " / " + data.total_edges + " {% trans "liens" %}";
         } else {
-            statsEl.textContent = data.nodes.length + " concepts \u00b7 " + data.edges.length + " liens";
+            statsEl.textContent = data.nodes.length + " {% trans "concepts" %} · " + data.edges.length + " {% trans "liens" %}";
         }
-
     }
 
-    // --- Overview mode ---
+    // Le tracé est rejoué à l'identique quand le thème bascule : les couleurs
+    // sont relues au moment du rendu, la vue en cours ne bouge pas.
+    function draw() {
+        if (current) renderGraph(current.data, current.seeds);
+    }
+
+    function show(data, seeds) {
+        current = { data: data, seeds: seeds };
+        currentZoom = 1;
+        draw();
+    }
+
+    function showNote(message, isError) {
+        container.innerHTML = "";
+        var el = document.createElement("div");
+        el.className = "sc-viz-note" + (isError ? " sc-viz-note--error" : "");
+        el.textContent = message;
+        container.appendChild(el);
+    }
+
+    // ── Vue d'ensemble ──
     function loadOverview() {
         if (overviewCache) {
-            renderGraph(overviewCache, null);
+            show(overviewCache, null);
             return;
         }
-        statsEl.textContent = "Chargement\u2026";
+        statsEl.textContent = "{% trans "Chargement…" %}";
         fetch("{% url 'api-concept-graph' job.pk %}")
             .then(function(r) {
                 if (!r.ok) throw new Error("HTTP " + r.status);
@@ -229,70 +257,59 @@
             })
             .then(function(data) {
                 overviewCache = data;
-                renderGraph(data, null);
+                show(data, null);
             })
             .catch(function(err) {
-                console.error("concept graph:", err);
-                container.innerHTML = '<p class="text-danger text-center mt-5">Erreur de chargement : ' + err.message + '</p>';
+                statsEl.textContent = "";
+                showNote("{% trans "Erreur de chargement" %} : " + err.message, true);
             });
     }
 
-    // --- Explorer mode ---
+    // ── Mode exploration ──
     function doSearch() {
         var query = queryInput.value.trim();
         if (!query) return;
 
-        statsEl.textContent = "Recherche\u2026";
+        statsEl.textContent = "{% trans "Recherche…" %}";
         fetch("{% url 'api-concept-graph-query' job.pk %}", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": csrfToken,
-            },
-            body: JSON.stringify({ query: query }),
+            headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+            body: JSON.stringify({ query: query })
         })
-        .then(function(r) {
-            if (!r.ok) throw new Error("HTTP " + r.status);
-            return r.json();
-        })
-        .then(function(data) {
-            isExplorer = true;
-            btnReset.style.display = "";
-            legendSeed.style.display = "";
-            // Add degree to nodes from edge count
-            var degreeMap = {};
-            data.edges.forEach(function(e) {
-                degreeMap[e.source] = (degreeMap[e.source] || 0) + 1;
-                degreeMap[e.target] = (degreeMap[e.target] || 0) + 1;
+            .then(function(r) {
+                if (!r.ok) throw new Error("HTTP " + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                btnReset.hidden = false;
+                legendSeed.hidden = false;
+                // Le degré n'est pas renvoyé en mode requête : on le déduit des arêtes.
+                var degreeMap = {};
+                data.edges.forEach(function(e) {
+                    degreeMap[e.source] = (degreeMap[e.source] || 0) + 1;
+                    degreeMap[e.target] = (degreeMap[e.target] || 0) + 1;
+                });
+                data.nodes.forEach(function(n) { n.degree = degreeMap[n.id] || 0; });
+                show(data, data.seeds);
+            })
+            .catch(function(err) {
+                statsEl.textContent = "{% trans "Erreur" %} : " + err.message;
             });
-            data.nodes.forEach(function(n) {
-                n.degree = degreeMap[n.id] || 0;
-            });
-            renderGraph(data, data.seeds);
-        })
-        .catch(function(err) {
-            console.error("concept query:", err);
-            statsEl.textContent = "Erreur : " + err.message;
-        });
     }
 
-    // --- Reset ---
     function doReset() {
-        isExplorer = false;
-        btnReset.style.display = "none";
-        legendSeed.style.display = "none";
+        btnReset.hidden = true;
+        legendSeed.hidden = true;
         queryInput.value = "";
-        renderGraph(overviewCache, null);
+        show(overviewCache, null);
     }
 
-    // Event listeners
     btnSearch.addEventListener("click", doSearch);
     btnReset.addEventListener("click", doReset);
     queryInput.addEventListener("keydown", function(e) {
         if (e.key === "Enter") doSearch();
     });
 
-    // Zoom controls
     document.getElementById("zoom-in").addEventListener("click", function() {
         currentZoom *= 1.3;
         chart.setOption({ series: [{ zoom: currentZoom }] });
@@ -302,22 +319,9 @@
         chart.setOption({ series: [{ zoom: currentZoom }] });
     });
 
-    // Theme change
-    new MutationObserver(function() {
-        var newColor = getLabelColor();
-        var opt = chart.getOption();
-        if (opt && opt.series && opt.series[0] && opt.series[0].data) {
-            var updatedData = opt.series[0].data.map(function(n) {
-                if (n.label) n.label.color = newColor;
-                return n;
-            });
-            chart.setOption({ series: [{ data: updatedData }] });
-        }
-    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-bs-theme"] });
+    scChart.autoResize(container, chart);
+    scChart.onThemeChange(draw);
 
-    window.addEventListener("resize", function() { chart.resize(); });
-
-    // Initial load
     loadOverview();
 })();
 </script>

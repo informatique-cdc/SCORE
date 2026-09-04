@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class GovernanceAxis(BaseAuditAxis):
     axis_key = "governance"
-    axis_label = "Gouvernance & metadata"
+    axis_label = "Gouvernance & métadonnées"
 
     def analyze(self):
         from ingestion.models import Document

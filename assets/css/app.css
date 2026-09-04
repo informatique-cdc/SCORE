@@ -1,0 +1,32 @@
+/* Point d'entrée des styles SCORE.
+   Compilé vers dashboard/static/css/app.css par `npm run build:css`. */
+
+@import "tailwindcss" source(none);
+@import "./fonts.css";
+@import "./theme.css";
+@import "./base.css";
+@import "./components/shell.css";
+@import "./components/cards.css";
+@import "./components/controls.css";
+@import "./components/menus.css";
+@import "./components/findings.css";
+@import "./components/jobs.css";
+@import "./components/audit.css";
+@import "./components/tables.css";
+@import "./components/docviewer.css";
+@import "./components/toasts.css";
+@import "./components/connectors.css";
+@import "./components/chat.css";
+@import "./components/settings.css";
+@import "./components/auth.css";
+@import "./components/scale.css";
+
+/* Sources déclarées explicitement : la détection automatique remonterait
+   dans venv/ et dans le dossier de maquette. */
+@source "../../dashboard/static/js";
+@source "../../analysis/templates";
+@source "../../chat/templates";
+@source "../../connectors/templates";
+@source "../../dashboard/templates";
+@source "../../reports/templates";
+@source "../../tenants/templates";

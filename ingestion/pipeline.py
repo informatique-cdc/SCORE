@@ -21,6 +21,7 @@ from ingestion.extraction import extract_text
 from ingestion.hashing import hash_content
 from ingestion.models import Document, DocumentChunk, IngestionJob
 from llm.client import get_llm_client
+from score.cachekit import invalidate_project
 from vectorstore.store import get_vector_store
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,9 @@ class IngestionPipeline:
             self.connector_config.last_sync_at = django_tz.now()
             self.connector_config.last_sync_status = "success"
             self.connector_config.save()
+
+            # Le nombre de documents alimente la dimension « Santé » du SCORE.
+            invalidate_project(self.project)
 
             logger.info(
                 "Ingestion completed: new=%d updated=%d deleted=%d errors=%d",

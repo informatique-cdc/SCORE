@@ -1,0 +1,171 @@
+@layer components {
+  /* ── Menus déroulants ── */
+  .sc-dropdown {
+    position: relative;
+    width: 100%;
+  }
+
+  .sc-dropdown-menu {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-12);
+    box-shadow: var(--shadow-tip);
+    padding: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .sc-dropdown.is-open .sc-dropdown-menu {
+    display: block;
+  }
+
+  .sc-dropdown-menu--up {
+    bottom: calc(100% + 4px);
+  }
+
+  .sc-dropdown-menu--down {
+    top: calc(100% + 4px);
+  }
+
+  .sc-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: var(--radius-8);
+    background: none;
+    color: var(--color-ink-700);
+    font-family: inherit;
+    font-size: var(--text-12p5);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .sc-dropdown-item:hover {
+    background: var(--color-surface-100);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .sc-dropdown-item.is-active {
+    background: var(--color-ok-bg-warm);
+    color: var(--color-accent);
+  }
+
+  .sc-dropdown-hint {
+    font-size: var(--text-10);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+    padding: 6px 10px 4px;
+  }
+
+  .sc-dropdown-sep {
+    height: 1px;
+    background: var(--color-line);
+    margin: 4px 0;
+  }
+
+  .sc-caret {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    transition: transform 0.15s ease;
+  }
+
+  .sc-dropdown.is-open .sc-caret {
+    transform: rotate(180deg);
+  }
+
+  /* ── Sous-menu du rail ── */
+  .sc-submenu-items {
+    display: none;
+    flex-direction: column;
+    gap: 1px;
+    padding-left: 22px;
+    margin-top: 2px;
+  }
+
+  .sc-submenu.is-open .sc-submenu-items {
+    display: flex;
+  }
+
+  .sc-submenu-arrow {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    opacity: 0.6;
+    transition: transform 0.2s ease;
+  }
+
+  .sc-submenu.is-open .sc-submenu-arrow {
+    transform: rotate(90deg);
+  }
+
+  .sc-subitem {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 2px 8px;
+    border-radius: var(--radius-7);
+    font-size: var(--text-12);
+    color: var(--color-rail-nav-ink);
+    opacity: 0.8;
+  }
+
+  .sc-subitem:hover {
+    background: var(--color-rail-nav-hover-bg);
+    color: var(--color-rail-nav-active-ink);
+    opacity: 1;
+    text-decoration: none;
+  }
+
+  .sc-subitem.is-active {
+    color: var(--color-rail-nav-active-ink);
+    opacity: 1;
+    font-weight: 500;
+  }
+
+  /* ── Section dépliable ── */
+  .sc-disclosure {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: var(--radius-12);
+    border: 1px solid var(--color-line);
+    background: var(--color-surface-50);
+    color: inherit;
+    font-family: inherit;
+    font-size: var(--text-12p5);
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .sc-disclosure:hover {
+    border-color: var(--color-line-400);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .sc-disclosure-chevron {
+    margin-left: auto;
+    font-size: var(--text-11);
+    color: var(--color-ink-500);
+    transition: transform 0.15s ease;
+  }
+
+  .sc-disclosure.is-open .sc-disclosure-chevron {
+    transform: rotate(180deg);
+  }
+}

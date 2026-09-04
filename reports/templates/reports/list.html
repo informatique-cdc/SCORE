@@ -1,31 +1,104 @@
 {% extends "dashboard/base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Rapports - SCORE" %}{% endblock %}
-{% block nav_reports %}active{% endblock %}
+
+{% block title %}{% trans "Rapports" %} - SCORE{% endblock %}
+{% block nav_reports %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    {% if current_tenant %}<span class="sc-crumb">{{ current_tenant.name }}<span class="sc-crumb-sep">/</span></span>{% endif %}
+    <span class="sc-crumb is-current">{% trans "Rapports" %}</span>
+{% endblock %}
+
+{% block page_title %}{% trans "Rapports" %}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Chaque analyse terminée s'exporte : un CSV par famille de constats, le JSON complet du run, ou un rapport PDF prêt à diffuser." %}</p>
+{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">{% trans "Rapports" %}</h2>
+<div class="flex flex-col gap-4">
 
-<div class="card mb-4">
-    <div class="card-header"><strong>{% trans "Exporter depuis une analyse" %}</strong></div>
-    <div class="card-body">
-        {% for a in analyses %}
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span>
-                {% trans "Analysis" %} {{ a.id|truncatechars:12 }}
-                <small class="text-muted">({{ a.created_at|date:"M d, Y" }})</small>
-            </span>
-            <div>
-                <a href="{% url 'export-duplicates-csv' a.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Doublons CSV" %}</a>
-                <a href="{% url 'export-contradictions-csv' a.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Contradictions CSV" %}</a>
-                <a href="{% url 'export-gaps-csv' a.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Lacunes CSV" %}</a>
-                <a href="{% url 'export-report-json' a.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "JSON complet" %}</a>
-                <a href="{% url 'analysis-detail' a.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Voir" %}</a>
+    <section class="flex flex-col gap-2.5">
+        <div class="flex items-center justify-between gap-4">
+            <h2 class="sc-subhead">{% trans "Exporter depuis une analyse" %}</h2>
+            {% if analyses %}
+            <span class="text-11p5 text-ink-500">{% blocktrans count n=analyses|length %}{{ n }} analyse terminée{% plural %}{{ n }} analyses terminées{% endblocktrans %}</span>
+            {% endif %}
+        </div>
+
+        {% if analyses %}
+        <div class="sc-table" data-scroll="1">
+            <div class="sc-thead min-w-[960px] [--sc-cols:minmax(160px,1fr)_150px_minmax(560px,auto)]">
+                <div>{% trans "Analyse" %}</div>
+                <div>{% trans "Terminée le" %}</div>
+                <div class="text-right">{% trans "Exports" %}</div>
+            </div>
+
+            {% for a in analyses %}
+            <div class="sc-trow min-w-[960px]">
+                <div class="sc-tr [--sc-cols:minmax(160px,1fr)_150px_minmax(560px,auto)]">
+                    <div class="min-w-0">
+                        <a class="sc-td-primary block" href="{% url 'analysis-detail' a.pk %}">#{{ a.id|truncatechars:10 }}</a>
+                        <div class="sc-td-meta">{% trans "Lancée le" %} {{ a.created_at|date:"j M Y · H:i" }}</div>
+                    </div>
+
+                    <div class="sc-td-meta">{% if a.completed_at %}{{ a.completed_at|date:"j M Y · H:i" }}{% else %}—{% endif %}</div>
+
+                    <div class="flex flex-wrap items-center justify-end gap-1.5">
+                        <span class="sc-eyebrow">{% trans "CSV" %}</span>
+                        <a class="sc-btn sc-btn--tonal" href="{% url 'export-duplicates-csv' a.pk %}">{% trans "Doublons" %}</a>
+                        <a class="sc-btn sc-btn--tonal" href="{% url 'export-contradictions-csv' a.pk %}">{% trans "Contradictions" %}</a>
+                        <a class="sc-btn sc-btn--tonal" href="{% url 'export-gaps-csv' a.pk %}">{% trans "Lacunes" %}</a>
+                        <a class="sc-btn sc-btn--tonal" href="{% url 'export-hallucinations-csv' a.pk %}">{% trans "Risques" %}</a>
+                        <a class="sc-btn sc-btn--secondary sc-btn--sm" href="{% url 'export-report-json' a.pk %}">{% trans "JSON" %}</a>
+                        <a class="sc-btn sc-btn--secondary sc-btn--sm" href="{% url 'export-report-pdf' a.pk %}">{% trans "PDF" %}</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="sc-card">
+            <div class="sc-empty">
+                <div class="sc-empty-title">{% trans "Aucun rapport disponible" %}</div>
+                <div class="sc-empty-detail">{% trans "Les exports sont générés à partir d'une analyse terminée. Lancez une première analyse pour obtenir des rapports." %}</div>
+                <a href="{% url 'analysis-list' %}" class="sc-btn sc-btn--secondary sc-btn--sm">{% trans "Voir les analyses" %} →</a>
             </div>
         </div>
-        {% empty %}
-        <p class="text-muted">{% trans "Aucune analyse terminée disponible pour l'export." %}</p>
-        {% endfor %}
-    </div>
+        {% endif %}
+    </section>
+
+    {% if reports %}
+    <section class="flex flex-col gap-2.5">
+        <h2 class="sc-subhead">{% trans "Rapports enregistrés" %}</h2>
+
+        <div class="sc-table" data-scroll="1">
+            <div class="sc-thead min-w-[820px] [--sc-cols:minmax(240px,1fr)_190px_100px_150px_96px]">
+                <div>{% trans "Titre" %}</div>
+                <div>{% trans "Type" %}</div>
+                <div>{% trans "Format" %}</div>
+                <div>{% trans "Créé le" %}</div>
+                <div class="text-right">{% trans "Analyse" %}</div>
+            </div>
+
+            {% for r in reports %}
+            <div class="sc-trow min-w-[820px]">
+                <div class="sc-tr [--sc-cols:minmax(240px,1fr)_190px_100px_150px_96px]">
+                    <div class="min-w-0">
+                        <div class="sc-td-primary">{{ r.title }}</div>
+                        {% if r.summary %}<div class="sc-td-meta">{{ r.summary }}</div>{% endif %}
+                    </div>
+                    <div class="min-w-0"><span class="sc-tag">{{ r.get_report_type_display }}</span></div>
+                    <div class="min-w-0"><span class="sc-tag sc-tag--type">{{ r.get_format_display }}</span></div>
+                    <div class="sc-td-meta">{{ r.created_at|date:"j M Y · H:i" }}</div>
+                    <div class="flex items-center justify-end">
+                        <a class="sc-btn sc-btn--secondary sc-btn--sm" href="{% url 'analysis-detail' r.analysis_job_id %}">{% trans "Voir" %}</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}

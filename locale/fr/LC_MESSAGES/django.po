@@ -1621,7 +1621,7 @@ msgstr ""
 msgid "Envoi…"
 msgstr ""
 
-msgid "Erreur lors de l\\'envoi. Veuillez réessayer."
+msgid "Erreur lors de l'envoi. Veuillez réessayer."
 msgstr ""
 
 msgid "Vue d'ensemble de votre base de connaissances"

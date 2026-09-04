@@ -6,28 +6,35 @@ keeping presentation logic out of view functions.
 
 import json
 
+from django.db.models import Count
 
-def _group_by_display(queryset, field_name):
-    """Group queryset items by a display field and return name/value pairs.
+
+def count_by_display(queryset, field_name):
+    """Group queryset rows by a choice field and return name/value pairs.
+
+    Le comptage est fait par la base : la variante qui itérait le queryset en
+    Python chargeait la table entière pour n'en tirer que quelques totaux.
 
     Parameters
     ----------
     queryset : QuerySet
-        Django queryset to iterate over.
+        Django queryset to aggregate over.
     field_name : str
-        Name of the model field whose ``get_<field>_display()`` will be used.
+        Name of the model field whose ``choices`` provide the display labels.
 
     Returns
     -------
     str
         JSON string of ``[{"name": ..., "value": ...}, ...]``.
     """
-    counts = {}
-    getter = f"get_{field_name}_display"
-    for obj in queryset:
-        label = str(getattr(obj, getter)())
-        counts[label] = counts.get(label, 0) + 1
-    return json.dumps([{"name": k, "value": v} for k, v in counts.items()])
+    labels = dict(queryset.model._meta.get_field(field_name).choices or [])
+    rows = queryset.values(field_name).annotate(count=Count("id")).order_by()
+    return json.dumps(
+        [
+            {"name": str(labels.get(row[field_name], row[field_name])), "value": row["count"]}
+            for row in rows
+        ]
+    )
 
 
 def contradiction_chart_data(job):
@@ -36,8 +43,8 @@ def contradiction_chart_data(job):
 
     contras = ContradictionPair.objects.filter(analysis_job=job)
     return {
-        "contra_by_severity_json": _group_by_display(contras, "severity"),
-        "contra_by_class_json": _group_by_display(contras, "classification"),
+        "contra_by_severity_json": count_by_display(contras, "severity"),
+        "contra_by_class_json": count_by_display(contras, "classification"),
     }
 
 
@@ -47,8 +54,8 @@ def gap_chart_data(job):
 
     gaps = GapReport.objects.filter(analysis_job=job)
     return {
-        "gap_by_type_json": _group_by_display(gaps, "gap_type"),
-        "gap_by_severity_json": _group_by_display(gaps, "severity"),
+        "gap_by_type_json": count_by_display(gaps, "gap_type"),
+        "gap_by_severity_json": count_by_display(gaps, "severity"),
     }
 
 
@@ -58,6 +65,14 @@ def hallucination_chart_data(job):
 
     reports = HallucinationReport.objects.filter(analysis_job=job)
     return {
-        "hallu_by_type_json": _group_by_display(reports, "risk_type"),
-        "hallu_by_severity_json": _group_by_display(reports, "severity"),
+        "hallu_by_type_json": count_by_display(reports, "risk_type"),
+        "hallu_by_severity_json": count_by_display(reports, "severity"),
     }
+
+
+def duplicate_chart_data(job):
+    """Return chart JSON string for duplicate groups by recommended action."""
+    from analysis.models import DuplicateGroup
+
+    groups = DuplicateGroup.objects.filter(analysis_job=job)
+    return {"dup_by_action_json": count_by_display(groups, "recommended_action")}

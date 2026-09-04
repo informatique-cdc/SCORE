@@ -4,8 +4,24 @@ import uuid
 
 import pytest
 from django.contrib.auth.models import User
+from django.core.cache import cache
 
 from tenants.models import Tenant, TenantMembership
+
+
+# Cache mémoire vidé entre chaque test : sinon une entrée mémoïsée par un test
+# ressort dans le suivant et les composants de page sont servis périmés.
+@pytest.fixture(autouse=True)
+def _isolated_cache(settings):
+    settings.CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "tests",
+        }
+    }
+    cache.clear()
+    yield
+    cache.clear()
 
 
 # Use plain static files storage in tests (no manifest required)

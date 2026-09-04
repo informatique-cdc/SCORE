@@ -13,6 +13,7 @@ from django.db import models
 from django.views.decorators.http import require_POST
 
 from analysis.constants import AXIS_COLORS, AXIS_ICONS, AXIS_LABELS, SUB_COLORS, SUB_SCORE_LABELS
+from score.cachekit import cached, invalidate_project
 from score.issues import build_analysis_issues
 from score.ratelimit import ratelimit
 from analysis.models import (
@@ -27,8 +28,13 @@ from analysis.models import (
     PipelineTrace,
     TopicCluster,
 )
-from analysis.presenters import contradiction_chart_data, gap_chart_data, hallucination_chart_data
-from analysis.semantic_graph import graph_dir
+from analysis.presenters import (
+    contradiction_chart_data,
+    duplicate_chart_data,
+    gap_chart_data,
+    hallucination_chart_data,
+)
+from analysis.semantic_graph import graph_mtime, graph_stats
 from analysis.tasks import UNIFIED_PROGRESS, run_unified_pipeline
 from connectors.models import ConnectorConfig
 from score.scoring import build_breakdown_json, compute_score, compute_score_detail
@@ -412,25 +418,66 @@ def _analysis_progress_page_context(job):
 
 
 def _analysis_results_context(job):
-    """Build context dict for analysis results partial."""
+    """Contexte des compteurs KPI et de leurs répartitions."""
     should_poll = job.status in (AnalysisJob.Status.QUEUED, AnalysisJob.Status.RUNNING)
-    return {
-        "job": job,
-        "dup_count": DuplicateGroup.objects.filter(analysis_job=job).count(),
-        "contra_count": ContradictionPair.objects.filter(analysis_job=job)
-        .exclude(resolution="resolved")
-        .count(),
-        "cluster_count": TopicCluster.objects.filter(analysis_job=job).count(),
-        "gap_count": GapReport.objects.filter(analysis_job=job)
-        .exclude(resolution="resolved")
-        .count(),
-        "hallu_count": HallucinationReport.objects.filter(analysis_job=job)
-        .exclude(resolution="resolved")
-        .count(),
-        "doc_count": Document.objects.filter(project=job.project).count(),
-        "ds": compute_score(job.project),
-        "should_poll": should_poll,
-    }
+
+    def build():
+        ctx = {
+            "dup_count": DuplicateGroup.objects.filter(analysis_job=job).count(),
+            "contra_count": ContradictionPair.objects.filter(analysis_job=job)
+            .exclude(resolution="resolved")
+            .count(),
+            "cluster_count": TopicCluster.objects.filter(analysis_job=job).count(),
+            "gap_count": GapReport.objects.filter(analysis_job=job)
+            .exclude(resolution="resolved")
+            .count(),
+            "hallu_count": HallucinationReport.objects.filter(analysis_job=job)
+            .exclude(resolution="resolved")
+            .count(),
+            "doc_count": Document.objects.filter(project=job.project).count(),
+            "ds": compute_score(job.project),
+        }
+        ctx.update(duplicate_chart_data(job))
+        ctx.update(contradiction_chart_data(job))
+        ctx.update(gap_chart_data(job))
+        ctx.update(hallucination_chart_data(job))
+        return ctx
+
+    # Pendant que le pipeline tourne, les compteurs bougent à chaque sondage sans
+    # que la version du projet change : on ne mémorise que les jobs à l'arrêt.
+    ctx = build() if should_poll else cached("results", job.project, build, job.id, job.status)
+    return {**ctx, "job": job, "should_poll": should_poll}
+
+
+def _analysis_score_context(job):
+    """Contexte du panneau qualité : SCORE, sept dimensions, radar, alertes."""
+
+    def build():
+        ds = compute_score(job.project)
+        return {
+            "ds": ds,
+            "breakdown_json": build_breakdown_json(ds["breakdown"]),
+            "top_issues": _build_job_issues(job),
+        }
+
+    return {**cached("score-panel", job.project, build, job.id, job.status), "job": job}
+
+
+def _analysis_recommendations_context(job):
+    """Contexte des recommandations.
+
+    ``compute_score_detail`` est de loin le calcul le plus cher de la page pour la
+    plus petite sortie : cinq lignes de texte. D'où sa propre frame, chargée en
+    différé, et son propre cache.
+    """
+
+    def build():
+        if job.status != AnalysisJob.Status.COMPLETED:
+            return {"top_recommendations": []}
+        detail = compute_score_detail(job.project)
+        return {"top_recommendations": detail.get("top_recommendations", [])}
+
+    return {**cached("recommendations", job.project, build, job.id, job.status), "job": job}
 
 
 @login_required
@@ -549,6 +596,7 @@ def analysis_retry(request, pk):
     task = run_unified_pipeline.delay(str(job.id))
     job.celery_task_id = task.id
     job.save()
+    invalidate_project(request.project)
 
     logger.info("Retried analysis job=%s (resume from %s)", pk, job.current_phase)
     return redirect("analysis-detail", pk=pk)
@@ -570,6 +618,7 @@ def analysis_delete(request, pk):
     )
     logger.info("Deleting analysis job=%s", pk)
     job.delete()
+    invalidate_project(request.project)
 
     return redirect("analysis-list")
 
@@ -595,6 +644,7 @@ def analysis_cancel(request, pk):
     job.error_message = _("Annulé par l\u2019utilisateur.")
     job.completed_at = timezone.now()
     job.save()
+    invalidate_project(request.project)
 
     logger.info("Cancelled analysis job=%s", pk)
     return redirect("analysis-detail", pk=pk)
@@ -609,40 +659,12 @@ def analysis_detail(request, pk):
         context = _analysis_progress_page_context(job)
         return render(request, "analysis/progress.html", context)
 
+    # La page n'est plus qu'une coquille : chaque bloc lourd est une frame qui
+    # charge son propre endpoint en parallèle. Voir _score_panel / _results /
+    # _recommendations, et les endpoints JSON pour les deux graphes.
     context = {"job": job}
     context.update(_analysis_progress_context(job))
-    context.update(_analysis_results_context(job))
-
-    # --- Report summary charts data ---
-    # Duplicates by recommended action
-    dup_groups = DuplicateGroup.objects.filter(analysis_job=job)
-    dup_by_action = {}
-    for g in dup_groups:
-        label = str(g.get_recommended_action_display())
-        dup_by_action[label] = dup_by_action.get(label, 0) + 1
-    context["dup_by_action_json"] = json.dumps(
-        [{"name": k, "value": v} for k, v in dup_by_action.items()]
-    )
-
-    # Chart data (extracted to presenters)
-    context.update(contradiction_chart_data(job))
-    context.update(gap_chart_data(job))
-    context.update(hallucination_chart_data(job))
-
-    # Concept graph availability
-    graph_path = graph_dir(str(job.project_id)) / "graph.json"
-    context["has_graph"] = graph_path.exists()
-
-    context["top_issues"] = _build_job_issues(job)
-
-    if job.status == AnalysisJob.Status.COMPLETED:
-        detail = compute_score_detail(job.project)
-        context["top_recommendations"] = detail.get("top_recommendations", [])
-
-    # SCORE widget data
-    ds = compute_score(job.project)
-    context["ds"] = ds
-    context["breakdown_json"] = build_breakdown_json(ds["breakdown"])
+    context["has_graph"] = graph_mtime(str(job.project_id)) is not None
 
     return render(request, "analysis/detail.html", context)
 
@@ -688,11 +710,9 @@ def analysis_audit_overview(request, pk):
         for a in axes:
             a["score_pct"] = round((a["score"] or 0) / total_score * 100)
         context["audit_axes"] = axes
+        # Le donut colore ses parts avec scChart.nutri : inutile d'exporter une teinte.
         context["axes_json"] = json.dumps(
-            [
-                {"label": str(a["label"]), "score": a["score"] or 0, "color": a["color"]}
-                for a in axes
-            ]
+            [{"label": str(a["label"]), "score": a["score"] or 0} for a in axes]
         )
         context["radar_data_json"] = json.dumps(
             [{"axis": str(a["label"]), "score": a["score"] or 0} for a in axes]
@@ -762,3 +782,31 @@ def analysis_results_partial(request, pk):
     job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
     context = _analysis_results_context(job)
     return render(request, "analysis/_results.html", context)
+
+
+@login_required
+def analysis_score_partial(request, pk):
+    job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
+    context = _analysis_score_context(job)
+    return render(request, "analysis/_score_panel.html", context)
+
+
+@login_required
+def analysis_recommendations_partial(request, pk):
+    job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
+    context = _analysis_recommendations_context(job)
+    return render(request, "analysis/_recommendations.html", context)
+
+
+@login_required
+def analysis_graph_stats_partial(request, pk):
+    """Compteurs de la carte des concepts — parse un fichier de plusieurs centaines
+    de mégaoctets, d'où la frame différée."""
+    job = get_object_or_404(AnalysisJob, pk=pk, project=request.project)
+    mtime = graph_mtime(str(job.project_id))
+    stats = None
+    if mtime is not None:
+        stats = cached(
+            "graph-stats", request.project, lambda: graph_stats(str(job.project_id)), mtime
+        )
+    return render(request, "analysis/_graph_stats.html", {"job": job, "graph_stats": stats})

@@ -8,8 +8,8 @@ AXIS_LABELS = {
     "structure": _lazy("Structure RAG"),
     "coverage": _lazy("Couverture sémantique"),
     "coherence": _lazy("Cohérence interne"),
-    "retrievability": _lazy("Retrievability"),
-    "governance": _lazy("Gouvernance & metadata"),
+    "retrievability": _lazy("Repérabilité"),
+    "governance": _lazy("Gouvernance & métadonnées"),
 }
 
 # Audit axis labels for pipeline progress messages
@@ -18,7 +18,7 @@ AUDIT_AXIS_LABELS = {
     "structure": "Audit : Structure",
     "coverage": "Audit : Couverture",
     "coherence": "Audit : Cohérence",
-    "retrievability": "Audit : Retrievability",
+    "retrievability": "Audit : Repérabilité",
     "governance": "Audit : Gouvernance",
 }
 

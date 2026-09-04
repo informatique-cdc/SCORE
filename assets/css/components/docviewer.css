@@ -1,0 +1,167 @@
+@layer components {
+  /* Lecteur de document : panneau latéral partagé par les doublons,
+     le détail d'un connecteur et l'assistant. */
+
+  .sc-doc {
+    width: 55vw;
+    max-width: 820px;
+    min-width: 400px;
+  }
+
+  .sc-doc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--color-line);
+    flex-shrink: 0;
+  }
+
+  .sc-doc-title {
+    font-size: var(--text-15);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-doc-meta {
+    font-size: var(--text-11);
+    color: var(--color-ink-500);
+    margin-top: 2px;
+  }
+
+  /* Les icônes du panneau sont dessinées en viewBox 24 : on les cadre ici. */
+  .sc-doc-head svg,
+  .sc-doc-pager svg,
+  .sc-doc-zoom svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .sc-doc-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .sc-doc-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--color-line);
+    background: var(--color-surface-50);
+    flex-shrink: 0;
+  }
+
+  .sc-doc-pager-info {
+    font-size: var(--text-12p5);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    min-width: 48px;
+    text-align: center;
+    padding: 2px 14px;
+    background: var(--color-surface-100);
+    border-radius: var(--radius-6);
+  }
+
+  /* Fond neutre soutenu : la page du document doit s'en détacher. */
+  .sc-doc-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    position: relative;
+    background: var(--color-surface-200);
+  }
+
+  .sc-doc-canvas-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  .sc-doc-canvas {
+    max-width: 100%;
+    background: #fff;
+    box-shadow: var(--shadow-page);
+  }
+
+  .sc-doc-text {
+    padding: 28px 24px;
+    background: var(--color-surface);
+  }
+
+  .sc-doc-text p {
+    margin-bottom: 12px;
+    line-height: var(--leading-excerpt);
+    white-space: pre-wrap;
+  }
+
+  .sc-doc-text h5 {
+    font-family: var(--font-display);
+    font-size: var(--text-15);
+    font-weight: 600;
+    color: var(--color-accent);
+    border-bottom: 1px solid var(--color-line);
+    padding-bottom: 5px;
+    margin: 18px 0 10px;
+  }
+
+  .sc-doc-loading {
+    display: grid;
+    place-items: center;
+    gap: 14px;
+    padding: 80px 20px;
+    color: var(--color-ink-500);
+    font-size: var(--text-13);
+  }
+
+  .sc-spinner {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2.5px solid var(--color-surface-200);
+    border-top-color: var(--color-accent);
+    animation: spin 1s linear infinite;
+  }
+
+  /* Empilés, d'où les rayons ouverts sur la jonction. */
+  .sc-doc-zoom {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 10;
+  }
+
+  .sc-doc-zoom-btn {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+    color: var(--color-ink-700);
+    font-size: var(--text-15);
+    line-height: var(--leading-flat);
+    cursor: pointer;
+    box-shadow: var(--shadow-legend);
+  }
+
+  .sc-doc-zoom-btn:first-child {
+    border-radius: 8px 8px 0 0;
+  }
+
+  .sc-doc-zoom-btn:last-child {
+    border-radius: 0 0 8px 8px;
+  }
+
+  .sc-doc-zoom-btn:hover {
+    border-color: var(--color-ink);
+  }
+}

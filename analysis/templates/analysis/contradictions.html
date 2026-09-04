@@ -1,153 +1,206 @@
 {% extends "dashboard/base.html" %}
-{% load i18n %}
-{% block title %}{% trans "Rapport des contradictions" %} - SCORE{% endblock %}
-{% block nav_analysis %}active{% endblock %}
+{% load i18n analysis_ui %}
+
+{% block title %}{% trans "Contradictions" %} - SCORE{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'analysis-list' %}">{% trans "Analyses" %}<span class="sc-crumb-sep">/</span></a>
+    <a class="sc-crumb" href="{% url 'analysis-detail' job.pk %}">#{{ job.pk }}<span class="sc-crumb-sep">/</span></a>
+    <span class="sc-crumb is-current">{% trans "Contradictions" %}</span>
+{% endblock %}
+
+{% block page_title %}{% trans "Contradictions" %}{% endblock %}
+
+{% block page_lede %}
+<p class="sc-lede">{% trans "Affirmations qui se contredisent d'un document à l'autre, ou qu'une source plus récente a rendues obsolètes." %}</p>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'export-contradictions-csv' job.pk %}" class="sc-btn sc-btn--secondary">{% trans "Exporter" %}</a>
+{% endblock %}
+
+{% block page_tabs %}{% analysis_tabs job "contradictions" %}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="mb-0">{% trans "Contradictions et informations obsol&egrave;tes" %}</h2>
-        <span class="text-muted" style="font-size:13px;">{{ page_obj.paginator.count }} {% trans "r&eacute;sultat(s)" %}</span>
-    </div>
-    <div>
-        <a href="{% url 'export-contradictions-csv' job.pk %}" class="btn btn-sm btn-outline-secondary">{% trans "Exporter CSV" %}</a>
-        <a href="{% url 'analysis-detail' job.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Retour" %}</a>
-    </div>
-</div>
+<div class="flex flex-col gap-3.5">
 
-<div class="mb-3 d-flex flex-wrap gap-2">
-    <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Filtre par type' %}">
-        <a href="{% url 'analysis-contradictions' job.pk %}{% if resolution_filter %}?resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-secondary {% if not type_filter %}active{% endif %}">{% trans "Tous" %}</a>
-        <a href="{% url 'analysis-contradictions' job.pk %}?type=contradiction{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-danger {% if type_filter == 'contradiction' %}active{% endif %}">{% trans "Contradictions" %}</a>
-        <a href="{% url 'analysis-contradictions' job.pk %}?type=outdated{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="btn btn-outline-warning {% if type_filter == 'outdated' %}active{% endif %}">{% trans "Obsol&egrave;tes" %}</a>
+    <div class="flex flex-col gap-2">
+        <div class="flex flex-wrap items-center gap-2" role="group" aria-label="{% trans "Filtre par type" %}">
+            <span class="sc-eyebrow w-16 shrink-0">{% trans "Type" %}</span>
+            <a href="{% url 'analysis-contradictions' job.pk %}{% if resolution_filter %}?resolution={{ resolution_filter }}{% endif %}" class="sc-pill {% if not type_filter %}is-active{% endif %}">{% trans "Tous" %}</a>
+            <a href="{% url 'analysis-contradictions' job.pk %}?type=contradiction{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="sc-pill {% if type_filter == 'contradiction' %}is-active{% endif %}">{% trans "Contradictions" %}</a>
+            <a href="{% url 'analysis-contradictions' job.pk %}?type=outdated{% if resolution_filter %}&resolution={{ resolution_filter }}{% endif %}" class="sc-pill {% if type_filter == 'outdated' %}is-active{% endif %}">{% trans "Obsolètes" %}</a>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2" role="group" aria-label="{% trans "Filtre par statut" %}">
+            <span class="sc-eyebrow w-16 shrink-0">{% trans "Statut" %}</span>
+            <a href="{% url 'analysis-contradictions' job.pk %}{% if type_filter %}?type={{ type_filter }}{% endif %}" class="sc-pill {% if not resolution_filter %}is-active{% endif %}">{% trans "Tous" %}</a>
+            <a href="{% url 'analysis-contradictions' job.pk %}?resolution=unresolved{% if type_filter %}&type={{ type_filter }}{% endif %}" class="sc-pill {% if resolution_filter == 'unresolved' %}is-active{% endif %}">{% trans "Non traité" %}</a>
+            <a href="{% url 'analysis-contradictions' job.pk %}?resolution=resolved{% if type_filter %}&type={{ type_filter }}{% endif %}" class="sc-pill {% if resolution_filter == 'resolved' %}is-active{% endif %}">{% trans "Traité" %}</a>
+            <a href="{% url 'analysis-contradictions' job.pk %}?resolution=kept{% if type_filter %}&type={{ type_filter }}{% endif %}" class="sc-pill {% if resolution_filter == 'kept' %}is-active{% endif %}">{% trans "Conservé" %}</a>
+            <div class="flex-1"></div>
+            <span class="text-12 text-ink-500">{{ page_obj.paginator.count }} {% trans "résultat(s)" %}</span>
+        </div>
     </div>
 
-    <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Filtre par statut' %}">
-        <a href="{% url 'analysis-contradictions' job.pk %}{% if type_filter %}?type={{ type_filter }}{% endif %}" class="btn btn-outline-secondary {% if not resolution_filter %}active{% endif %}">{% trans "Tous" %}</a>
-        <a href="{% url 'analysis-contradictions' job.pk %}?resolution=unresolved{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-secondary {% if resolution_filter == 'unresolved' %}active{% endif %}">{% trans "Non trait&eacute;" %}</a>
-        <a href="{% url 'analysis-contradictions' job.pk %}?resolution=resolved{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-success {% if resolution_filter == 'resolved' %}active{% endif %}">{% trans "Trait&eacute;" %}</a>
-        <a href="{% url 'analysis-contradictions' job.pk %}?resolution=kept{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-outline-info {% if resolution_filter == 'kept' %}active{% endif %}">{% trans "Conserv&eacute;" %}</a>
-    </div>
-</div>
+    {# Formulaire groupé : seulement des champs cachés, les cases et les boutons le visent via `form`. #}
+    <form method="post" action="{% url 'contradiction-batch-resolve' job.pk %}" id="batch-form">
+        {% csrf_token %}
+        <input type="hidden" name="type_filter" value="{{ type_filter }}">
+        <input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
+    </form>
 
-{% if can_edit and contradictions %}
-<div class="mb-2">
-    <label class="form-check form-check-inline">
-        <input type="checkbox" class="form-check-input" id="select-all">
-        <span class="form-check-label small">{% trans "Tout s&eacute;lectionner" %}</span>
+    {% if can_edit and contradictions %}
+    <label class="flex w-fit items-center gap-2 text-12 text-ink-500">
+        <input type="checkbox" class="sc-check" id="select-all">
+        <span>{% trans "Tout sélectionner" %}</span>
     </label>
-</div>
-{% endif %}
+    {% endif %}
 
-{# Batch form: only hidden inputs — checkboxes and buttons reference it via form attribute #}
-<form method="post" action="{% url 'contradiction-batch-resolve' job.pk %}" id="batch-form">
-{% csrf_token %}
-<input type="hidden" name="type_filter" value="{{ type_filter }}">
-<input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
-</form>
-
-{% for c in contradictions %}
-<div class="card mb-3 contra-item {% if c.resolution == 'resolved' %}opacity-50{% endif %}">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="d-flex align-items-center gap-2">
-            {% if can_edit %}
-            <input type="checkbox" class="form-check-input contra-checkbox" form="batch-form" name="selected" value="{{ c.pk }}">
-            {% endif %}
-            <span class="badge bg-{% if c.classification == 'contradiction' %}danger{% elif c.classification == 'outdated' %}warning{% else %}info{% endif %}">
-                {{ c.get_classification_display }}
-            </span>
-            <span class="badge badge-severity-{{ c.severity }}">{{ c.severity }}</span>
-            {% if c.resolution == 'resolved' %}
-                <span class="badge bg-success">{% trans "Trait&eacute;" %}</span>
-            {% elif c.resolution == 'kept' %}
-                <span class="badge bg-info">{% trans "Conserv&eacute;" %}</span>
-            {% endif %}
-        </span>
-        <span class="d-flex align-items-center gap-2">
-            <span class="text-muted">{% trans "Confiance :" %} {{ c.confidence|floatformat:2 }}</span>
-            {% if can_edit %}
-            <span class="d-inline-flex gap-1">
-                {% if c.resolution != 'resolved' %}
-                <button type="submit" form="single-{{ c.pk }}" name="resolution" value="resolved" class="btn btn-sm btn-outline-success" title="{% trans 'Marquer comme trait&eacute;' %}">{% trans "Trait&eacute;" %}</button>
+    {% if contradictions %}
+    <div class="sc-findings">
+        {% for c in contradictions %}
+        <article class="sc-finding {% if c.resolution == 'resolved' %}is-resolved{% endif %}">
+            <div class="sc-finding-head">
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                    {% if can_edit %}
+                    <input type="checkbox" class="sc-check" form="batch-form" name="selected" value="{{ c.pk }}" data-finding-check aria-label="{% trans "Sélectionner ce constat" %}">
+                    {% endif %}
+                    <span class="sc-tag sc-tag--type {% if c.classification == 'contradiction' %}sc-tag--danger{% elif c.classification == 'outdated' %}sc-tag--warn{% else %}sc-tag--info{% endif %}">{{ c.get_classification_display }}</span>
+                    <span class="sc-tag sc-tag--sev-{{ c.severity|severity_level }}">{{ c.get_severity_display }}</span>
+                    {% if c.resolution == 'resolved' %}
+                    <span class="sc-tag sc-tag--ok">{% trans "Traité" %}</span>
+                    {% elif c.resolution == 'kept' %}
+                    <span class="sc-tag sc-tag--info">{% trans "Conservé" %}</span>
+                    {% endif %}
+                </div>
+                {% if can_edit %}
+                <div class="flex shrink-0 items-center gap-1.5">
+                    {% if c.resolution != 'resolved' %}
+                    <button type="submit" form="single-{{ c.pk }}" name="resolution" value="resolved" class="sc-btn sc-btn--tonal" data-tip="{% trans "Marquer comme traité" %}">{% trans "Traité" %}</button>
+                    {% endif %}
+                    {% if c.resolution != 'kept' %}
+                    <button type="submit" form="single-{{ c.pk }}" name="resolution" value="kept" class="sc-btn sc-btn--tonal" data-tip="{% trans "Conserver tel quel" %}">{% trans "Conserver" %}</button>
+                    {% endif %}
+                    {% if c.resolution %}
+                    <button type="submit" form="single-{{ c.pk }}" name="resolution" value="" class="sc-btn sc-btn--tonal" data-tip="{% trans "Réinitialiser" %}">{% trans "Annuler" %}</button>
+                    {% endif %}
+                </div>
                 {% endif %}
-                {% if c.resolution != 'kept' %}
-                <button type="submit" form="single-{{ c.pk }}" name="resolution" value="kept" class="btn btn-sm btn-outline-info" title="{% trans 'Conserver tel quel' %}">{% trans "Conserver" %}</button>
-                {% endif %}
-                {% if c.resolution %}
-                <button type="submit" form="single-{{ c.pk }}" name="resolution" value="" class="btn btn-sm btn-outline-secondary" title="{% trans 'R&eacute;initialiser' %}">{% trans "Annuler" %}</button>
-                {% endif %}
-            </span>
-            {% endif %}
-        </span>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h6>{% trans "Affirmation A" %} <small class="text-muted">(<a href="javascript:void(0)" class="doc-read-btn text-muted" data-url="{% url 'document-content' c.claim_a.document.connector_id c.claim_a.document.pk %}">{{ c.claim_a.document.title|truncatechars:40 }}</a>)</small></h6>
-                <blockquote class="blockquote small border-start border-3 border-primary ps-3">
-                    {{ c.claim_a.as_text }}
-                </blockquote>
-                <p class="small text-muted">
-                    <em>"{{ c.claim_a.raw_text|truncatechars:200 }}"</em>
-                </p>
             </div>
-            <div class="col-md-6">
-                <h6>{% trans "Affirmation B" %} <small class="text-muted">(<a href="javascript:void(0)" class="doc-read-btn text-muted" data-url="{% url 'document-content' c.claim_b.document.connector_id c.claim_b.document.pk %}">{{ c.claim_b.document.title|truncatechars:40 }}</a>)</small></h6>
-                <blockquote class="blockquote small border-start border-3 border-danger ps-3">
-                    {{ c.claim_b.as_text }}
-                </blockquote>
-                <p class="small text-muted">
-                    <em>"{{ c.claim_b.raw_text|truncatechars:200 }}"</em>
-                </p>
+
+            <h3 class="sc-finding-title">{{ c.claim_a.subject }}</h3>
+
+            <div class="sc-claims mt-3">
+                <div class="sc-claim {% if c.authoritative_claim_id == c.claim_a_id %}is-reference{% endif %}">
+                    <div class="sc-claim-date">{% trans "Affirmation A" %}{% if c.claim_a.claim_date %} · {{ c.claim_a.claim_date|date:"j M Y" }}{% endif %}</div>
+                    <p class="sc-claim-text">{{ c.claim_a.as_text }}</p>
+                    <button type="button" class="sc-claim-src cell-truncate doc-read-btn block w-full" data-url="{% url 'document-content' c.claim_a.document.connector_id c.claim_a.document.pk %}">{{ c.claim_a.document.title }}</button>
+                </div>
+                <div class="sc-claim-swap" aria-hidden="true">⇄</div>
+                <div class="sc-claim {% if c.authoritative_claim_id == c.claim_b_id %}is-reference{% endif %}">
+                    <div class="sc-claim-date">{% trans "Affirmation B" %}{% if c.claim_b.claim_date %} · {{ c.claim_b.claim_date|date:"j M Y" }}{% endif %}</div>
+                    <p class="sc-claim-text">{{ c.claim_b.as_text }}</p>
+                    <button type="button" class="sc-claim-src cell-truncate doc-read-btn block w-full" data-url="{% url 'document-content' c.claim_b.document.connector_id c.claim_b.document.pk %}">{{ c.claim_b.document.title }}</button>
+                </div>
             </div>
-        </div>
-        {% if c.evidence %}
-        <div class="mt-2 p-2 rounded" style="background: var(--ds-grey-800);">
-            <strong class="small">{% trans "Preuve :" %}</strong>
-            <p class="small mb-0">{{ c.evidence|truncatechars:500 }}</p>
-        </div>
-        {% endif %}
-        {% if c.authoritative_claim %}
-        <div class="mt-2 alert alert-info py-1 small">
-            {% trans "Affirmation de r&eacute;f&eacute;rence :" %} <strong>{{ c.authoritative_claim.as_text|truncatechars:200 }}</strong>
-            ({% trans "de" %} {{ c.authoritative_claim.document.title }})
-        </div>
+
+            {% if c.authoritative_claim %}
+            <div class="sc-alert mt-3">
+                <div class="sc-alert-body">
+                    <div class="sc-alert-title">{% trans "Affirmation de référence" %}</div>
+                    <div class="sc-alert-detail">{{ c.authoritative_claim.as_text|truncatechars:200 }} — {{ c.authoritative_claim.document.title }}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="sc-finding-meta">
+                <div class="sc-gauge min-w-[220px] flex-1">
+                    <div class="sc-gauge-track">
+                        <div class="sc-gauge-fill sc-fill--sev-{{ c.severity|severity_level }}" style="--sc-fill: {{ c.confidence|percent }}%"></div>
+                    </div>
+                    <div class="sc-gauge-value">{% trans "Confiance" %} {{ c.confidence|percent }}%</div>
+                </div>
+                {% if c.evidence %}
+                <button type="button" class="sc-evidence-toggle w-auto" data-disclosure="contra-{{ c.pk }}" aria-expanded="false">
+                    <svg class="size-3 shrink-0" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 2.5h5.5L10 5v4.5a1 1 0 01-1 1H3a1 1 0 01-1-1v-6a1 1 0 011-1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+                        <path d="M4 6.5h4M4 8.25h2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+                    </svg>
+                    <span>{% trans "Lire la preuve" %}</span>
+                </button>
+                {% endif %}
+            </div>
+
+            {% if c.evidence %}
+            <div class="mt-3" data-disclosure-panel="contra-{{ c.pk }}" hidden>
+                <div class="sc-evidence">
+                    <div class="sc-evidence-head">
+                        <span class="sc-eyebrow">{% trans "Preuve" %}</span>
+                        <span class="flex-1"></span>
+                        <button type="button" class="sc-icon-btn" data-disclosure="contra-{{ c.pk }}" aria-label="{% trans "Fermer" %}">✕</button>
+                    </div>
+                    <div class="sc-evidence-body">
+                        <div class="sc-evidence-cell">
+                            <div class="mb-2 flex items-center gap-2">
+                                <span class="sc-evidence-chip">A</span>
+                                <span class="cell-truncate text-12p5 font-semibold">{{ c.claim_a.document.title }}</span>
+                            </div>
+                            <p class="sc-excerpt">{{ c.claim_a.raw_text|truncatechars:400 }}</p>
+                        </div>
+                        <div class="sc-evidence-cell">
+                            <div class="mb-2 flex items-center gap-2">
+                                <span class="sc-evidence-chip sc-evidence-chip--b">B</span>
+                                <span class="cell-truncate text-12p5 font-semibold">{{ c.claim_b.document.title }}</span>
+                            </div>
+                            <p class="sc-excerpt">{{ c.claim_b.raw_text|truncatechars:400 }}</p>
+                        </div>
+                    </div>
+                    <div class="sc-evidence-foot">
+                        <p class="sc-finding-detail">{{ c.evidence|truncatechars:500 }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
+
+        {# Défilement infini : la page suivante est chargée à la volée par Turbo. #}
+        {% if next_page_url %}
+        <turbo-frame id="contradictions-page-{{ page_obj.next_page_number }}" loading="lazy" src="{{ next_page_url }}">
+            <div class="sc-loading" role="status" aria-label="{% trans "Chargement…" %}"><span></span><span></span><span></span></div>
+        </turbo-frame>
         {% endif %}
     </div>
+    {% else %}
+    <div class="sc-card">
+        <div class="sc-empty">
+            <div class="sc-empty-title">{% trans "Aucune contradiction" %}</div>
+            <div class="sc-empty-detail">{% trans "Aucune affirmation contradictoire ni information obsolète ne correspond aux filtres actifs." %}</div>
+        </div>
+    </div>
+    {% endif %}
 </div>
-{% empty %}
-<div class="alert alert-info">{% trans "Aucune contradiction ni information obsol&egrave;te trouv&eacute;e." %}</div>
-{% endfor %}
 
-{# Individual per-card forms (outside batch form to avoid nesting) #}
+{# Formulaires individuels, hors du formulaire groupé pour éviter l'imbrication. #}
 {% if can_edit %}
 {% for c in contradictions %}
-<form method="post" action="{% url 'contradiction-resolve' job.pk c.pk %}" id="single-{{ c.pk }}" class="d-none">
+<form method="post" action="{% url 'contradiction-resolve' job.pk c.pk %}" id="single-{{ c.pk }}" hidden>
     {% csrf_token %}
     <input type="hidden" name="type_filter" value="{{ type_filter }}">
     <input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
 </form>
 {% endfor %}
-{% endif %}
 
-{# Infinite scroll: lazy-load next page via Turbo Frame #}
-{% if next_page_url %}
-<turbo-frame id="contradictions-page-{{ page_obj.next_page_number }}" loading="lazy" src="{{ next_page_url }}">
-    <div class="text-center py-3">
-        <div class="spinner-border spinner-border-sm text-muted" role="status">
-            <span class="visually-hidden">{% trans "Chargement..." %}</span>
-        </div>
+{# Barre d'actions groupées, révélée dès qu'une case est cochée. #}
+<div id="batch-bar" class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2" hidden>
+    <div class="sc-bulkbar">
+        <span id="batch-count" class="font-semibold"></span>
+        <button form="batch-form" type="submit" name="resolution" value="resolved" class="sc-bulkbar-btn sc-bulkbar-btn--solid">{% trans "Traité" %}</button>
+        <button form="batch-form" type="submit" name="resolution" value="kept" class="sc-bulkbar-btn">{% trans "Conserver" %}</button>
+        <button form="batch-form" type="submit" name="resolution" value="" class="sc-bulkbar-btn">{% trans "Réinitialiser" %}</button>
     </div>
-</turbo-frame>
-{% endif %}
-
-{% if can_edit %}
-{# Sticky batch action bar — hidden until checkboxes are ticked #}
-<div id="batch-bar" class="position-fixed bottom-0 start-50 translate-middle-x mb-3 px-4 py-2 rounded-pill shadow d-none d-flex align-items-center gap-3" style="background: var(--bs-body-bg, #fff); border: 1px solid var(--bs-border-color, #dee2e6); z-index: 1050;">
-    <span id="batch-count" class="fw-semibold small"></span>
-    <button form="batch-form" type="submit" name="resolution" value="resolved" class="btn btn-sm btn-success">{% trans "Trait&eacute;" %}</button>
-    <button form="batch-form" type="submit" name="resolution" value="kept" class="btn btn-sm btn-info">{% trans "Conserver" %}</button>
-    <button form="batch-form" type="submit" name="resolution" value="" class="btn btn-sm btn-outline-secondary">{% trans "R&eacute;initialiser" %}</button>
 </div>
 {% endif %}
 
@@ -157,36 +210,39 @@
 {% block extra_js %}
 <script>
 (function() {
-    const selectAll = document.getElementById('select-all');
-    const batchBar = document.getElementById('batch-bar');
-    const batchCount = document.getElementById('batch-count');
-    if (!selectAll || !batchBar) return;
+    var selectAll = document.getElementById('select-all');
+    var batchBar = document.getElementById('batch-bar');
+    var batchCount = document.getElementById('batch-count');
+    if (!batchBar) return;
 
-    function getCheckboxes() {
-        return document.querySelectorAll('.contra-checkbox');
+    var ONE = '{% trans "sélectionné" %}';
+    var MANY = '{% trans "sélectionnés" %}';
+
+    function boxes(extra) {
+        return document.querySelectorAll('[data-finding-check]' + (extra || ''));
     }
 
     function updateBar() {
-        const checked = document.querySelectorAll('.contra-checkbox:checked').length;
-        if (checked > 0) {
-            batchBar.classList.remove('d-none');
-            batchCount.textContent = checked + ' sélectionné' + (checked > 1 ? 's' : '');
-        } else {
-            batchBar.classList.add('d-none');
+        var checked = boxes(':checked').length;
+        batchBar.hidden = checked === 0;
+        if (checked) batchCount.textContent = checked + ' ' + (checked > 1 ? MANY : ONE);
+        if (selectAll) {
+            var all = boxes().length;
+            selectAll.checked = all > 0 && checked === all;
+            selectAll.indeterminate = checked > 0 && checked < all;
         }
-        // sync select-all state
-        const all = getCheckboxes();
-        selectAll.checked = all.length > 0 && checked === all.length;
-        selectAll.indeterminate = checked > 0 && checked < all.length;
     }
 
-    selectAll.addEventListener('change', function() {
-        getCheckboxes().forEach(cb => { cb.checked = selectAll.checked; });
-        updateBar();
-    });
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            boxes().forEach(function(cb) { cb.checked = selectAll.checked; });
+            updateBar();
+        });
+    }
 
+    // Délégation : les cases des pages suivantes arrivent après coup via Turbo.
     document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('contra-checkbox')) updateBar();
+        if (e.target.hasAttribute && e.target.hasAttribute('data-finding-check')) updateBar();
     });
 })();
 </script>

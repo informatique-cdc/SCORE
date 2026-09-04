@@ -1,0 +1,382 @@
+@layer components {
+  /* Composants propres aux écrans « connectors ». */
+
+  /* ── Barre de recherche ── */
+  .sc-search {
+    position: relative;
+    flex: 1 1 260px;
+    max-width: 340px;
+  }
+
+  .sc-search-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 13px;
+    height: 13px;
+    color: var(--color-ink-400);
+    pointer-events: none;
+  }
+
+  .sc-search .sc-input {
+    padding-left: 34px;
+  }
+
+  /* ── Grilles de sources ── */
+  .sc-conn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+    gap: 14px;
+  }
+
+  .sc-conn-types {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 12px;
+  }
+
+  /* ── Carte d'un connecteur ── */
+  .sc-conn-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 190px;
+    animation: rise 0.4s ease both;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .sc-conn-card:hover {
+    border-color: var(--color-line-300);
+    box-shadow: var(--shadow-lift);
+  }
+
+  /* display:flex l'emporterait sur le display:none implicite de [hidden]. */
+  .sc-conn-card[hidden] {
+    display: none;
+  }
+
+  .sc-conn-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Pastille carrée portant l'abréviation du type, en police display. */
+  .sc-conn-badge {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border-radius: var(--radius-12);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-size: var(--text-13);
+    font-weight: 600;
+    letter-spacing: var(--tracking-tag);
+    background: var(--color-surface-100);
+    color: var(--color-ink-700);
+  }
+
+  .sc-conn-badge--sm {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-9);
+    font-size: var(--text-11p5);
+  }
+
+  .sc-conn-badge--sharepoint {
+    background: var(--color-info-bg);
+    color: var(--color-info-ink);
+  }
+
+  .sc-conn-badge--confluence {
+    background: var(--color-llm-bg);
+    color: var(--color-llm-ink);
+  }
+
+  .sc-conn-badge--elasticsearch {
+    background: var(--color-warn-bg);
+    color: var(--color-warn-ink);
+  }
+
+  .sc-conn-badge--zipupload {
+    background: var(--color-mark-bg);
+    color: var(--color-warn-ink);
+  }
+
+  .sc-conn-badge--generic {
+    background: var(--color-surface-100);
+    color: var(--color-ink-500);
+  }
+
+  .sc-conn-name {
+    display: block;
+    font-size: var(--text-14);
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  .sc-conn-name:hover {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .sc-conn-type {
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+  }
+
+  /* Menu d'actions logé dans le coin d'une carte : le menu du rail s'étire sur
+     toute la largeur, ici il doit se caler à droite du bouton. */
+  .sc-conn-menu {
+    width: auto;
+  }
+
+  .sc-conn-menu .sc-dropdown-menu {
+    left: auto;
+    right: 0;
+    min-width: 176px;
+  }
+
+  /* ── Chiffres de la carte ── */
+  .sc-conn-figures {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-surface-200);
+  }
+
+  /* La métrique est calibrée pour une carte pleine largeur : réduite ici. */
+  .sc-conn-figures .sc-metric {
+    font-size: var(--text-20);
+  }
+
+  .sc-conn-figure-label {
+    margin-top: 3px;
+    font-size: var(--text-10);
+    letter-spacing: var(--tracking-thead);
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+  }
+
+  .sc-conn-sync {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+  }
+
+  .sc-conn-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  /* ── Tuiles de statistiques du détail ── */
+  .sc-conn-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    gap: 12px;
+  }
+
+  /* ── Ligne clé / valeur de la fiche d'informations ── */
+  .sc-conn-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--color-surface-100);
+    font-size: var(--text-12p5);
+  }
+
+  .sc-conn-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .sc-conn-row-key {
+    flex: 0 0 auto;
+    color: var(--color-ink-500);
+  }
+
+  .sc-conn-row-value {
+    min-width: 0;
+    text-align: right;
+  }
+
+  /* ── Note de réassurance sur le chiffrement ── */
+  /* Rassure, n'alerte pas : ton « ok » plutôt qu'une teinte de sévérité. */
+  .sc-conn-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px 14px;
+    border: 1px solid var(--color-ok-line);
+    border-radius: var(--radius-13);
+    background: var(--color-ok-bg-warm);
+  }
+
+  .sc-conn-shield {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    border-radius: var(--radius-9);
+    display: grid;
+    place-items: center;
+    background: var(--color-ok-bg);
+    color: var(--color-accent);
+  }
+
+  .sc-conn-shield svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .sc-conn-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(256px, 1fr));
+    gap: 6px 20px;
+  }
+
+  .sc-conn-fact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+    line-height: var(--leading-snug);
+  }
+
+  .sc-conn-fact::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+
+  /* ── Assistant de création ── */
+  .sc-wizard {
+    width: min(760px, 100%);
+    margin-inline: auto;
+  }
+
+  /* La dernière étape n'a pas de trait de liaison : elle ne doit pas s'étirer. */
+  .sc-steps .sc-step:last-child {
+    flex: 0 0 auto;
+  }
+
+  .sc-cf-panel {
+    display: grid;
+    gap: 14px;
+  }
+
+  /* display:grid l'emporterait sur le display:none implicite de [hidden]. */
+  .sc-cf-panel[hidden] {
+    display: none;
+  }
+
+  .sc-cf-foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-surface-200);
+  }
+
+  /* La radio couvre la tuile : clavier et focus restent natifs, seul l'habillage
+     est repris par .sc-choice. */
+  .sc-choice--pick {
+    position: relative;
+  }
+
+  .sc-choice-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .sc-choice--pick:has(.sc-choice-input:checked) {
+    border-color: var(--color-accent);
+    background: var(--color-ok-bg-warm);
+  }
+
+  .sc-choice--pick:has(.sc-choice-input:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Le sélecteur de fichier natif : seul son bouton interne est habillé. */
+  .sc-file {
+    padding: 8px 12px;
+  }
+
+  .sc-file::file-selector-button {
+    margin-right: 10px;
+    padding: 5px 11px;
+    border-radius: var(--radius-7);
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+    color: var(--color-ink-700);
+    font-family: inherit;
+    font-size: var(--text-11p5);
+    cursor: pointer;
+  }
+
+  /* ── Pagination ── */
+  .sc-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 0;
+  }
+
+  .sc-pager-link {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-8);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-ink-500);
+    font-family: inherit;
+    font-size: var(--text-12);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-pager-link:hover {
+    background: var(--color-surface-100);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .sc-pager-link.is-active {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-surface);
+    font-weight: 600;
+  }
+
+  .sc-pager-gap {
+    padding: 0 3px;
+    font-size: var(--text-12);
+    color: var(--color-ink-400);
+  }
+}

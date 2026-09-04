@@ -1,0 +1,183 @@
+{% load i18n score_ui %}
+<turbo-frame id="analysis-score" target="_top">
+<section class="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-stretch gap-3.5">
+    <div class="sc-card sc-card--roomy">
+        <div class="sc-eyebrow mb-3.5">{% trans "Qualité de la base" %}</div>
+
+        {% if ds.has_analysis %}
+        <div class="flex flex-wrap items-center gap-7">
+            <div class="sc-donut">
+                <svg class="sc-donut-svg" viewBox="0 0 168 168">
+                    <circle class="sc-donut-track" cx="84" cy="84" r="70" fill="none" stroke-width="14" />
+                    {% if ds.score %}
+                    <circle class="sc-donut-value sc-stroke--{{ ds.score|score_color }}" cx="84" cy="84" r="70"
+                            fill="none" stroke-width="14" stroke-linecap="round"
+                            stroke-dasharray="{% widthratio ds.score 100 440 %} 440" />
+                    {% endif %}
+                </svg>
+                <div class="sc-donut-center">
+                    <div class="sc-donut-number">{{ ds.score }}</div>
+                    <div class="sc-donut-caption">{% trans "sur 100" %}</div>
+                </div>
+            </div>
+
+            <div class="min-w-[220px] flex-[1_1_240px]">
+                <div class="sc-grades">
+                    {% for letter in "ABCDE" %}
+                    <div class="sc-grade sc-grade--{{ letter|lower }}{% if ds.grade == letter %} is-active{% endif %}">{{ letter }}</div>
+                    {% endfor %}
+                </div>
+                <p class="mb-3.5 text-13 leading-normal text-ink-700 pretty">
+                    {% blocktrans with grade=ds.grade %}Note <strong>{{ grade }}</strong> sur les sept dimensions mesurées par cette exécution.{% endblocktrans %}
+                </p>
+                <a href="{% url 'analysis-audit-overview' job.pk %}" class="sc-btn sc-btn--secondary sc-btn--sm">{% trans "Voir l'audit RAG" %} →</a>
+            </div>
+        </div>
+
+        {% with b=ds.breakdown %}
+        <div class="sc-dims">
+            <div class="sc-dim">
+                <div class="sc-dim-label">{% trans "Unicité" %}</div>
+                <div class="sc-dim-track"><div class="sc-dim-fill sc-fill--{{ b.uniqueness|score_color }}" style="--sc-fill: {{ b.uniqueness|default:0 }}%"></div></div>
+                <div class="sc-dim-value">{{ b.uniqueness|default:"—" }}</div>
+            </div>
+            <div class="sc-dim">
+                <div class="sc-dim-label">{% trans "Cohérence" %}</div>
+                <div class="sc-dim-track"><div class="sc-dim-fill sc-fill--{{ b.consistency|score_color }}" style="--sc-fill: {{ b.consistency|default:0 }}%"></div></div>
+                <div class="sc-dim-value">{{ b.consistency|default:"—" }}</div>
+            </div>
+            <div class="sc-dim">
+                <div class="sc-dim-label">{% trans "Couverture" %}</div>
+                <div class="sc-dim-track"><div class="sc-dim-fill sc-fill--{{ b.coverage|score_color }}" style="--sc-fill: {{ b.coverage|default:0 }}%"></div></div>
+                <div class="sc-dim-value">{{ b.coverage|default:"—" }}</div>
+            </div>
+            <div class="sc-dim">
+                <div class="sc-dim-label">{% trans "Structure" %}</div>
+                <div class="sc-dim-track"><div class="sc-dim-fill sc-fill--{{ b.structure|score_color }}" style="--sc-fill: {{ b.structure|default:0 }}%"></div></div>
+                <div class="sc-dim-value">{{ b.structure|default:"—" }}</div>
+            </div>
+            <div class="sc-dim">
+                <div class="sc-dim-label">{% trans "Santé" %}</div>
+                <div class="sc-dim-track"><div class="sc-dim-fill sc-fill--{{ b.health|score_color }}" style="--sc-fill: {{ b.health|default:0 }}%"></div></div>
+                <div class="sc-dim-value">{{ b.health|default:"—" }}</div>
+            </div>
+            <div class="sc-dim">
+                <div class="sc-dim-label">{% trans "Repérabilité" %}</div>
+                <div class="sc-dim-track"><div class="sc-dim-fill sc-fill--{{ b.retrievability|score_color }}" style="--sc-fill: {{ b.retrievability|default:0 }}%"></div></div>
+                <div class="sc-dim-value">{{ b.retrievability|default:"—" }}</div>
+            </div>
+            <div class="sc-dim">
+                <div class="sc-dim-label">{% trans "Gouvernance" %}</div>
+                <div class="sc-dim-track"><div class="sc-dim-fill sc-fill--{{ b.governance|score_color }}" style="--sc-fill: {{ b.governance|default:0 }}%"></div></div>
+                <div class="sc-dim-value">{{ b.governance|default:"—" }}</div>
+            </div>
+        </div>
+        {% endwith %}
+        {% else %}
+        <div class="sc-empty">
+            <div class="sc-empty-title">{% trans "Score indisponible" %}</div>
+            <div class="sc-empty-detail">{% trans "Aucune analyse terminée sur ce projet : le score des sept dimensions ne peut pas encore être calculé." %}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="grid min-w-0 grid-rows-[auto_1fr] gap-3.5">
+        <div class="sc-card">
+            <div class="sc-eyebrow mb-3.5">{% trans "Profil du corpus" %}</div>
+            {% if ds.has_analysis %}
+            <div id="ds-radar-analysis" class="h-[230px] w-full"></div>
+            {% else %}
+            <div class="sc-empty">
+                <div class="sc-empty-detail">{% trans "Le profil apparaîtra après la première analyse terminée." %}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="sc-card min-w-0">
+            <div class="mb-3.5 flex items-center justify-between gap-3">
+                <div class="sc-eyebrow">{% trans "À traiter en priorité" %}</div>
+                <span class="text-11p5 text-ink-500">{% blocktrans count n=top_issues|length %}{{ n }} alerte{% plural %}{{ n }} alertes{% endblocktrans %}</span>
+            </div>
+            <div class="grid max-h-[420px] gap-2 overflow-y-auto" data-scroll="1">
+                {% for issue in top_issues %}
+                <div class="sc-alert sc-alert--{{ issue.severity }}">
+                    <span class="sc-alert-icon">!</span>
+                    <div class="sc-alert-body">
+                        <div class="sc-alert-title">{{ issue.title }}</div>
+                        <div class="sc-alert-detail">{{ issue.detail }}</div>
+                    </div>
+                    {% if issue.action_url_name %}
+                    <a class="sc-btn sc-btn--secondary sc-btn--sm shrink-0"
+                       href="{% if issue.action_pk %}{% url issue.action_url_name issue.action_pk %}{% else %}{% url issue.action_url_name %}{% endif %}">{{ issue.action_label }}</a>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="sc-empty">
+                    <div class="sc-empty-title">{% trans "Rien à traiter" %}</div>
+                    <div class="sc-empty-detail">{% trans "Cette analyse n'a remonté aucune alerte prioritaire." %}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if ds.has_analysis %}
+{{ breakdown_json|json_script:"analysis-radar-data" }}
+{% trans "Objectif" as l_target %}
+{% trans "Aujourd'hui" as l_today %}
+<script>
+(function() {
+    "use strict";
+    var el = document.getElementById("ds-radar-analysis");
+    var data = window.scChart && scChart.readJson("analysis-radar-data");
+    if (!el || !data || !window.echarts) return;
+
+    var chart = echarts.init(el, null, { renderer: "canvas" });
+
+    function draw() {
+        var t = scChart.tokens();
+        chart.setOption(Object.assign(scChart.base(), {
+            radar: {
+                indicator: data.map(function(d) { return { name: d.axis, max: 100 }; }),
+                shape: "polygon",
+                splitNumber: 5,
+                radius: "66%",
+                center: ["50%", "52%"],
+                axisName: { color: t.ink500, fontSize: 10 },
+                splitLine: { lineStyle: { color: t.line } },
+                splitArea: { areaStyle: { color: ["transparent", scChart.accentAlpha(0.035)] } },
+                axisLine: { lineStyle: { color: t.line } }
+            },
+            series: [{
+                type: "radar",
+                data: [
+                    {
+                        name: "{{ l_target|escapejs }} 70",
+                        value: data.map(function() { return 70; }),
+                        lineStyle: { color: t.line400, width: 1.2, type: "dashed" },
+                        symbol: "none",
+                        itemStyle: { opacity: 0 }
+                    },
+                    {
+                        name: "{{ l_today|escapejs }}",
+                        value: data.map(function(d) { return d.score; }),
+                        areaStyle: { color: scChart.accentAlpha(0.16) },
+                        lineStyle: { color: t.accent, width: 2 },
+                        itemStyle: { color: t.accent, borderColor: t.surface, borderWidth: 1 },
+                        symbol: "circle",
+                        symbolSize: 6
+                    }
+                ],
+                animationDuration: 800
+            }]
+        }));
+    }
+
+    draw();
+    scChart.autoResize(el, chart);
+    scChart.onThemeChange(draw);
+})();
+</script>
+{% endif %}
+</turbo-frame>

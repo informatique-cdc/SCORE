@@ -16,6 +16,8 @@ import shutil
 from celery import shared_task
 from django.utils import timezone
 
+from score.cachekit import invalidate_project
+
 logger = logging.getLogger(__name__)
 
 # Progress mapping for unified pipeline
@@ -347,6 +349,9 @@ def run_unified_pipeline(self, job_id: str):
         collector.finalize()
         llm_client.clear_trace()
         vec_store.clear_trace()
+        # Dans le finally : succès, échec et annulation changent tous ce que les
+        # composants de page affichent.
+        invalidate_project(job.project)
 
 
 @shared_task(bind=True, max_retries=1, default_retry_delay=120)
@@ -436,3 +441,6 @@ def run_analysis(self, job_id: str):
         collector.finalize()
         llm_client.clear_trace()
         vec_store.clear_trace()
+        # Dans le finally : succès, échec et annulation changent tous ce que les
+        # composants de page affichent.
+        invalidate_project(job.project)

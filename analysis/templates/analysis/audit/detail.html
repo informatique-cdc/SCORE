@@ -1,188 +1,232 @@
 {% extends "dashboard/base.html" %}
-{% load i18n %}
-{% block title %}Audit #{{ job.id|truncatechars:8 }} — SCORE{% endblock %}
-{% block nav_analysis %}active{% endblock %}
+{% load i18n analysis_ui score_ui %}
 
-{% block nav_analysis_submenu %}
-<a class="sidebar-subitem" href="{% url 'analysis-detail' job.analysis_job_id %}">Vue d'ensemble</a>
-<a class="sidebar-subitem active" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">Audit RAG</a>
-<a class="sidebar-subitem" href="{% url 'analysis-trace' job.analysis_job_id %}">Trace pipeline</a>
+{% block title %}{% trans "Synthèse de l'audit" %} - SCORE{% endblock %}
+{% block nav_analysis %}is-active{% endblock %}
+
+{% block breadcrumbs %}
+    <a class="sc-crumb" href="{% url 'analysis-list' %}">{% trans "Analyses" %}<span class="sc-crumb-sep">/</span></a>
+    {% if job.analysis_job_id %}
+    <a class="sc-crumb" href="{% url 'analysis-detail' job.analysis_job_id %}">{% trans "Analyse" %} {{ analysis_number }}<span class="sc-crumb-sep">/</span></a>
+    <a class="sc-crumb" href="{% url 'analysis-audit-overview' job.analysis_job_id %}">{% trans "Audit RAG" %}<span class="sc-crumb-sep">/</span></a>
+    {% endif %}
+    <span class="sc-crumb is-current">{% trans "Synthèse" %}</span>
 {% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-1" style="font-size:13px;--bs-breadcrumb-divider:'/';">
-                <li class="breadcrumb-item"><a href="{% url 'dashboard-home' %}" style="color:var(--ds-text-muted);text-decoration:none;" title="Accueil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a></li>
-                <li class="breadcrumb-item"><a href="{% url 'analysis-list' %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyses</a></li>
-                <li class="breadcrumb-item"><a href="{% url 'analysis-detail' job.analysis_job_id %}" style="color:var(--ds-text-muted);text-decoration:none;">Analyse {{ analysis_number }}</a></li>
-                <li class="breadcrumb-item" style="color:var(--ds-grey-100);font-weight:600;">Audit RAG</li>
-            </ol>
-        </nav>
-        <h2 class="mb-0">Synthèse de l'audit</h2>
-    </div>
-    <div class="d-flex gap-2">
-        {% if job.status == "failed" or job.status == "queued" %}
-        <form method="post" action="{% url 'audit-retry' pk=job.id %}">
-            {% csrf_token %}
-            <button class="btn btn-outline-warning btn-sm">Relancer</button>
-        </form>
-        {% endif %}
-        <form method="post" action="{% url 'audit-delete' pk=job.id %}"
-              data-confirm-title="Supprimer l'audit"
-              data-confirm-message="Supprimer cet audit ?"
-              data-confirm-action="Supprimer">
-            {% csrf_token %}
-            <button class="btn btn-outline-danger btn-sm">Supprimer</button>
-        </form>
-    </div>
-</div>
+{% block page_title %}{% trans "Synthèse de l'audit" %}{% endblock %}
 
-<!-- Progress / status -->
-<turbo-frame id="audit-progress"
-    {% if should_poll %}
-    data-controller="auto-refresh"
-    data-auto-refresh-url-value="{% url 'audit-progress-partial' pk=job.id %}"
-    data-auto-refresh-frame-value="audit-progress"
-    data-auto-refresh-active-value="true"
+{% block page_lede %}
+<p class="sc-lede">{% trans "Score RAG consolidé sur les six axes de qualité mesurés sans appel au modèle." %}</p>
+{% endblock %}
+
+{% block page_actions %}
+    {% if job.status == "failed" or job.status == "queued" %}
+    <form method="post" action="{% url 'audit-retry' pk=job.id %}">
+        {% csrf_token %}
+        <button type="submit" class="sc-btn sc-btn--secondary">{% trans "Relancer" %}</button>
+    </form>
     {% endif %}
->
-{% include "analysis/audit/_progress.html" %}
-</turbo-frame>
+    <form method="post" action="{% url 'audit-delete' pk=job.id %}"
+          data-confirm-title="{% trans "Supprimer l'audit" %}"
+          data-confirm-message="{% trans "Cet audit et ses résultats seront définitivement supprimés." %}"
+          data-confirm-action="{% trans "Supprimer" %}">
+        {% csrf_token %}
+        <button type="submit" class="sc-btn sc-btn--danger">{% trans "Supprimer" %}</button>
+    </form>
+{% endblock %}
 
-{% if job.status == "completed" %}
-<!-- Overall score -->
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card text-center p-4">
-            <div class="score-number score-color-{{ job.overall_grade }}">{{ job.overall_score|floatformat:0 }}</div>
-            <div class="mt-2">
-                <span class="score-pill active score-{{ job.overall_grade }}">{{ job.overall_grade }}</span>
-            </div>
-            <div class="text-muted mt-2" style="font-size:13px;">Score global RAG</div>
-        </div>
-    </div>
-    <div class="col-md-8">
-        <!-- Radar chart -->
-        <div class="card p-3">
-            <div id="radar-chart" style="height:320px;"></div>
-        </div>
-    </div>
-</div>
+{% block page_tabs %}{% if job.analysis_job_id %}{% analysis_tabs job.analysis_job "audit" %}{% endif %}{% endblock %}
 
-<!-- Axis cards -->
-<div class="row g-3">
-    {% for axis in axes %}
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <h6 class="mb-0">{{ axis.label }}</h6>
+{% block content %}
+<div class="flex flex-col gap-3.5">
+
+    <turbo-frame id="audit-progress"
+        {% if should_poll %}
+        data-controller="auto-refresh"
+        data-auto-refresh-url-value="{% url 'audit-progress-partial' pk=job.id %}"
+        data-auto-refresh-frame-value="audit-progress"
+        data-auto-refresh-active-value="true"
+        {% endif %}
+    >
+    {% include "analysis/audit/_progress.html" %}
+    </turbo-frame>
+
+    {% if job.status == "failed" %}
+    <div class="sc-card sc-card--danger">
+        <div class="sc-alert-title">{% trans "L'audit a échoué" %}</div>
+        <div class="sc-alert-detail">{{ job.error_message|truncatewords:60 }}</div>
+    </div>
+    {% endif %}
+
+    {% if job.status == "completed" %}
+    <section class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] items-stretch gap-3.5">
+
+        <div class="sc-card sc-card--roomy animate-rise">
+            <div class="sc-eyebrow mb-3.5">{% trans "Score global RAG" %}</div>
+            <div class="flex flex-wrap items-center gap-6">
+                <div class="sc-donut">
+                    <svg class="sc-donut-svg" viewBox="0 0 168 168">
+                        <circle class="sc-donut-track" cx="84" cy="84" r="70" fill="none" stroke-width="14" />
+                        {% if job.overall_score %}
+                        <circle class="sc-donut-value sc-stroke--{{ job.overall_score|score_color }}" cx="84" cy="84" r="70"
+                                fill="none" stroke-width="14" stroke-linecap="round"
+                                stroke-dasharray="{% widthratio job.overall_score 100 440 %} 440" />
+                        {% endif %}
+                    </svg>
+                    <div class="sc-donut-center">
+                        <div class="sc-donut-number">{{ job.overall_score|floatformat:0 }}</div>
+                        <div class="sc-donut-caption">{% trans "sur 100" %}</div>
                     </div>
-                    {% if axis.score is not None %}
-                    <span class="badge {% if axis.score >= 80 %}bg-success{% elif axis.score >= 60 %}bg-primary{% elif axis.score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size:14px;">
-                        {{ axis.score|floatformat:0 }}
-                    </span>
-                    {% else %}
-                    <span class="badge bg-secondary">—</span>
-                    {% endif %}
                 </div>
-                {% if axis.result %}
-                <div class="progress mb-3" style="height:6px;">
-                    <div class="progress-bar {% if axis.score >= 80 %}bg-success{% elif axis.score >= 60 %}bg-primary{% elif axis.score >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
-                         style="width:{{ axis.score }}%"></div>
-                </div>
-                {% if axis.result.metrics.sub_scores %}
-                <div style="font-size:12px;" class="text-muted">
-                    {% for sub_key, sub_val in axis.result.metrics.sub_scores.items %}
-                    <div class="d-flex justify-content-between">
-                        <span>{{ sub_key }}</span>
-                        <span>{{ sub_val|floatformat:0 }}</span>
+                <div class="min-w-[180px] flex-1">
+                    <div class="sc-grades">
+                        {% for letter in "ABCDE" %}
+                        <div class="sc-grade sc-grade--{{ letter|lower }}{% if job.overall_grade == letter %} is-active{% endif %}">{{ letter }}</div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    <p class="text-13 leading-normal text-ink-700 pretty">
+                        {% trans "Moyenne pondérée des six axes. L'objectif de mise en production est fixé à 70." %}
+                    </p>
                 </div>
-                {% endif %}
-                <div class="mt-3">
-                    <a href="{{ axis.url }}" class="btn btn-sm btn-outline-light w-100">Détails</a>
-                </div>
-                {% endif %}
             </div>
         </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
 
-{% if job.status == "failed" %}
-<div class="alert alert-danger mt-3">
-    <strong>Erreur :</strong> {{ job.error_message|truncatewords:50 }}
-</div>
-{% endif %}
+        <div class="sc-card sc-card--roomy animate-rise">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <div class="sc-eyebrow">{% trans "Scores par axe" %}</div>
+                <div class="sc-legend">
+                    <span class="sc-legend-item"><span class="sc-legend-swatch sc-fill--a"></span>{% trans "Aujourd'hui" %}</span>
+                    <span class="sc-legend-item"><span class="sc-legend-swatch bg-line-400"></span>{% trans "Objectif 70" %}</span>
+                </div>
+            </div>
+            <div id="radar-chart" class="h-[300px] w-full"></div>
+        </div>
+    </section>
 
-{% if parent_analysis %}
-<div class="card mt-4">
-    <div class="card-body d-flex justify-content-between align-items-center">
-        <span>
-            <svg style="width:14px;height:14px;margin-right:4px;vertical-align:-2px" viewBox="0 0 12 12" fill="none"><circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7.5L10.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-            Analyse parente :
-            <strong>{{ parent_analysis.get_status_display }}</strong>
-            — {{ parent_analysis.created_at|date:"d/m/Y H:i" }}
-        </span>
-        <a href="{% url 'analysis-detail' pk=parent_analysis.id %}" class="btn btn-sm btn-outline-primary">Voir l'analyse</a>
+    <section class="grid grid-cols-3 gap-3.5">
+        {% for axis in axes %}
+        <div class="sc-card">
+            <div class="mb-3 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-13p5 font-semibold">{{ axis.label }}</div>
+                    <div class="mt-1 flex items-baseline gap-1.5">
+                        {% if axis.score is not None %}
+                        <span class="font-display text-24 font-semibold tracking-metric num">{{ axis.score|floatformat:0 }}</span>
+                        <span class="text-11p5 text-ink-500">/100</span>
+                        {% else %}
+                        <span class="font-display text-24 font-semibold text-ink-400">—</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if axis.score is not None %}
+                <span class="sc-tag sc-tag--grade sc-ink--{{ axis.score|score_color }}">{{ axis.score|score_grade }}</span>
+                {% endif %}
+            </div>
+
+            {% if axis.result.metrics.sub_scores %}
+            <div class="grid gap-2.5">
+                {% for sub_key, sub_val in axis.result.metrics.sub_scores.items %}
+                <div class="sc-dim grid-cols-[104px_1fr_34px]">
+                    <div class="sc-dim-label cell-truncate">{{ sub_key }}</div>
+                    <div class="sc-dim-track">
+                        <div class="sc-dim-fill sc-fill--{{ sub_val|score_color }}" style="--sc-fill: {{ sub_val|floatformat:0 }}%"></div>
+                        <div class="sc-dim-target" style="--sc-at: 70%"></div>
+                    </div>
+                    <div class="sc-dim-value">{{ sub_val|floatformat:0 }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if axis.url %}
+            <a href="{{ axis.url }}" class="sc-btn sc-btn--secondary sc-btn--sm mt-3.5 w-full">{% trans "Détails" %} →</a>
+            {% else %}
+            <div class="mt-3.5 text-11p5 text-ink-400">{% trans "Aucun résultat pour cet axe." %}</div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="sc-card col-span-3">
+            <div class="sc-empty">
+                <div class="sc-empty-title">{% trans "Aucun axe évalué" %}</div>
+                <div class="sc-empty-detail">{% trans "Cet audit n'a produit aucun résultat exploitable." %}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if parent_analysis %}
+    <div class="sc-card flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+            <div class="text-12p5 font-medium">{% trans "Analyse parente" %} — {{ parent_analysis.get_status_display }}</div>
+            <div class="text-11p5 text-ink-500">{{ parent_analysis.created_at|date:"j M Y, H:i" }}</div>
+        </div>
+        <a href="{% url 'analysis-detail' pk=parent_analysis.id %}" class="sc-btn sc-btn--secondary sc-btn--sm">{% trans "Voir l'analyse" %} →</a>
     </div>
+    {% endif %}
 </div>
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 {% if job.status == "completed" %}
 <script>
 (function() {
-    const radarData = [
-        {% for axis in axes %}
-        {axis: "{{ axis.label }}", score: {{ axis.score|default:"0" }}}{% if not forloop.last %},{% endif %}
+    var el = document.getElementById("radar-chart");
+    if (!el || !window.echarts) return;
+
+    var radarData = [
+        {% for axis in axes %}{ axis: "{{ axis.label|escapejs }}", score: {{ axis.score|default:"0"|floatformat:0 }} }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
 
-    const chart = echarts.init(document.getElementById("radar-chart"), null, { renderer: "canvas" });
+    var chart = echarts.init(el, null, { renderer: "canvas" });
 
-    chart.setOption({
-        backgroundColor: "transparent",
-        radar: {
-            indicator: radarData.map(d => ({ name: d.axis, max: 100 })),
-            shape: "polygon",
-            splitNumber: 5,
-            axisName: { color: "#f8f8f8", fontSize: 11 },
-            splitLine: { lineStyle: { color: "rgba(55,56,58,0.8)" } },
-            splitArea: { areaStyle: { color: ["transparent", "rgba(13,110,253,0.03)"] } },
-            axisLine: { lineStyle: { color: "rgba(55,56,58,0.6)" } },
-        },
-        series: [{
-            type: "radar",
-            data: [{
-                value: radarData.map(d => d.score),
-                name: "Score",
-                areaStyle: { color: "rgba(13,110,253,0.2)" },
-                lineStyle: { color: "#0d6efd", width: 2 },
-                itemStyle: { color: "#0d6efd", borderColor: "#fff", borderWidth: 1 },
-                symbol: "circle",
-                symbolSize: 8,
-            }],
-            animationDuration: 800,
-        }],
-        tooltip: {
-            trigger: "item",
-            confine: true,
-            backgroundColor: "#27282a",
-            borderColor: "#37383a",
-            textStyle: { color: "#f8f8f8" },
-            extraCssText: "max-width:280px;white-space:normal;",
-        },
-    });
+    function draw() {
+        var t = scChart.tokens();
+        var base = scChart.base();
+        base.tooltip.trigger = "item";
+        base.tooltip.confine = true;
 
-    window.addEventListener("resize", function() { chart.resize(); });
+        chart.setOption(Object.assign(base, {
+            radar: {
+                indicator: radarData.map(function(d) { return { name: d.axis, max: 100 }; }),
+                shape: "polygon",
+                splitNumber: 5,
+                radius: "66%",
+                center: ["50%", "52%"],
+                axisName: { color: t.ink500, fontSize: 10.5 },
+                splitLine: { lineStyle: { color: t.line } },
+                splitArea: { areaStyle: { color: ["transparent", scChart.accentAlpha(0.035)] } },
+                axisLine: { lineStyle: { color: t.line } }
+            },
+            series: [{
+                type: "radar",
+                data: [
+                    {
+                        name: "{% trans "Objectif" %} 70",
+                        value: radarData.map(function() { return 70; }),
+                        lineStyle: { color: t.line400, width: 1.2, type: "dashed" },
+                        symbol: "none",
+                        itemStyle: { opacity: 0 }
+                    },
+                    {
+                        name: "{% trans "Aujourd'hui" %}",
+                        value: radarData.map(function(d) { return d.score; }),
+                        areaStyle: { color: scChart.accentAlpha(0.16) },
+                        lineStyle: { color: t.accent, width: 2 },
+                        itemStyle: { color: t.accent, borderColor: t.surface, borderWidth: 1 },
+                        symbol: "circle",
+                        symbolSize: 7
+                    }
+                ],
+                animationDuration: 800
+            }]
+        }));
+    }
+
+    draw();
+    scChart.autoResize(el, chart);
+    scChart.onThemeChange(draw);
 })();
 </script>
 {% endif %}

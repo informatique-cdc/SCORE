@@ -1,0 +1,420 @@
+@layer components {
+  /* ── Liste de constats ── */
+  /* Les pages suivantes arrivent dans une <turbo-frame> imbriquée : elle sort
+     de la mise en page pour que l'écart entre fiches reste le même d'une page
+     à l'autre. */
+  .sc-findings {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sc-findings turbo-frame {
+    display: contents;
+  }
+
+  /* ── Fiche de constat (contradictions, lacunes, hallucinations) ── */
+  .sc-finding {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-18);
+    padding: 18px 20px;
+    animation: rise 0.45s ease both;
+  }
+
+  .sc-finding.is-resolved {
+    opacity: 0.55;
+  }
+
+  .sc-finding-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .sc-finding-title {
+    font-size: var(--text-14p5);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .sc-finding-detail {
+    font-size: var(--text-12p5);
+    color: var(--color-ink-500);
+    line-height: var(--leading-claim);
+    text-wrap: pretty;
+    margin: 0;
+  }
+
+  .sc-finding-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+  }
+
+  /* ── Comparaison de deux affirmations contradictoires ── */
+  .sc-claims {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    align-items: center;
+    gap: 0;
+  }
+
+  .sc-claim {
+    padding: 14px 16px;
+    border: 1px solid var(--color-surface-200);
+    border-radius: var(--radius-14);
+    background: var(--color-surface-50);
+  }
+
+  /* Côté désigné comme faisant référence. */
+  .sc-claim.is-reference {
+    border-color: var(--color-ok-line);
+    background: var(--color-ok-bg-warm);
+  }
+
+  .sc-claim-date {
+    font-size: var(--text-10p5);
+    letter-spacing: var(--tracking-micro);
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+    margin-bottom: 6px;
+  }
+
+  .sc-claim-text {
+    font-size: var(--text-13);
+    line-height: var(--leading-claim);
+    text-wrap: pretty;
+    margin: 0 0 8px;
+  }
+
+  .sc-claim-src {
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+  }
+
+  /* La source ouvre le lecteur de document : bouton dégrisé en simple lien. */
+  button.sc-claim-src {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-300);
+    text-underline-offset: 2px;
+  }
+
+  button.sc-claim-src:hover {
+    color: var(--color-ink);
+  }
+
+  .sc-claim-swap {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-ink);
+    color: var(--color-surface-200);
+    display: grid;
+    place-items: center;
+    font-size: var(--text-12);
+    margin: 0 auto;
+  }
+
+  /* ── Barre de confiance / risque / couverture ── */
+  .sc-gauge {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sc-gauge-track {
+    height: 6px;
+    border-radius: var(--radius-6);
+    background: var(--color-surface-200);
+    overflow: hidden;
+  }
+
+  .sc-gauge-fill {
+    height: 100%;
+    width: var(--sc-fill, 0%);
+    border-radius: var(--radius-6);
+    transition: width 0.9s var(--ease-expo);
+  }
+
+  .sc-gauge-value {
+    font-size: var(--text-12);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  /* ── Terme d'hallucination ── */
+  .sc-term {
+    font-family: var(--font-display);
+    font-size: var(--text-16);
+    font-weight: 600;
+  }
+
+  /* ── Paliers de sévérité ── */
+  /* Trois libellés seulement (high / medium / low) : le filtre `severity_level`
+     ramène tous les vocabulaires du back-end à cette échelle. */
+  .sc-tag--sev-high {
+    background: var(--color-danger-bg);
+    color: var(--color-danger-ink);
+  }
+
+  .sc-tag--sev-medium {
+    background: var(--color-warn-bg);
+    color: var(--color-warn-ink);
+  }
+
+  .sc-tag--sev-low {
+    background: var(--color-surface-100);
+    color: var(--color-ink-500);
+  }
+
+  /* Même échelle en aplat, pour le remplissage d'une jauge. */
+  .sc-fill--sev-high {
+    background: var(--color-score-e);
+  }
+
+  .sc-fill--sev-medium {
+    background: var(--color-score-d);
+  }
+
+  .sc-fill--sev-low {
+    background: var(--color-line-400);
+  }
+
+  /* ── Case de sélection d'un constat ── */
+  /* La case native suffit : on n'impose que la taille et la couleur d'accent. */
+  .sc-check {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    margin: 0;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  /* ── Chargement de la page suivante d'une liste infinie ── */
+  .sc-loading {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    padding: 18px;
+  }
+
+  .sc-loading span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-line-400);
+    animation: var(--animate-dot);
+  }
+
+  /* Décalage des pulsations : les points se lisent comme une vague. */
+  .sc-loading span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .sc-loading span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  /* ── Phases d'un traitement en cours ── */
+  .sc-phase {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 13px 14px;
+    border-radius: var(--radius-13);
+    background: var(--color-surface-50);
+    border: 1px solid var(--color-surface-200);
+  }
+
+  .sc-phase.is-active {
+    background: var(--color-ok-bg-warm);
+    border-color: var(--color-ok-line);
+  }
+
+  .sc-phase-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--color-line-300);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: var(--text-11);
+    flex: 0 0 auto;
+  }
+
+  .sc-phase.is-active .sc-phase-dot {
+    background: var(--color-accent);
+  }
+
+  .sc-phase.is-done .sc-phase-dot {
+    background: var(--color-score-a);
+  }
+
+  .sc-phase-track {
+    width: 110px;
+    height: 5px;
+    border-radius: var(--radius-5);
+    background: var(--color-surface-200);
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+
+  .sc-phase-fill {
+    height: 100%;
+    width: var(--sc-fill, 0%);
+    background: var(--color-accent);
+    transition: width 0.6s linear;
+  }
+
+  /* ── Fil d'étapes ── */
+  .sc-steps {
+    display: flex;
+    gap: 4px;
+  }
+
+  .sc-step {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: 1;
+  }
+
+  .sc-step-n {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-surface-100);
+    color: var(--color-ink-500);
+    display: grid;
+    place-items: center;
+    font-size: var(--text-11p5);
+    font-weight: 600;
+    flex: 0 0 auto;
+  }
+
+  .sc-step.is-current .sc-step-n {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  .sc-step.is-done .sc-step-n {
+    background: var(--color-ink);
+    color: #fff;
+  }
+
+  .sc-step-label {
+    font-size: var(--text-12p5);
+    font-weight: var(--font-weight-450);
+    color: var(--color-ink-500);
+  }
+
+  .sc-step.is-current .sc-step-label,
+  .sc-step.is-done .sc-step-label {
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  .sc-step-line {
+    flex: 1;
+    height: 1px;
+    background: var(--color-line);
+  }
+
+  /* ── Curseur de seuil ── */
+  .sc-slider-track {
+    position: relative;
+    height: 5px;
+    border-radius: var(--radius-5);
+    background: var(--color-surface-200);
+  }
+
+  .sc-slider-fill {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: var(--sc-fill, 0%);
+    border-radius: var(--radius-5);
+    background: var(--color-accent);
+  }
+
+  .sc-slider-thumb {
+    position: absolute;
+    top: -4.5px;
+    left: var(--sc-fill, 0%);
+    width: 14px;
+    height: 14px;
+    margin-left: -7px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--color-accent);
+    box-shadow: var(--shadow-thumb);
+  }
+
+  /* Valeur validée en configuration : rend visible l'écart au défaut. */
+  .sc-slider-ref {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    left: var(--sc-at, 50%);
+    width: 1.5px;
+    background: var(--color-line-400);
+  }
+
+  .sc-slider-hint {
+    font-size: var(--text-10p5);
+    color: var(--color-ink-400);
+    margin-top: 7px;
+  }
+
+  /* ── Légende de graphe ── */
+  .sc-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: var(--text-11);
+    color: var(--color-ink-500);
+  }
+
+  .sc-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .sc-legend-swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    flex: 0 0 auto;
+  }
+
+  .sc-legend-swatch--gap {
+    transform: rotate(45deg);
+  }
+
+  /* ── Conteneur de visualisation ── */
+  .sc-viz {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-14);
+    background: var(--color-surface-50);
+    border: 1px solid var(--color-surface-200);
+    overflow: hidden;
+  }
+}

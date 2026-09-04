@@ -1,0 +1,18 @@
+{
+  "name": "score-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Feuilles de style Tailwind de l'interface SCORE",
+  "scripts": {
+    "build": "npm run build:fonts && npm run build:css",
+    "build:fonts": "node scripts/copy-fonts.mjs",
+    "build:css": "tailwindcss -i assets/css/app.css -o dashboard/static/css/app.css --minify",
+    "watch:css": "tailwindcss -i assets/css/app.css -o dashboard/static/css/app.css --watch"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "@tailwindcss/cli": "^4.1.14",
+    "tailwindcss": "^4.1.14"
+  }
+}

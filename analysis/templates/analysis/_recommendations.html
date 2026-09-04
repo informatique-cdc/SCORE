@@ -1,0 +1,16 @@
+{% load i18n %}
+<turbo-frame id="analysis-recommendations" target="_top">
+<div class="grid gap-2.5">
+    {% for rec in top_recommendations %}
+    <div class="flex items-start gap-2.5">
+        <span class="sc-evidence-chip mt-0.5">{{ forloop.counter }}</span>
+        <p class="sc-finding-detail">{{ rec.text }}</p>
+    </div>
+    {% empty %}
+    <div class="sc-empty">
+        <div class="sc-empty-title">{% trans "Aucune recommandation" %}</div>
+        <div class="sc-empty-detail">{% trans "Les recommandations sont calculées à la fin d'une analyse terminée." %}</div>
+    </div>
+    {% endfor %}
+</div>
+</turbo-frame>

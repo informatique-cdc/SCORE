@@ -1,68 +1,91 @@
-{% load i18n %}
+{% load i18n analysis_ui score_ui %}
 <turbo-frame id="gaps-page-{{ page_obj.number }}">
 {% for gap in gaps %}
-<div class="card mb-2 gap-item {% if gap.resolution == 'resolved' %}opacity-50{% endif %}">
-    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
-        <span class="d-flex align-items-center gap-2 flex-wrap">
+<article class="sc-finding {% if gap.resolution == 'resolved' %}is-resolved{% endif %}">
+    <div class="sc-finding-head">
+        <div class="flex min-w-0 flex-wrap items-center gap-2">
             {% if can_edit %}
-            <input type="checkbox" class="form-check-input gap-checkbox" form="batch-form" name="selected" value="{{ gap.pk }}">
+            <input type="checkbox" class="sc-check" form="batch-form" name="selected" value="{{ gap.pk }}" data-finding-check aria-label="{% trans "Sélectionner ce constat" %}">
             {% endif %}
-            <span class="badge bg-{% if gap.gap_type == 'missing_topic' %}danger{% elif gap.gap_type == 'low_coverage' %}warning{% elif gap.gap_type == 'stale_area' %}info{% else %}secondary{% endif %}">
-                {{ gap.get_gap_type_display }}
-            </span>
-            <span class="badge badge-severity-{{ gap.severity }}">{{ gap.severity }}</span>
+            <span class="sc-tag sc-tag--type {% if gap.gap_type == 'missing_topic' %}sc-tag--danger{% elif gap.gap_type == 'low_coverage' %}sc-tag--warn{% elif gap.gap_type == 'stale_area' %}sc-tag--info{% endif %}">{{ gap.get_gap_type_display }}</span>
+            <span class="sc-tag sc-tag--sev-{{ gap.severity|severity_level }}">{{ gap.get_severity_display }}</span>
             {% if gap.resolution == 'resolved' %}
-                <span class="badge bg-success">{% trans "Trait&eacute;" %}</span>
+            <span class="sc-tag sc-tag--ok">{% trans "Traité" %}</span>
             {% elif gap.resolution == 'kept' %}
-                <span class="badge bg-info">{% trans "Conserv&eacute;" %}</span>
+            <span class="sc-tag sc-tag--info">{% trans "Conservé" %}</span>
             {% endif %}
-            {% if gap.coverage_score is not None %}
-            <span class="text-muted small">{% trans "Couverture :" %} <strong>{{ gap.coverage_score|floatformat:0 }}%</strong></span>
-            {% endif %}
-        </span>
+        </div>
         {% if can_edit %}
-        <span class="d-inline-flex gap-1 flex-shrink-0">
+        <div class="flex shrink-0 items-center gap-1.5">
             {% if gap.resolution != 'resolved' %}
-            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="resolved" class="btn btn-sm btn-outline-success" title="{% trans 'Marquer comme trait&eacute;' %}">{% trans "Trait&eacute;" %}</button>
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="resolved" class="sc-btn sc-btn--tonal" data-tip="{% trans "Marquer comme traité" %}">{% trans "Traité" %}</button>
             {% endif %}
             {% if gap.resolution != 'kept' %}
-            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="kept" class="btn btn-sm btn-outline-info" title="{% trans 'Conserver tel quel' %}">{% trans "Conserver" %}</button>
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="kept" class="sc-btn sc-btn--tonal" data-tip="{% trans "Conserver tel quel" %}">{% trans "Conserver" %}</button>
             {% endif %}
             {% if gap.resolution %}
-            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="" class="btn btn-sm btn-outline-secondary" title="{% trans 'R&eacute;initialiser' %}">{% trans "Annuler" %}</button>
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="" class="sc-btn sc-btn--tonal" data-tip="{% trans "Réinitialiser" %}">{% trans "Annuler" %}</button>
             {% endif %}
-        </span>
+        </div>
         {% endif %}
     </div>
-    <div class="card-body py-2">
-        <h6 class="mb-1">{{ gap.title }}</h6>
-        <p class="mb-1 small">{{ gap.description }}</p>
 
+    <h3 class="sc-finding-title">{{ gap.title }}</h3>
+    <p class="sc-finding-detail mt-1.5">{{ gap.description }}</p>
+
+    <div class="sc-finding-meta">
+        {% if gap.coverage_score is not None %}
+        <div class="sc-gauge min-w-[220px] flex-1">
+            <div class="sc-gauge-track">
+                <div class="sc-gauge-fill sc-fill--{{ gap.coverage_score|percent|score_color }}" style="--sc-fill: {{ gap.coverage_score|percent }}%"></div>
+            </div>
+            <div class="sc-gauge-value">{% trans "Couverture" %} {{ gap.coverage_score|percent }}%</div>
+        </div>
+        {% endif %}
         {% if gap.related_cluster %}
-        <small class="text-muted">{% trans "Cluster associ&eacute; :" %} {{ gap.related_cluster.label }}</small>
+        <span class="sc-tag sc-tag--outline">{{ gap.related_cluster.label }}</span>
         {% endif %}
-
         {% if gap.evidence.unanswered_questions %}
-        <details class="mt-1">
-            <summary class="small fw-semibold">{% trans "Questions sans r&eacute;ponse" %} ({{ gap.evidence.unanswered_questions|length }})</summary>
-            <ul class="small mb-0 mt-1">
-                {% for q in gap.evidence.unanswered_questions %}
-                <li>
-                    {{ q.question }}
-                    <span class="badge badge-severity-{{ q.importance }}">{{ q.importance }}</span>
-                    {% if q.missing_info %}<br><em class="text-muted">{% trans "Manquant :" %} {{ q.missing_info|truncatechars:200 }}</em>{% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-        </details>
+        <button type="button" class="sc-evidence-toggle w-auto" data-disclosure="gap-{{ gap.pk }}" aria-expanded="false">
+            <svg class="size-3 shrink-0" viewBox="0 0 12 12" fill="none">
+                <path d="M4.3 4.4a1.8 1.8 0 113.4.8c-.4.7-1.4.9-1.4 1.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+                <circle cx="6" cy="9.2" r="0.7" fill="currentColor"/>
+            </svg>
+            <span>{% trans "Questions sans réponse" %} ({{ gap.evidence.unanswered_questions|length }})</span>
+        </button>
         {% endif %}
     </div>
-</div>
+
+    {% if gap.evidence.unanswered_questions %}
+    <div class="mt-3" data-disclosure-panel="gap-{{ gap.pk }}" hidden>
+        <div class="sc-evidence">
+            <div class="sc-evidence-head">
+                <span class="sc-eyebrow">{% trans "Questions sans réponse" %}</span>
+                <span class="flex-1"></span>
+                <button type="button" class="sc-icon-btn" data-disclosure="gap-{{ gap.pk }}" aria-label="{% trans "Fermer" %}">✕</button>
+            </div>
+            <div class="sc-evidence-cell grid gap-3.5">
+                {% for q in gap.evidence.unanswered_questions %}
+                <div class="grid gap-1.5">
+                    <div class="flex items-start gap-2">
+                        <span class="sc-tag sc-tag--sev-{{ q.importance|severity_level }}">{{ q.importance }}</span>
+                        <span class="pretty text-13 leading-claim">{{ q.question }}</span>
+                    </div>
+                    {% if q.missing_info %}
+                    <p class="sc-finding-detail">{% trans "Manquant :" %} {{ q.missing_info|truncatechars:250 }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</article>
 {% endfor %}
 
 {% if can_edit %}
 {% for gap in gaps %}
-<form method="post" action="{% url 'gap-resolve' job.pk gap.pk %}" id="single-{{ gap.pk }}" class="d-none">
+<form method="post" action="{% url 'gap-resolve' job.pk gap.pk %}" id="single-{{ gap.pk }}" hidden>
     {% csrf_token %}
     <input type="hidden" name="type_filter" value="{{ type_filter }}">
     <input type="hidden" name="resolution_filter" value="{{ resolution_filter }}">
@@ -72,11 +95,7 @@
 
 {% if next_page_url %}
 <turbo-frame id="gaps-page-{{ page_obj.next_page_number }}" loading="lazy" src="{{ next_page_url }}">
-    <div class="text-center py-3">
-        <div class="spinner-border spinner-border-sm text-muted" role="status">
-            <span class="visually-hidden">{% trans "Chargement..." %}</span>
-        </div>
-    </div>
+    <div class="sc-loading" role="status" aria-label="{% trans "Chargement…" %}"><span></span><span></span><span></span></div>
 </turbo-frame>
 {% endif %}
 </turbo-frame>

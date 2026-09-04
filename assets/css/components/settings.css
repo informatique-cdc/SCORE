@@ -1,0 +1,42 @@
+@layer components {
+  /* Composants propres aux écrans « settings ». */
+
+  /* Sous-titre d'une section, dans une carte ou au-dessus d'un tableau.
+     Plus discret qu'un .sc-title, plus affirmé qu'un .sc-eyebrow. */
+  .sc-subhead {
+    font-size: var(--text-13p5);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  /* Barre d'onglets posée dans la page et non dans .sc-header : le filet de
+     séparation que l'en-tête fournit ailleurs doit ici être porté par la barre. */
+  .sc-tabs--panel {
+    border-bottom: 1px solid var(--color-line);
+    margin-bottom: 18px;
+  }
+
+  /* Un champ verrouillé doit se lire comme tel : sans fond distinct, il est
+     impossible de le distinguer d'un champ éditable. */
+  .sc-input:disabled,
+  .sc-select:disabled {
+    background: var(--color-surface-200);
+    color: var(--color-ink-500);
+    cursor: not-allowed;
+  }
+
+  /* Initiale d'un membre en tête de ligne. Plus petite que .sc-tenant-avatar,
+     qui est dimensionnée pour une liste de sélection. */
+  .sc-member-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-surface-100);
+    color: var(--color-ink-700);
+    display: grid;
+    place-items: center;
+    font-size: var(--text-11);
+    font-weight: 600;
+    flex: 0 0 auto;
+  }
+}
