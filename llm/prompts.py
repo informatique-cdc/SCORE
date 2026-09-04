@@ -219,6 +219,60 @@ Texte à analyser :
 
 Réponds avec un objet JSON : {{"triples": [{{"subject": "...", "predicate": "...", "object": "..."}}]}}"""
 
+KG_CROSS_CLUSTER_INFERENCE = """\
+Deux ensembles d'entités proviennent de thématiques distinctes du même corpus documentaire.
+Ils ne sont reliés par aucune relation connue.
+
+Thématique A — « {cluster_a_label} »
+Entités : {entities_a}
+
+Thématique B — « {cluster_b_label} »
+Entités : {entities_b}
+
+Relations déjà constatées dans le corpus, pour te situer :
+{existing_relations}
+
+Identifie au maximum {max_relations} relations qui existent **de façon manifeste** entre une entité de A \
+et une entité de B, au vu de ce que ces deux thématiques recouvrent.
+
+Règles impératives :
+- **Ne force rien.** S'il n'existe aucune relation manifeste, renvoie une liste vide. \
+Une liste vide est une réponse correcte et attendue : deux thématiques peuvent légitimement \
+n'avoir aucun lien.
+- N'invente aucune entité : sujet et objet doivent figurer mot pour mot dans les listes ci-dessus.
+- Le sujet doit venir de A et l'objet de B.
+- Sujet et objet doivent être différents.
+- Prédicats de 1 à 3 mots maximum.
+- Une relation vague du type « est lié à » n'apporte rien : ne la propose pas.
+- Indique pour chaque relation une confiance entre 0 et 1. En dessous de 0,7, ne la propose pas.
+
+Réponds avec un objet JSON : \
+{{"relations": [{{"subject": "...", "predicate": "...", "object": "...", "confidence": 0.0}}]}}"""
+
+KG_WITHIN_CLUSTER_INFERENCE = """\
+Les paires d'entités suivantes appartiennent à la même thématique — « {cluster_label} » — \
+mais ne sont reliées par aucune relation connue.
+
+Paires à examiner :
+{pairs}
+
+Relations déjà constatées dans le corpus, pour te situer :
+{existing_relations}
+
+Pour chaque paire, indique la relation qui les unit **si elle est manifeste**.
+
+Règles impératives :
+- **Ne force rien.** Écarte toute paire dont la relation ne serait qu'une conjecture. \
+Renvoyer une liste vide est une réponse correcte.
+- N'invente aucune entité : sujet et objet doivent figurer mot pour mot dans les paires ci-dessus.
+- Sujet et objet doivent être différents.
+- Prédicats de 1 à 3 mots maximum.
+- Une relation vague du type « est lié à » n'apporte rien : ne la propose pas.
+- Indique pour chaque relation une confiance entre 0 et 1. En dessous de 0,7, ne la propose pas.
+
+Réponds avec un objet JSON : \
+{{"relations": [{{"subject": "...", "predicate": "...", "object": "...", "confidence": 0.0}}]}}"""
+
 CONCEPT_CONTEXT = """\
 Contexte conceptuel issu du graphe sémantique :
 Les concepts suivants sont liés à la question de l'utilisateur, avec leurs relations.

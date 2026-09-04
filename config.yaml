@@ -59,11 +59,15 @@ analysis:
       embedding_threshold: 0.88
       use_llm_for_entities: false
     inference:
-      enabled: true               # sans elle le graphe reste à un degré ~2
+      enabled: true
       cross_cluster: true
       within_cluster: true
-      transitive: true
-      lexical_similarity: false   # bruyant — voir le plan
+      # Les deux règles mécaniques ci-dessous gonflent le degré sans rien
+      # apprendre : mesurées sur le corpus de référence, les transitives
+      # doublent le degré (2,74 → 5,35) en laissant le nombre de composantes
+      # inchangé, sous un prédicat unique et vague. Voir le plan, lot 3.
+      transitive: false
+      lexical_similarity: false
     extraction:
       cluster_level: 1            # niveau de TopicCluster servant d'unité
       chunk_max_chars: 1200

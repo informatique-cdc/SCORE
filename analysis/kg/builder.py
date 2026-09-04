@@ -14,6 +14,7 @@ from django.db import transaction
 
 from analysis.kg import layout
 from analysis.kg.extraction import extract_triples, normalize
+from analysis.kg.inference import infer
 from analysis.kg.standardize import standardize
 from analysis.models import KGEntity, KGRelation, KnowledgeGraphRun, TopicCluster
 from llm.client import get_llm_client
@@ -50,16 +51,32 @@ class KnowledgeGraphBuilder:
         logger.info("[kg] Step 2/4: standardising %d triples...", len(triples))
         mapping = standardize(triples, self.llm, self.config)
 
-        logger.info("[kg] Step 3/4: aggregating graph...")
+        logger.info("[kg] Step 3/5: aggregating graph...")
         entities, edges = self._aggregate(triples, mapping)
+        observed = layout.summarize(
+            layout.build_graph(
+                entities.keys(), [(e["subject"], e["object"], e["weight"]) for e in edges]
+            )
+        )
+        logger.info(
+            "[kg] Observed: %(nodes)d nodes, %(edges)d edges, degree %(avg_degree)s, "
+            "%(components)d components, largest %(largest_pct)s%%",
+            observed,
+        )
 
-        logger.info("[kg] Step 4/4: computing layout for %d entities...", len(entities))
+        logger.info("[kg] Step 4/5: inferring relations...")
+        inferred = infer(entities, edges, clusters, self.llm, self.config)
+        edges += inferred
+
+        # Inferred edges must count towards degree, centrality and layout:
+        # they are part of the graph the user explores, only flagged apart.
+        logger.info("[kg] Step 5/5: computing layout for %d entities...", len(entities))
         graph = layout.build_graph(
             entities.keys(), [(e["subject"], e["object"], e["weight"]) for e in edges]
         )
         stats = layout.summarize(graph)
         logger.info(
-            "[kg] Graph: %(nodes)d nodes, %(edges)d edges, degree %(avg_degree)s, "
+            "[kg] Final: %(nodes)d nodes, %(edges)d edges, degree %(avg_degree)s, "
             "%(components)d components, largest %(largest_pct)s%%",
             stats,
         )
@@ -180,7 +197,7 @@ class KnowledgeGraphBuilder:
             config_snapshot=self.config,
             entity_count=len(entities),
             relation_count=len(edges),
-            inferred_count=0,
+            inferred_count=sum(1 for e in edges if e.get("inferred")),
             cluster_count=len(clusters),
             bridge_count=sum(1 for d in entities.values() if d["cluster_count"] > 1),
             duration_seconds=round(duration, 2),
@@ -228,9 +245,10 @@ class KnowledgeGraphBuilder:
                 object=obj,
                 predicate=edge["predicate"][:120],
                 weight=edge["weight"],
-                confidence=1.0,
+                confidence=edge.get("confidence", 1.0),
                 cluster=cluster_by_id.get(edge["cluster_id"]),
-                inferred=False,
+                inferred=edge.get("inferred", False),
+                inference_kind=edge.get("inference_kind", ""),
                 evidence=edge["evidence"],
             )
             relations.append(relation)

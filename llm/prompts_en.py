@@ -219,6 +219,59 @@ Text to analyse:
 
 Respond with a JSON object: {{"triples": [{{"subject": "...", "predicate": "...", "object": "..."}}]}}"""
 
+KG_CROSS_CLUSTER_INFERENCE = """\
+Two sets of entities come from distinct topics of the same document corpus.
+No known relation connects them.
+
+Topic A — "{cluster_a_label}"
+Entities: {entities_a}
+
+Topic B — "{cluster_b_label}"
+Entities: {entities_b}
+
+Relations already observed in the corpus, for context:
+{existing_relations}
+
+Identify at most {max_relations} relations that **manifestly** hold between an entity of A \
+and an entity of B, given what these two topics cover.
+
+Mandatory rules:
+- **Force nothing.** If no manifest relation exists, return an empty list. \
+An empty list is a correct and expected answer: two topics may legitimately share no link.
+- Invent no entity: subject and object must appear verbatim in the lists above.
+- The subject must come from A and the object from B.
+- Subject and object must differ.
+- Predicates of 1 to 3 words maximum.
+- A vague relation such as "is related to" adds nothing: do not propose it.
+- Give each relation a confidence between 0 and 1. Below 0.7, do not propose it.
+
+Respond with a JSON object: \
+{{"relations": [{{"subject": "...", "predicate": "...", "object": "...", "confidence": 0.0}}]}}"""
+
+KG_WITHIN_CLUSTER_INFERENCE = """\
+The following entity pairs belong to the same topic — "{cluster_label}" — \
+but no known relation connects them.
+
+Pairs to examine:
+{pairs}
+
+Relations already observed in the corpus, for context:
+{existing_relations}
+
+For each pair, state the relation that binds them **if it is manifest**.
+
+Mandatory rules:
+- **Force nothing.** Discard any pair whose relation would only be a conjecture. \
+Returning an empty list is a correct answer.
+- Invent no entity: subject and object must appear verbatim in the pairs above.
+- Subject and object must differ.
+- Predicates of 1 to 3 words maximum.
+- A vague relation such as "is related to" adds nothing: do not propose it.
+- Give each relation a confidence between 0 and 1. Below 0.7, do not propose it.
+
+Respond with a JSON object: \
+{{"relations": [{{"subject": "...", "predicate": "...", "object": "...", "confidence": 0.0}}]}}"""
+
 CONCEPT_CONTEXT = """\
 Conceptual context from the semantic graph:
 The following concepts are related to the user's question, along with their relationships.
