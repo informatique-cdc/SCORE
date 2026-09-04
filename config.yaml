@@ -49,7 +49,7 @@ analysis:
     subcluster_k: null            # auto-select if null (sqrt of cluster size, capped 2-5)
   use_batch_api: false             # Batch API pour les phases d'analyse (>= 10 prompts)
   knowledge_graph:
-    enabled: false                # livré désactivé — n'altère pas le pipeline existant
+    enabled: true                 # ajoute ~20 min et ~1,6 M jetons à une analyse complète
     source: extract               # extract | hybrid | claims
     max_predicate_words: 3
     min_entity_frequency: 2       # écarte les entités vues une seule fois

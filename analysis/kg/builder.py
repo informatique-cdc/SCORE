@@ -43,12 +43,12 @@ class KnowledgeGraphBuilder:
             logger.warning("[kg] No clusters for project %s — empty graph", self.project.id)
             return self._persist([], {}, [], clusters, time.monotonic() - started)
 
-        logger.info("[kg] Step 1/4: extracting triples from %d clusters...", len(clusters))
+        logger.info("[kg] Step 1/5: extracting triples from %d clusters...", len(clusters))
         triples = extract_triples(self.llm, clusters, self.config, on_progress=self.on_progress)
         if not triples:
             return self._persist([], {}, [], clusters, time.monotonic() - started)
 
-        logger.info("[kg] Step 2/4: standardising %d triples...", len(triples))
+        logger.info("[kg] Step 2/5: standardising %d triples...", len(triples))
         mapping = standardize(triples, self.llm, self.config)
 
         logger.info("[kg] Step 3/5: aggregating graph...")

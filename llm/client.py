@@ -19,7 +19,14 @@ from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 from django.conf import settings
-from openai import APIConnectionError, APITimeoutError, AzureOpenAI, OpenAI, RateLimitError
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    AzureOpenAI,
+    BadRequestError,
+    OpenAI,
+    RateLimitError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -404,6 +411,14 @@ class LLMClient:
                 )
             except (RateLimitError, APIConnectionError, APITimeoutError, ValueError) as exc:
                 logger.warning("Concurrent chat call %d failed: %s", idx, exc)
+                return idx, None
+            except BadRequestError as exc:
+                # Azure's content filter rejects individual passages — an HR
+                # corpus trips it on health or harassment wording. Letting it
+                # escape would abort the whole batch over one passage, so the
+                # call is dropped like any other failure and the caller reports
+                # how many came back empty.
+                logger.warning("Concurrent chat call %d rejected: %s", idx, exc)
                 return idx, None
             finally:
                 if caller_trace is not None:
