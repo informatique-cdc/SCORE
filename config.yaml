@@ -48,6 +48,30 @@ analysis:
     subcluster_min_members: 10    # only subcluster if parent has >= 10 chunks
     subcluster_k: null            # auto-select if null (sqrt of cluster size, capped 2-5)
   use_batch_api: false             # Batch API pour les phases d'analyse (>= 10 prompts)
+  knowledge_graph:
+    enabled: false                # livré désactivé — n'altère pas le pipeline existant
+    source: extract               # extract | hybrid | claims
+    max_predicate_words: 3
+    min_entity_frequency: 2       # écarte les entités vues une seule fois
+    standardization:
+      enabled: true
+      use_embeddings: true        # structurant : le lexical seul ne suffit pas
+      embedding_threshold: 0.88
+      use_llm_for_entities: false
+    inference:
+      enabled: true               # sans elle le graphe reste à un degré ~2
+      cross_cluster: true
+      within_cluster: true
+      transitive: true
+      lexical_similarity: false   # bruyant — voir le plan
+    extraction:
+      cluster_level: 1            # niveau de TopicCluster servant d'unité
+      chunk_max_chars: 1200
+      max_triples_per_chunk: 20
+      max_chunks_per_cluster:     # null = tous les fragments du cluster
+    layout:
+      max_render_nodes: 400
+      betweenness_sample: 500
   gap_detection:
     coverage_question_count: 2    # questions per cluster
     confidence_threshold: 0.5     # below this = gap

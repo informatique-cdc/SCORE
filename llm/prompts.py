@@ -194,6 +194,31 @@ Réponds avec un JSON :
   ]
 }}"""
 
+KG_TRIPLE_EXTRACTION = """\
+Lis le texte ci-dessous et identifie toutes les relations Sujet-Prédicat-Objet qu'il exprime.
+
+Règles impératives :
+- Termes atomiques : chaque sujet et chaque objet doit être une entité courte et indivisible \
+(personne, organisation, produit, lieu, concept, dispositif, date, montant). \
+Ne fusionne jamais plusieurs idées dans un même terme, et n'y mets pas de phrase.
+- Prédicats de 1 à 3 mots maximum. Jamais plus de 3 mots.
+- Cohérence : désigne une même entité par une même chaîne partout. \
+Si le texte alterne « le RGPD », « RGPD » et « règlement général sur la protection des données », \
+retiens la forme la plus courante et utilise-la systématiquement.
+- Remplace les pronoms (« il », « celle-ci », « ce dernier »…) par l'entité qu'ils désignent.
+- Relie par paires : si plusieurs termes d'une même phrase entretiennent une relation \
+explicite, produis un triplet pour chaque paire concernée.
+- N'invente rien : chaque triplet doit être justifiable par le texte.
+
+Extrais au maximum {max_triples} triplets.
+
+Texte à analyser :
+---
+{text}
+---
+
+Réponds avec un objet JSON : {{"triples": [{{"subject": "...", "predicate": "...", "object": "..."}}]}}"""
+
 CONCEPT_CONTEXT = """\
 Contexte conceptuel issu du graphe sémantique :
 Les concepts suivants sont liés à la question de l'utilisateur, avec leurs relations.

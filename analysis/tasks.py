@@ -26,6 +26,7 @@ UNIFIED_PROGRESS = {
     "claims": 10,
     "semantic_graph": 16,
     "clustering": 22,
+    "knowledge_graph": 27,
     "gaps": 32,
     "tree": 40,
     "contradictions": 48,
@@ -46,6 +47,7 @@ ANALYSIS_PHASE_ORDER = [
     "claims",
     "semantic_graph",
     "clustering",
+    "knowledge_graph",
     "gaps",
     "tree",
     "contradictions",
@@ -109,6 +111,13 @@ def _cleanup_phase(job, phase_value):
         deleted2, _ = TopicCluster.objects.filter(analysis_job=job).delete()
         logger.info("Cleanup clustering: deleted %d tree nodes + %d clusters", deleted, deleted2)
 
+    elif phase_value == "knowledge_graph":
+        from analysis.models import KnowledgeGraphRun
+
+        # Entities and relations cascade via the run FK
+        deleted, _ = KnowledgeGraphRun.objects.filter(analysis_job=job).delete()
+        logger.info("Cleanup knowledge_graph: deleted %d objects", deleted)
+
     elif phase_value == "gaps":
         deleted, _ = GapReport.objects.filter(analysis_job=job).delete()
         logger.info("Cleanup gaps: deleted %d gap reports", deleted)
@@ -136,6 +145,7 @@ def _collect_existing_stats(job):
         DuplicateGroup,
         GapReport,
         HallucinationReport,
+        KGRelation,
         TopicCluster,
     )
 
@@ -146,6 +156,7 @@ def _collect_existing_stats(job):
         "clusters": TopicCluster.objects.filter(analysis_job=job).count(),
         "gaps": GapReport.objects.filter(analysis_job=job).count(),
         "hallucinations": HallucinationReport.objects.filter(analysis_job=job).count(),
+        "kg_relations": KGRelation.objects.filter(run__analysis_job=job).count(),
     }
 
 

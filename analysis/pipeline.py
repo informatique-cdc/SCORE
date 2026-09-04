@@ -320,6 +320,63 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             raise
 
     # ------------------------------------------------------------------
+    # Phase 4bis: Knowledge graph (needs clusters, feeds nothing yet)
+    # ------------------------------------------------------------------
+    kg_config = effective.get("knowledge_graph", {})
+    if _should_skip("knowledge_graph"):
+        logger.info("Phase 4bis skipped (resume): knowledge_graph")
+        if collector:
+            from analysis.models import KGRelation
+
+            existing = KGRelation.objects.filter(run__analysis_job=job).count()
+            collector.start_phase(
+                "knowledge_graph", "Graphe de connaissances", sort_order=4, items_in=0
+            )
+            collector.end_phase(items_out=existing, status="skipped")
+    elif kg_config.get("enabled", False):
+        if _is_resume_target("knowledge_graph"):
+            _cleanup_phase(job, "knowledge_graph")
+        cluster_count = TopicCluster.objects.filter(analysis_job=job).count()
+        _update_phase(job, AnalysisJob.Phase.KNOWLEDGE_GRAPH, UNIFIED_PROGRESS["knowledge_graph"])
+        if collector:
+            collector.start_phase(
+                "knowledge_graph",
+                "Graphe de connaissances",
+                sort_order=4,
+                items_in=cluster_count,
+            )
+        try:
+            from analysis.kg.builder import KnowledgeGraphBuilder
+
+            kg_cb = _make_progress_cb(job.pk, "Construction du graphe de connaissances")
+            kg_builder = KnowledgeGraphBuilder(
+                tenant, job, project, on_progress=kg_cb, config=kg_config
+            )
+            kg_run = kg_builder.run()
+            logger.info(
+                "Phase 4bis complete: %d entities, %d relations",
+                kg_run.entity_count,
+                kg_run.relation_count,
+            )
+            if collector:
+                collector.end_phase(items_out=kg_run.relation_count)
+        except (ImportError, OSError) as exc:
+            logger.warning("Phase 4bis skipped: %s", exc)
+            if collector:
+                collector.end_phase(status="skipped", error_message=str(exc)[:500])
+        except Exception as exc:
+            if collector:
+                collector.end_phase(status="failed", error_message=str(exc)[:500])
+            raise
+    else:
+        logger.info("Phase 4bis skipped: knowledge graph disabled")
+        if collector:
+            collector.start_phase(
+                "knowledge_graph", "Graphe de connaissances", sort_order=4, items_in=0
+            )
+            collector.end_phase(status="skipped")
+
+    # ------------------------------------------------------------------
     # Phase 5: Gap detection
     # ------------------------------------------------------------------
     if _should_skip("gaps"):
@@ -328,7 +385,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             from analysis.models import GapReport
 
             existing = GapReport.objects.filter(analysis_job=job).count()
-            collector.start_phase("gaps", "Détection des lacunes", sort_order=4, items_in=0)
+            collector.start_phase("gaps", "Détection des lacunes", sort_order=5, items_in=0)
             collector.end_phase(items_out=existing, status="skipped")
     else:
         if _is_resume_target("gaps"):
@@ -337,7 +394,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         cluster_count = TopicCluster.objects.filter(analysis_job=job).count()
         if collector:
             collector.start_phase(
-                "gaps", "Détection des lacunes", sort_order=4, items_in=cluster_count
+                "gaps", "Détection des lacunes", sort_order=5, items_in=cluster_count
             )
         try:
             gaps_cb = _make_progress_cb(job.pk, "Détection des lacunes")
@@ -364,7 +421,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
     if _should_skip("tree"):
         logger.info("Phase 6 skipped (resume): tree")
         if collector:
-            collector.start_phase("tree", "Index arborescent", sort_order=5, items_in=0)
+            collector.start_phase("tree", "Index arborescent", sort_order=6, items_in=0)
             collector.end_phase(items_out=0, status="skipped")
     else:
         if _is_resume_target("tree"):
@@ -372,7 +429,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         _update_phase(job, AnalysisJob.Phase.TREE, UNIFIED_PROGRESS["tree"])
         cluster_count = TopicCluster.objects.filter(analysis_job=job).count()
         if collector:
-            collector.start_phase("tree", "Index arborescent", sort_order=5, items_in=cluster_count)
+            collector.start_phase("tree", "Index arborescent", sort_order=6, items_in=cluster_count)
             collector.end_phase(items_out=0)
 
     # ------------------------------------------------------------------
@@ -385,7 +442,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
 
             existing = ContradictionPair.objects.filter(analysis_job=job).count()
             collector.start_phase(
-                "contradictions", "Détection des contradictions", sort_order=6, items_in=0
+                "contradictions", "Détection des contradictions", sort_order=7, items_in=0
             )
             collector.end_phase(items_out=existing, status="skipped")
     else:
@@ -395,7 +452,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
         claim_count = Claim.objects.filter(project=project).count()
         if collector:
             collector.start_phase(
-                "contradictions", "Détection des contradictions", sort_order=6, items_in=claim_count
+                "contradictions", "Détection des contradictions", sort_order=7, items_in=claim_count
             )
         try:
             contra_cb = _make_progress_cb(job.pk, "Classification des paires")
@@ -421,7 +478,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
 
             existing = HallucinationReport.objects.filter(analysis_job=job).count()
             collector.start_phase(
-                "hallucination", "Détection des risques d'hallucination", sort_order=7, items_in=0
+                "hallucination", "Détection des risques d'hallucination", sort_order=8, items_in=0
             )
             collector.end_phase(items_out=existing, status="skipped")
     else:
@@ -432,7 +489,7 @@ def run_analysis_phases(job, collector=None, resume_from=None):
             collector.start_phase(
                 "hallucination",
                 "Détection des risques d'hallucination",
-                sort_order=7,
+                sort_order=8,
                 items_in=doc_count,
             )
         try:
@@ -524,7 +581,7 @@ def run_audit_phases(job, collector=None, resume_from=None):
                 collector.start_phase(
                     f"audit_{axis_key}",
                     AUDIT_AXIS_LABELS.get(axis_key, axis_key),
-                    sort_order=7 + idx,
+                    sort_order=9 + idx,
                 )
                 collector.end_phase(items_out=1, status="skipped")
         else:
@@ -585,7 +642,7 @@ def run_audit_phases(job, collector=None, resume_from=None):
             collector.start_phase(
                 f"audit_{axis_key}",
                 AUDIT_AXIS_LABELS.get(axis_key, axis_key),
-                sort_order=7 + idx,
+                sort_order=9 + idx,
             )
 
         if isinstance(result, Exception):

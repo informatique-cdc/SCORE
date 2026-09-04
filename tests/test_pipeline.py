@@ -9,10 +9,15 @@ from analysis.models import (
     ContradictionPair,
     DuplicateGroup,
     GapReport,
+    KGEntity,
+    KGRelation,
+    KnowledgeGraphRun,
+    TopicCluster,
 )
 from analysis.tasks import (
     ANALYSIS_PHASE_ORDER,
     AUDIT_PHASE_ORDER,
+    UNIFIED_PROGRESS,
     _build_effective_config,
     _cleanup_phase,
     _make_progress_cb,
@@ -178,6 +183,100 @@ class TestResumeLogic:
         # All analysis phases should be skipped
         is_analysis_resume = checkpoint in ANALYSIS_PHASE_ORDER
         assert is_analysis_resume is False
+
+
+# ---------------------------------------------------------------------------
+# Knowledge graph phase
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestKnowledgeGraphPhase:
+    def test_runs_after_clustering_and_before_gaps(self):
+        """It consumes TopicClusters, so it cannot run before they exist."""
+        order = ANALYSIS_PHASE_ORDER
+        assert order.index("clustering") < order.index("knowledge_graph")
+        assert order.index("knowledge_graph") < order.index("gaps")
+
+    def test_progress_slot_leaves_neighbours_untouched(self):
+        """The new step fits in the existing 22-32 gap, so no other value moves."""
+        assert UNIFIED_PROGRESS["clustering"] == 22
+        assert UNIFIED_PROGRESS["gaps"] == 32
+        assert 22 < UNIFIED_PROGRESS["knowledge_graph"] < 32
+
+    def test_insertion_does_not_break_existing_resume(self):
+        """Phase order is recomputed at runtime; only the string is persisted."""
+        resume_idx = ANALYSIS_PHASE_ORDER.index("gaps")
+        skipped = ANALYSIS_PHASE_ORDER[:resume_idx]
+
+        assert "clustering" in skipped
+        assert "knowledge_graph" in skipped
+        assert "tree" not in skipped
+
+    def test_disabled_by_default_in_shipped_config(self, settings):
+        """Shipped configuration must leave the existing pipeline untouched."""
+        assert settings.ANALYSIS_CONFIG["knowledge_graph"]["enabled"] is False
+
+    def test_cleanup_removes_run_and_cascades(self, tenant, project, analysis_job):
+        run = KnowledgeGraphRun.objects.create(
+            tenant=tenant, project=project, analysis_job=analysis_job
+        )
+        entity = KGEntity.objects.create(
+            tenant=tenant, project=project, run=run, canonical="rgpd", label="RGPD"
+        )
+        other = KGEntity.objects.create(
+            tenant=tenant, project=project, run=run, canonical="cnil", label="CNIL"
+        )
+        KGRelation.objects.create(
+            tenant=tenant,
+            project=project,
+            run=run,
+            subject=entity,
+            object=other,
+            predicate="contrôlé par",
+        )
+
+        _cleanup_phase(analysis_job, "knowledge_graph")
+
+        assert KnowledgeGraphRun.objects.filter(analysis_job=analysis_job).count() == 0
+        assert KGEntity.objects.filter(run=run).count() == 0
+        assert KGRelation.objects.filter(run=run).count() == 0
+
+    def test_cluster_deletion_keeps_the_graph(self, tenant, project, analysis_job):
+        """SET_NULL, not CASCADE: resuming from clustering must not wipe the graph."""
+        cluster = TopicCluster.objects.create(
+            tenant=tenant, project=project, analysis_job=analysis_job, label="Santé"
+        )
+        run = KnowledgeGraphRun.objects.create(
+            tenant=tenant, project=project, analysis_job=analysis_job
+        )
+        entity = KGEntity.objects.create(
+            tenant=tenant,
+            project=project,
+            run=run,
+            canonical="ipsec",
+            label="IPSEC",
+            main_cluster=cluster,
+        )
+        other = KGEntity.objects.create(
+            tenant=tenant, project=project, run=run, canonical="garantie", label="garantie"
+        )
+        relation = KGRelation.objects.create(
+            tenant=tenant,
+            project=project,
+            run=run,
+            subject=entity,
+            object=other,
+            predicate="propose",
+            cluster=cluster,
+        )
+
+        _cleanup_phase(analysis_job, "clustering")
+
+        entity.refresh_from_db()
+        relation.refresh_from_db()
+        assert entity.main_cluster is None
+        assert relation.cluster is None
 
 
 # ---------------------------------------------------------------------------

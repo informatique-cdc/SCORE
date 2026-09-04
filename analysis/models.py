@@ -25,6 +25,7 @@ class AnalysisJob(ProjectScopedModel):
         SEMANTIC_GRAPH = "semantic_graph", _("Graphe sémantique")
         CONTRADICTIONS = "contradictions", _("Détection des contradictions")
         CLUSTERING = "clustering", _("Clustering thématique")
+        KNOWLEDGE_GRAPH = "knowledge_graph", _("Graphe de connaissances")
         GAPS = "gaps", _("Détection des lacunes")
         TREE = "tree", _("Index arborescent")
         HALLUCINATION = "hallucination", _("Détection des risques d'hallucination")
@@ -611,3 +612,12 @@ class TraceEvent(models.Model):
         indexes = [
             models.Index(fields=["phase_trace", "event_type"]),
         ]
+
+
+# Knowledge graph models live in their own module but must be imported here so
+# Django registers them, and so existing `from analysis.models import ...` works.
+from analysis.models_kg import (  # noqa: E402,F401
+    KGEntity,
+    KGRelation,
+    KnowledgeGraphRun,
+)

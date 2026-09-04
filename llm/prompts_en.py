@@ -194,6 +194,31 @@ Respond with a JSON:
   ]
 }}"""
 
+KG_TRIPLE_EXTRACTION = """\
+Read the text below and identify every Subject-Predicate-Object relationship it expresses.
+
+Mandatory rules:
+- Atomic terms: each subject and each object must be a short, indivisible entity \
+(person, organisation, product, place, concept, mechanism, date, amount). \
+Never merge several ideas into one term, and never put a sentence in one.
+- Predicates of 1 to 3 words maximum. Never more than 3 words.
+- Consistency: refer to the same entity with the same string everywhere. \
+If the text alternates between "the GDPR", "GDPR" and "General Data Protection Regulation", \
+keep the most common form and use it throughout.
+- Replace pronouns ("it", "the latter", "this one"…) with the entity they refer to.
+- Relate pairwise: when several terms in the same sentence hold an explicit relationship, \
+emit one triple for each relevant pair.
+- Invent nothing: every triple must be justifiable from the text.
+
+Extract at most {max_triples} triples.
+
+Text to analyse:
+---
+{text}
+---
+
+Respond with a JSON object: {{"triples": [{{"subject": "...", "predicate": "...", "object": "..."}}]}}"""
+
 CONCEPT_CONTEXT = """\
 Conceptual context from the semantic graph:
 The following concepts are related to the user's question, along with their relationships.
