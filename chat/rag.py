@@ -23,6 +23,7 @@ from .rag_techniques import (
     crag_evaluate,
     decompose_question,
     graph_rag_context,
+    graph_trace_payload,
     hyde,
     rag_fusion,
     rerank_chunks,
@@ -100,7 +101,7 @@ def _generate_answer(
     question,
     context_str,
     sources,
-    concept_context,
+    graph_prompt,
     history,
     llm,
     system_prompt_template=None,
@@ -110,8 +111,8 @@ def _generate_answer(
     Returns dict with "answer", "sources", "suggestions".
     """
     full_context = context_str
-    if concept_context:
-        full_context = concept_context + "\n\n" + context_str
+    if graph_prompt:
+        full_context = graph_prompt + "\n\n" + context_str
     template = system_prompt_template or get_prompt("CHAT_QA_SYSTEM")
     system_prompt = template.format(context=full_context)
     messages = [{"role": "system", "content": system_prompt}]
@@ -213,7 +214,7 @@ def ask_documents(
         system_prompt_template: Optional custom system prompt template with {context}.
 
     Returns:
-        {"answer": str, "sources": [...], "suggestions": [...]}
+        {"answer": str, "sources": [...], "suggestions": [...], "graph_trace": {...}}
     """
     tools = tools or []
     llm = get_llm_client()
@@ -241,18 +242,22 @@ def ask_documents(
     # Graph RAG context (independent, composable). The retrieved sources are
     # handed over so the graph expands what was actually found, rather than
     # answering a parallel question of its own.
-    concept_ctx = (
+    graph_context = (
         graph_rag_context(question, project, sources=pipeline_result["sources"])
         if "graph-rag" in tools
-        else ""
+        else None
     )
-
-    return _generate_answer(
+    # The documents behind the relations stay inside the trace, next to the
+    # relation they prove. Folding them into "sources" put 20+ titles the model
+    # never read alongside the 5 passages it did.
+    result = _generate_answer(
         question,
         pipeline_result["context"],
         pipeline_result["sources"],
-        concept_ctx,
+        graph_context["prompt"] if graph_context else "",
         history,
         llm,
         system_prompt_template=system_prompt_template,
     )
+    result["graph_trace"] = graph_trace_payload([graph_context])
+    return result

@@ -1675,6 +1675,9 @@ msgstr "areas to fill"
 msgid "bonne couverture"
 msgstr "good coverage"
 
+msgid "stable"
+msgstr "steady"
+
 msgid "Qualité de la base"
 msgstr "Knowledge base quality"
 

@@ -114,6 +114,29 @@ def normalize_concept(concept: str) -> str:
     return c
 
 
+# Un concept doit être du langage. spaCy, lui, découpe volontiers en groupes
+# nominaux des fragments qui n'en sont pas et qui remontent ensuite jusqu'aux
+# écrans : îlots conceptuels illisibles, sondes de couverture faussées.
+#
+# U+FFFD est le caractère de remplacement : sa présence signe un texte dont le
+# décodage a échoué à l'ingestion, pas un mot.
+_REPLACEMENT_CHAR = "�"
+
+# Les URL et adresses encodées en pourcents (« %6a%70%6c… ») traversent
+# l'extraction telles quelles. Trois échappements suffisent à les reconnaître
+# sans risquer « majoré de 20% » ni « temps partiel (90%) », où le pourcent
+# n'est jamais suivi de deux chiffres hexadécimaux.
+_PERCENT_ESCAPE = re.compile(r"%[0-9a-fA-F]{2}")
+_MAX_PERCENT_ESCAPES = 2
+
+
+def is_language(concept: str) -> bool:
+    """Écarte ce qui n'est pas du texte : décodage raté, URL encodée."""
+    if _REPLACEMENT_CHAR in concept:
+        return False
+    return len(_PERCENT_ESCAPE.findall(concept)) <= _MAX_PERCENT_ESCAPES
+
+
 _FUNCTION_POS = frozenset(
     {
         "DET",
@@ -145,6 +168,8 @@ def extract_concepts(text: str, spacy_model: str = "en_core_web_sm") -> list[str
             continue
         norm = normalize_concept(span.text)
         if not norm or norm in _STOP_CONCEPTS or len(norm) < 2:
+            continue
+        if not is_language(norm):
             continue
         if norm not in seen:
             seen.add(norm)

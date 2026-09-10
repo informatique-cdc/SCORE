@@ -170,6 +170,7 @@ def chat_ask(request):
         content=result["answer"],
         sources=result.get("sources", []),
         suggestions=result.get("suggestions", []),
+        graph_trace=result.get("graph_trace") or {},
     )
 
     # Touch updated_at
@@ -201,6 +202,7 @@ def chat_ask(request):
         "answer": result["answer"],
         "sources": result.get("sources", []),
         "suggestions": result.get("suggestions", []),
+        "graph_trace": result.get("graph_trace") or {},
         "conversation_id": str(conversation.id),
         "title": conversation.title or "",
     }
@@ -249,7 +251,9 @@ def conversation_messages(request, pk):
         project=request.project,
         user=request.user,
     )
-    messages = conversation.messages.values("role", "content", "sources", "suggestions")
+    messages = conversation.messages.values(
+        "role", "content", "sources", "suggestions", "graph_trace"
+    )
     return JsonResponse(
         {
             "conversation_id": str(conversation.id),

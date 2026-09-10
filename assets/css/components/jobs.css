@@ -168,7 +168,7 @@
   }
 
   .sc-switch-input:focus-visible + .sc-switch-ui {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-accent-ink);
     outline-offset: 2px;
   }
 

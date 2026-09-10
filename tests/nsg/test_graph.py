@@ -6,6 +6,7 @@ pytest.importorskip("networkx", reason="networkx not installed")
 
 from nsg.config import NSGConfig  # noqa: E402
 from nsg.graph import NeuralSemanticGraph  # noqa: E402
+from tests.nsg.conftest import requires_english_model
 
 
 @pytest.fixture
@@ -20,6 +21,7 @@ SAMPLE_TEXT = (
 )
 
 
+@requires_english_model
 class TestBuildDocumentSubgraph:
     def test_subgraph_has_nodes_and_edges(self, nsg: NeuralSemanticGraph) -> None:
         sub = nsg.build_document_subgraph("doc1", SAMPLE_TEXT)
@@ -42,6 +44,7 @@ class TestBuildDocumentSubgraph:
             assert "evidence" in data
 
 
+@requires_english_model
 class TestMerge:
     def test_merge_increases_frequency(self, nsg: NeuralSemanticGraph) -> None:
         nsg.add_document("doc1", SAMPLE_TEXT)
@@ -67,6 +70,7 @@ FRENCH_TEXT = (
 )
 
 
+@requires_english_model
 class TestNoStopwordNodes:
     def test_graph_excludes_french_stopwords(self, nsg: NeuralSemanticGraph) -> None:
         from nsg.stopwords import STOPWORDS_FR
@@ -83,6 +87,7 @@ class TestNoStopwordNodes:
             assert node not in STOPWORDS_EN, f"Stopword {node!r} found as graph node"
 
 
+@requires_english_model
 class TestQuery:
     def test_query_returns_nonempty_subgraph(self, nsg: NeuralSemanticGraph) -> None:
         nsg.add_document("doc1", SAMPLE_TEXT)

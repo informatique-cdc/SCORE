@@ -1,0 +1,105 @@
+{% load i18n analysis_ui score_ui %}
+{% comment %}Incluse par gaps.html (1re page) et par _gaps_page.html (pages
+suivantes chargées par Turbo) : un seul balisage pour les deux.{% endcomment %}
+<article class="sc-finding sc-gap {% if gap.resolution == 'resolved' %}is-resolved{% endif %}">
+
+    <div class="sc-gap-cov">
+        {% if gap.coverage_score is not None %}
+        <div class="sc-gap-cov-value sc-ink--{{ gap.coverage_score|percent|score_color }}">{{ gap.coverage_score|percent }}&nbsp;%</div>
+        <div class="sc-gap-cov-label">{% trans "couverture" %}</div>
+        <div class="sc-gap-cov-track">
+            <div class="sc-gap-cov-fill sc-fill--{{ gap.coverage_score|percent|score_color }}" style="--sc-fill: {{ gap.coverage_score|percent }}%"></div>
+        </div>
+        {% else %}
+        <div class="sc-gap-cov-value sc-ink--none">—</div>
+        <div class="sc-gap-cov-label">{% trans "couverture" %}</div>
+        {% endif %}
+    </div>
+
+    <div class="sc-gap-body">
+        <div class="sc-gap-head">
+            {% if can_edit %}
+            <input type="checkbox" class="sc-check" form="batch-form" name="selected" value="{{ gap.pk }}" data-finding-check aria-label="{% trans "Sélectionner ce constat" %}">
+            {% endif %}
+            <span class="sc-tag sc-tag--type {% if gap.gap_type == 'missing_topic' %}sc-tag--danger{% elif gap.gap_type == 'low_coverage' %}sc-tag--warn{% elif gap.gap_type == 'stale_area' %}sc-tag--info{% endif %}">{{ gap.get_gap_type_display }}</span>
+            <span class="sc-tag sc-tag--sev-{{ gap.severity|severity_level }}">{{ gap.get_severity_display }}</span>
+            {% if gap.resolution == 'resolved' %}
+            <span class="sc-tag sc-tag--ok">{% trans "Traité" %}</span>
+            {% elif gap.resolution == 'kept' %}
+            <span class="sc-tag sc-tag--info">{% trans "Conservé" %}</span>
+            {% endif %}
+            {% if gap.related_cluster %}
+            <span class="sc-gap-cluster">{% trans "cluster" %}&nbsp;«&nbsp;{{ gap.related_cluster.label }}&nbsp;»</span>
+            {% endif %}
+        </div>
+
+        {% comment %}Certains concepts sont extraits sous forme d'URL encodée et
+        produisent des titres de plusieurs centaines de caractères : sans coupe,
+        une seule fiche occupe l'écran et la liste cesse d'être parcourable. Le
+        texte entier reste accessible au survol et dans l'export.{% endcomment %}
+        <h3 class="sc-finding-title" title="{{ gap.title }}">{{ gap.title|truncatechars:200 }}</h3>
+        <p class="sc-finding-detail mt-1" title="{{ gap.description }}">{{ gap.description|truncatechars:400 }}</p>
+
+        {% if gap.evidence.unanswered_questions %}
+        <button type="button" class="sc-evidence-toggle mt-2.5 w-auto" data-disclosure="gap-{{ gap.pk }}" aria-expanded="false">
+            <svg class="size-3 shrink-0" viewBox="0 0 12 12" fill="none">
+                <path d="M4.3 4.4a1.8 1.8 0 113.4.8c-.4.7-1.4.9-1.4 1.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+                <circle cx="6" cy="9.2" r="0.7" fill="currentColor"/>
+            </svg>
+            <span>{% trans "Questions sans réponse" %} ({{ gap.evidence.unanswered_questions|length }})</span>
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="sc-gap-side">
+        {% with terms=gap|gap_terms %}
+        {% if terms %}
+        <div class="sc-eyebrow mb-[7px]">{{ terms.label }}</div>
+        <div class="sc-gap-terms">
+            {% for term in terms.items %}
+            <span class="sc-gap-term" title="{{ term }}">{{ term|truncatechars:48 }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if can_edit %}
+        <div class="sc-gap-actions">
+            {% if gap.resolution != 'resolved' %}
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="resolved" class="sc-btn sc-btn--ink sc-btn--sm" data-tip="{% trans "Marquer comme traité" %}">{% trans "Traité" %}</button>
+            {% endif %}
+            {% if gap.resolution != 'kept' %}
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="kept" class="sc-btn sc-btn--outline sc-btn--sm" data-tip="{% trans "Conserver tel quel" %}">{% trans "Conserver" %}</button>
+            {% endif %}
+            {% if gap.resolution %}
+            <button type="submit" form="single-{{ gap.pk }}" name="resolution" value="" class="sc-btn sc-btn--outline sc-btn--sm" data-tip="{% trans "Réinitialiser" %}">{% trans "Annuler" %}</button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {% if gap.evidence.unanswered_questions %}
+    <div class="sc-gap-panel" data-disclosure-panel="gap-{{ gap.pk }}" hidden>
+        <div class="sc-evidence">
+            <div class="sc-evidence-head">
+                <span class="sc-eyebrow">{% trans "Questions sans réponse" %}</span>
+                <span class="flex-1"></span>
+                <button type="button" class="sc-icon-btn" data-disclosure="gap-{{ gap.pk }}" aria-label="{% trans "Fermer" %}">✕</button>
+            </div>
+            <div class="sc-evidence-cell grid gap-3.5">
+                {% for q in gap.evidence.unanswered_questions %}
+                <div class="grid gap-1.5">
+                    <div class="flex items-start gap-2">
+                        <span class="sc-tag sc-tag--sev-{{ q.importance|severity_level }}">{{ q.importance }}</span>
+                        <span class="pretty text-13 leading-claim">{{ q.question }}</span>
+                    </div>
+                    {% if q.missing_info %}
+                    <p class="sc-finding-detail">{% trans "Manquant :" %} {{ q.missing_info|truncatechars:250 }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</article>

@@ -97,7 +97,7 @@
 
   .sc-agent.is-active {
     background: var(--color-ok-bg-warm);
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
     font-weight: 600;
   }
 
@@ -171,7 +171,7 @@
   /* Le coin plat désigne l'émetteur ; il change de côté selon le rôle. */
   .sc-msg--user .sc-bubble {
     background: var(--color-ink);
-    color: var(--color-surface);
+    color: var(--color-invert-ink);
     border-radius: 14px 14px 4px 14px;
   }
 
@@ -295,7 +295,7 @@
     padding: 0;
     background: none;
     font: inherit;
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
     cursor: pointer;
     text-decoration: underline;
     text-decoration-style: dashed;
@@ -304,6 +304,116 @@
 
   .sc-bubble-ref:hover {
     color: var(--color-accent-hover);
+  }
+
+  /* ── Chemin de découverte : les relations du graphe ayant étayé la réponse ── */
+  .sc-graph-trace {
+    align-self: flex-start;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* Le dépliant générique est dimensionné pour une page de configuration : dans
+     le fil il doit rester secondaire par rapport à la réponse. */
+  .sc-graph-trace .sc-disclosure {
+    padding: 8px 12px;
+    font-size: var(--text-11p5);
+  }
+
+  .sc-gt-panel {
+    display: grid;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-12);
+    background: var(--color-surface-50);
+  }
+
+  .sc-gt-seeds {
+    font-size: var(--text-10p5);
+    color: var(--color-ink-500);
+  }
+
+  .sc-gt-rel {
+    display: grid;
+    gap: 5px;
+    justify-items: start;
+  }
+
+  .sc-gt-rel + .sc-gt-rel {
+    padding-top: 8px;
+    border-top: 1px solid var(--color-line);
+  }
+
+  /* Le chemin doit rester lisible d'un coup d'œil : il se relit en ligne tant
+     qu'il tient, et ne se replie que sur les libellés longs. */
+  .sc-gt-path {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: var(--text-12p5);
+  }
+
+  .sc-gt-entity {
+    font-weight: 500;
+  }
+
+  .sc-gt-pred {
+    color: var(--color-ink-500);
+  }
+
+  .sc-gt-pred::before {
+    content: "—[";
+  }
+
+  .sc-gt-pred::after {
+    content: "]→";
+  }
+
+  .sc-gt-inferred {
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--color-surface-300);
+    color: var(--color-ink-700);
+    font-size: var(--text-8p5);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .sc-gt-evidence {
+    padding-left: 9px;
+    border-left: 2px solid var(--color-line-300);
+    color: var(--color-ink-500);
+    font-size: var(--text-11p5);
+    line-height: var(--leading-bubble);
+  }
+
+  .sc-gt-doc {
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-ink-500);
+    font-family: inherit;
+    font-size: var(--text-10p5);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Sans connecteur le document n'est pas ouvrable : seul le bouton s'annonce
+     comme cliquable. */
+  button.sc-gt-doc {
+    color: var(--color-accent-ink);
+    cursor: pointer;
+  }
+
+  button.sc-gt-doc:hover {
+    color: var(--color-accent-hover);
+    text-decoration: underline;
   }
 
   /* ── Citations en pilules sous une réponse ── */
@@ -329,8 +439,8 @@
   }
 
   .sc-cite:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+    border-color: var(--color-accent-ink);
+    color: var(--color-accent-ink);
     text-decoration: none;
   }
 
@@ -350,7 +460,7 @@
 
   .sc-cite:hover .sc-cite-n {
     background: var(--color-ok-bg);
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
   }
 
   .sc-cite-label {
@@ -436,7 +546,7 @@
   }
 
   .sc-cited-doc:hover {
-    border-color: var(--color-accent);
+    border-color: var(--color-accent-ink);
     color: inherit;
     text-decoration: none;
   }
@@ -611,7 +721,7 @@
   }
 
   .sc-prompt-editor-wrap:focus-within {
-    border-color: var(--color-accent);
+    border-color: var(--color-accent-ink);
   }
 
   .sc-prompt-editor {
@@ -709,7 +819,7 @@
   }
 
   .sc-prompt-flag--ok {
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
   }
 
   .sc-prompt-flag--missing {

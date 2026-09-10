@@ -56,7 +56,7 @@
 
   .sc-dropdown-item.is-active {
     background: var(--color-ok-bg-warm);
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
   }
 
   .sc-dropdown-hint {

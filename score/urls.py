@@ -8,8 +8,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # Auth (allauth)
     path("auth/", include("allauth.urls")),
-    # Bascule de langue de l'en-tête (set_language)
-    path("i18n/", include("django.conf.urls.i18n")),
     # Apps
     path("dashboard/", include("dashboard.urls")),
     path("connectors/", include("connectors.urls")),

@@ -8,6 +8,9 @@ Identifies gaps via:
   4. Stale areas: clusters where most documents are outdated
 
 Outputs a ranked "missing topics" list with suggested document titles.
+
+Every gap is then scored against the corpus by `_measure_coverage`, so that the
+column ordering the report means the same thing whichever strategy raised it.
 """
 
 import json
@@ -24,6 +27,35 @@ from llm.prompt_loader import get_prompt
 from vectorstore.store import get_vector_store
 
 logger = logging.getLogger(__name__)
+
+# Passages retenus pour juger ce que le corpus dit déjà d'un sujet. Un unique
+# extrait très proche ne fait pas une couverture, d'où la moyenne sur trois.
+COVERAGE_PROBE_K = 3
+
+
+def flatten_text(value) -> str:
+    """Aplatit une valeur de réponse du modèle en texte lisible.
+
+    Les prompts demandent une chaîne, mais le modèle rend régulièrement un
+    objet — « {'delais': "…", 'modalites_calcul': "…"} ». Le repli précédent
+    était un `str()`, qui recopiait la syntaxe Python jusque dans le titre
+    affiché à l'écran.
+
+    Les clés sont des étiquettes que le modèle s'invente (`etapes_concretes`,
+    `conditions_eligibilite`) et que ses propres phrases reprennent déjà en
+    toutes lettres : on ne garde que les valeurs.
+    """
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, dict):
+        parts = (flatten_text(item) for item in value.values())
+    elif isinstance(value, (list, tuple)):
+        parts = (flatten_text(item) for item in value)
+    elif value is None:
+        return ""
+    else:
+        return str(value)
+    return " ; ".join(part for part in parts if part)
 
 
 class GapDetector:
@@ -100,8 +132,87 @@ class GapDetector:
         else:
             logger.info("[gaps] Strategy 5/5: Skipped (no semantic graph)")
 
+        logger.info("[gaps] Measuring coverage against the corpus...")
+        self._measure_coverage(gaps)
+
         logger.info("Gap detection found %d gaps", len(gaps))
         return gaps
+
+    # ------------------------------------------------------------------
+    # Coverage measurement
+    # ------------------------------------------------------------------
+
+    def _measure_coverage(self, gaps: list[GapReport]) -> None:
+        """Mesure la couverture de chaque lacune en interrogeant le corpus.
+
+        Trois stratégies posaient une constante (0.0, 0.0, 0.2) et deux autres
+        rangeaient sous « couverture » une fraîcheur ou un nombre de documents.
+        La colonne qui ordonne l'écran des lacunes était donc figée pour la
+        majorité des lignes, et incomparable d'un type à l'autre pour le reste :
+        annoncer « 0 % de couverture » sur un cluster de 121 documents est faux.
+        On pose ici la même question à toutes — que dit déjà le corpus de ce
+        sujet ? — avec le signal et l'échelle que QG/RAG utilise déjà.
+
+        LOW_COVERAGE est laissée de côté : elle mesure exactement cela, mais
+        question par question et vérifiée par le modèle, donc plus finement.
+        """
+        probes = [
+            (gap, self._probe(gap))
+            for gap in gaps
+            if gap.gap_type != GapReport.GapType.LOW_COVERAGE
+        ]
+        probes = [(gap, text) for gap, text in probes if text]
+        if not probes:
+            return
+
+        try:
+            vectors = self.llm.embed([text for _, text in probes])
+            results = self.vec_store.search_batch(
+                query_vectors=vectors,
+                tenant_id=str(self.tenant.id),
+                k=COVERAGE_PROBE_K,
+                project_id=str(self.project.id),
+            )
+        except Exception:
+            # Les constats sont déjà en base. Laisser remonter ferait échouer la
+            # phase, et la reprise les effacerait — pour un chiffre d'affichage.
+            logger.exception("[gaps] Coverage measurement failed, scores left unmeasured")
+            return
+
+        measured = [gap for gap, _ in probes]
+        for gap, hits in zip(measured, results):
+            gap.coverage_score = self._coverage_from(hits)
+        GapReport.objects.bulk_update(measured, ["coverage_score"])
+        logger.info("[gaps] Coverage measured for %d gaps", len(measured))
+
+    def _probe(self, gap: GapReport) -> str:
+        """Le sujet sur lequel interroger le corpus, selon ce que la lacune vise."""
+        evidence = gap.evidence or {}
+        if gap.gap_type == GapReport.GapType.CONCEPT_ISLAND:
+            return ", ".join(evidence.get("concepts", [])[:10])
+        if gap.gap_type == GapReport.GapType.WEAK_BRIDGE:
+            return " ".join(evidence.get("bridge", []))
+        if gap.gap_type == GapReport.GapType.MISSING_TOPIC:
+            return gap.title
+        # Orphelins et zones obsolètes portent sur un cluster entier : son
+        # libellé nomme le sujet, là où le titre du constat n'est qu'une
+        # étiquette (« Zone obsolète : … ») qui fausserait la sonde.
+        return gap.related_cluster.label if gap.related_cluster else ""
+
+    def _coverage_from(self, hits: list[dict]) -> float:
+        """Ramène les similarités remontées sur l'échelle 0-1 de la couverture.
+
+        Les bornes sont celles que QG/RAG applique déjà : sous
+        `similarity_auto_unanswered` le corpus est tenu pour muet, au-dessus de
+        `similarity_auto_answer` il répond. Réutiliser cet étalonnage évite un
+        second barème qui dirait autre chose du même corpus.
+        """
+        span = self.sim_auto_answer - self.sim_auto_unanswered
+        if not hits or span <= 0:
+            return 0.0
+        top = [hit.get("similarity", 0.0) for hit in hits[:COVERAGE_PROBE_K]]
+        mean = sum(top) / len(top)
+        return round(min(1.0, max(0.0, (mean - self.sim_auto_unanswered) / span)), 4)
 
     def _qg_rag_gaps(self, clusters: list[TopicCluster]) -> list[GapReport]:
         """Generate questions per cluster and check if documentation answers them."""
@@ -305,15 +416,12 @@ class GapDetector:
                     not coverage.get("answered", True)
                     or coverage.get("confidence", 1.0) < self.confidence_threshold
                 ):
-                    missing_info = coverage.get("missing_info", "")
-                    if not isinstance(missing_info, str):
-                        missing_info = str(missing_info)
                     unanswered.append(
                         {
-                            "question": q_info.get("question", ""),
+                            "question": flatten_text(q_info.get("question")),
                             "importance": q_info.get("importance", "medium"),
                             "confidence": coverage.get("confidence", 0.0),
-                            "missing_info": missing_info,
+                            "missing_info": flatten_text(coverage.get("missing_info")),
                         }
                     )
 
@@ -367,7 +475,6 @@ class GapDetector:
                     ),
                     severity="low",
                     related_cluster=cluster,
-                    coverage_score=min(1.0, cluster.doc_count / 5.0),
                     evidence={"doc_count": cluster.doc_count},
                 )
                 gaps.append(gap)
@@ -420,7 +527,6 @@ class GapDetector:
                     ),
                     severity="medium" if stale_ratio < 0.9 else "high",
                     related_cluster=cluster,
-                    coverage_score=1.0 - stale_ratio,
                     evidence={
                         "stale_count": stale,
                         "total_count": total,
@@ -480,7 +586,6 @@ class GapDetector:
                         description=data.get("description", ""),
                         severity="medium",
                         related_cluster=cluster,
-                        coverage_score=0.0,
                         evidence={"adjacent_clusters": neighbor_labels},
                     )
                     gaps.append(gap)
@@ -521,7 +626,6 @@ class GapDetector:
                             f"documentation principale."
                         ),
                         severity="medium" if len(comp) >= 2 else "low",
-                        coverage_score=0.0,
                         evidence={"concepts": concepts, "component_size": len(comp)},
                     )
                     gaps.append(gap)
@@ -548,7 +652,6 @@ class GapDetector:
                             f"relation renforcerait la couverture."
                         ),
                         severity="medium",
-                        coverage_score=0.2,
                         evidence={
                             "bridge": [src, dst],
                             "src_degree": src_degree,

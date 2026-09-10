@@ -74,7 +74,7 @@
     min-height: 0;
     overflow-y: auto;
     position: relative;
-    background: var(--color-surface-200);
+    background: var(--color-doc-bg);
   }
 
   .sc-doc-canvas-wrap {
@@ -85,7 +85,7 @@
 
   .sc-doc-canvas {
     max-width: 100%;
-    background: #fff;
+    background: var(--color-doc-page);
     box-shadow: var(--shadow-page);
   }
 
@@ -104,7 +104,7 @@
     font-family: var(--font-display);
     font-size: var(--text-15);
     font-weight: 600;
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
     border-bottom: 1px solid var(--color-line);
     padding-bottom: 5px;
     margin: 18px 0 10px;
@@ -124,7 +124,7 @@
     height: 34px;
     border-radius: 50%;
     border: 2.5px solid var(--color-surface-200);
-    border-top-color: var(--color-accent);
+    border-top-color: var(--color-accent-ink);
     animation: spin 1s linear infinite;
   }
 

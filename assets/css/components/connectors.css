@@ -120,7 +120,7 @@
   }
 
   .sc-conn-name:hover {
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
     text-decoration: none;
   }
 
@@ -232,7 +232,7 @@
     display: grid;
     place-items: center;
     background: var(--color-ok-bg);
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
   }
 
   .sc-conn-shield svg {
@@ -311,12 +311,12 @@
   }
 
   .sc-choice--pick:has(.sc-choice-input:checked) {
-    border-color: var(--color-accent);
+    border-color: var(--color-accent-ink);
     background: var(--color-ok-bg-warm);
   }
 
   .sc-choice--pick:has(.sc-choice-input:focus-visible) {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-accent-ink);
     outline-offset: 2px;
   }
 
@@ -370,7 +370,7 @@
   .sc-pager-link.is-active {
     background: var(--color-ink);
     border-color: var(--color-ink);
-    color: var(--color-surface);
+    color: var(--color-invert-ink);
     font-weight: 600;
   }
 

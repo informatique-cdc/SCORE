@@ -33,7 +33,11 @@
         var html = document.documentElement;
         try {
             var t = localStorage.getItem('ds-theme');
-            html.setAttribute('data-theme', (t === 'light' || t === 'dark') ? t : 'light');
+            // Pas de préférence stockée = « Système » : on suit le réglage de l'OS.
+            if (t !== 'light' && t !== 'dark') {
+                t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            html.setAttribute('data-theme', t);
             var r = localStorage.getItem('sc-rail');
             if (r === 'light' || r === 'dark') html.setAttribute('data-rail', r);
         } catch(e) {}
@@ -267,12 +271,6 @@
                     {% block page_lede %}{% endblock %}
                 </div>
                 <div class="sc-header-actions">
-                    <form method="post" action="{% url 'set_language' %}" class="sc-lang">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button type="submit" name="language" value="fr" class="sc-lang-btn {% if LANGUAGE_CODE == 'fr' %}is-active{% endif %}">FR</button>
-                        <button type="submit" name="language" value="en" class="sc-lang-btn {% if LANGUAGE_CODE == 'en' %}is-active{% endif %}">EN</button>
-                    </form>
                     {% block page_actions %}{% endblock %}
                 </div>
             </div>

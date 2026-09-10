@@ -74,11 +74,22 @@
   --color-ink-500: #6c717e;
   --color-ink-400: #9aa0ab;
 
+  /* Ce qui se pose sur --color-ink. Les deux basculent ensemble : en sombre
+     l'encre devient claire et cette couleur redevient foncée. */
+  --color-invert-ink: #ffffff;
+
   /* Panneau vedette : sombre dans les deux thèmes, donc distinct de --color-ink
      qui, lui, s'inverse. En clair les deux valent #14181a, ce qui masquait
      l'écart tant que le sombre n'était pas dessiné. */
   --color-feature-bg: #14181a;
   --color-feature-ink: #f1f2f4;
+
+  /* Lecteur de document : la page se détache d'un fond neutre plus soutenu. */
+  --color-doc-bg: #f0f1f4;
+  --color-doc-page: #ffffff;
+
+  --color-scrim: rgb(20 24 26 / 0.42);
+  --color-scrollbar: #c9ced8;
 
   /* ── Off-neutres chauds : ne pas fondre dans la rampe grise ── */
   --color-header-glass: rgb(246 245 241 / 0.86);
@@ -225,25 +236,78 @@
   --accent: #038141;
 }
 
-/* Palette sombre provisoire. La maquette ne décrit que le mode clair : ces valeurs
-   reprennent les tons sombres de l'ancienne feuille Bootstrap pour que le thème
-   existant reste utilisable, en attendant une vraie passe de design. */
+/* Palette sombre reprise du bloc [data-theme="dark"] de la maquette.
+   Attention à la rampe des surfaces : elle ne fait pas que s'inverser. En clair
+   50/100/200 s'enfoncent sous la surface ; en sombre 50 s'enfonce mais 100/200
+   remontent, parce qu'une surface se détache par la lumière et non par l'ombre. */
 [data-theme="dark"] {
   --color-page: #1f2024;
   --color-surface: #27282a;
-  --color-surface-50: #2b2c2f;
-  --color-surface-100: #303135;
-  --color-surface-200: #37383a;
-  --color-surface-300: #3f4043;
+  --color-surface-50: #232427;
+  --color-surface-100: #2e2f32;
+  --color-surface-200: #303133;
+  --color-surface-300: #3d3e42;
   --color-line: #37383a;
-  --color-line-300: #4a4b4f;
-  --color-line-400: #5a5b5f;
+  --color-line-300: #4a4c50;
+  /* Interpolé : la maquette n'a pas de jeton entre --sc-line-strong et --sc-ink-3. */
+  --color-line-400: #5c5f65;
   --color-ink: #f8f8f8;
-  --color-ink-700: #c9ccd1;
-  --color-ink-500: #9aa0ab;
-  --color-ink-400: #7e838d;
+  --color-ink-700: #c9ced8;
+  --color-ink-500: #9198a6;
+  --color-ink-400: #82868f;
+  --color-invert-ink: #1d1e21;
+
   --color-header-glass: rgb(31 32 36 / 0.86);
-  --color-warm-row: #2b2c2f;
+  --color-warm-row: #232427;
+
+  --color-feature-bg: #16171a;
+  --color-feature-ink: #f8f8f8;
+
+  --color-doc-bg: #1a1b1e;
+  --color-doc-page: #2e2f32;
+
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --color-scrollbar: #4a4c50;
+
+  /* Les tintes passent en voiles translucides : un aplat pastel posé sur un fond
+     sombre remonterait au premier plan. */
+  --color-danger-bg: rgb(220 53 69 / 0.16);
+  --color-danger-bg-deep: rgb(230 62 17 / 0.12);
+  --color-danger-line: rgb(220 53 69 / 0.28);
+  --color-danger-line-strong: rgb(230 62 17 / 0.4);
+  --color-danger-ink: #f87171;
+  --color-danger-ink-soft: #f8a99a;
+
+  --color-warn-bg: rgb(234 179 8 / 0.16);
+  --color-warn-line: rgb(234 179 8 / 0.28);
+  --color-warn-ink: #fbbf24;
+
+  --color-ok-bg: rgb(3 129 65 / 0.2);
+  --color-ok-bg-warm: rgb(3 129 65 / 0.14);
+  --color-ok-line: rgb(3 129 65 / 0.4);
+  --color-ok-ink: #4ade80;
+
+  --color-info-bg: rgb(96 165 250 / 0.16);
+  --color-info-ink: #60a5fa;
+  --color-llm-bg: rgb(139 92 246 / 0.18);
+  --color-llm-ink: #a78bfa;
+
+  --color-mark-bg: rgb(234 179 8 / 0.28);
+  --color-mark-line: rgb(251 191 36 / 0.45);
+
+  /* L'accent reste fixe — c'est une couleur de marque, toujours doublée de
+     blanc. Seul le vert écrit s'éclaircit pour rester lisible. */
+  --color-accent-ink: #4ade80;
+  --color-accent-hover: #86efac;
+
+  /* Les ombres portées ne peuvent plus être une encre bleutée diluée : sur un
+     fond sombre seule une ombre franche se voit. */
+  --shadow-page: 0 1px 3px rgb(0 0 0 / 0.45);
+  --shadow-thumb: 0 1px 3px rgb(0 0 0 / 0.5);
+  --shadow-legend: 0 2px 8px rgb(0 0 0 / 0.4);
+  --shadow-tip: 0 6px 20px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 8px 24px rgb(0 0 0 / 0.4);
+  --shadow-modal: 0 30px 80px rgb(0 0 0 / 0.6);
 }
 
 /* Le rail est le seul endroit de l'application où deux palettes complètes coexistent. */
@@ -269,4 +333,19 @@
   --rail-nav-hover-bg: rgb(255 255 255 / 0.45);
   --rail-nav-ink: #454c51;
   --rail-nav-active-ink: #14181a;
+}
+
+/* En thème sombre la maquette retire la bascule de contraste (showRailToggle vaut
+   theme === 'light') et sert le rail sombre quel que soit le réglage : un rail
+   crème contre une page anthracite redeviendrait la surface la plus lumineuse de
+   l'écran. Le bouton est masqué dans shell.css. */
+[data-theme="dark"][data-rail] {
+  --rail-bg: #16171a;
+  --rail-ink: #f8f8f8;
+  --rail-line: rgb(255 255 255 / 0.12);
+  --rail-soft: rgb(255 255 255 / 0.06);
+  --rail-nav-active-bg: rgb(255 255 255 / 0.13);
+  --rail-nav-hover-bg: rgb(255 255 255 / 0.07);
+  --rail-nav-ink: rgb(248 248 248 / 0.7);
+  --rail-nav-active-ink: #ffffff;
 }

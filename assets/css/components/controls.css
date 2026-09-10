@@ -46,14 +46,34 @@
     padding: 8px 13px;
     border-radius: var(--radius-9);
     background: var(--color-ink);
-    color: #fff;
+    color: var(--color-invert-ink);
     font-size: var(--text-12);
     font-weight: 500;
   }
 
   .sc-btn--ink:hover:not(:disabled) {
     filter: brightness(1.4);
-    color: #fff;
+    color: var(--color-invert-ink);
+  }
+
+  /* Jumeau détouré de --ink, pour les paires d'actions posées dans une fiche.
+     Le trait de 1px est déduit du rembourrage (7+1 = 8, 12+1 = 13) : sans cette
+     compensation le bouton secondaire dépasse le principal de deux pixels et la
+     ligne d'actions paraît de guingois. --secondary, lui, est calibré pour les
+     en-têtes de page et reste d'un cran plus grand. */
+  .sc-btn--outline {
+    padding: 7px 12px;
+    border-radius: var(--radius-9);
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+    color: var(--color-ink-700);
+    font-size: var(--text-12);
+    font-weight: 500;
+  }
+
+  .sc-btn--outline:hover:not(:disabled) {
+    border-color: var(--color-ink);
+    color: var(--color-ink-700);
   }
 
   .sc-btn--secondary {
@@ -82,6 +102,14 @@
     font-size: var(--text-12);
   }
 
+  /* --sm reprend le rembourrage à son compte et annule donc la compensation du
+     trait faite par --outline. Il faut la refaire ici (6+1 = 7, 11+1 = 12),
+     sinon le couple --ink / --outline se désaligne de deux pixels au petit
+     gabarit. Déclaré après --sm : à spécificité égale, l'ordre tranche. */
+  .sc-btn--outline.sc-btn--sm {
+    padding: 6px 11px;
+  }
+
   .sc-btn--tonal {
     padding: 7px 11px;
     border-radius: var(--radius-9);
@@ -99,12 +127,12 @@
   .sc-btn--link {
     padding: 0;
     font-size: var(--text-12);
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
   }
 
   .sc-btn--link:hover:not(:disabled) {
     text-decoration: underline;
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
   }
 
   .sc-btn--on-dark {
@@ -174,8 +202,8 @@
   }
 
   .sc-icon-btn--confirm:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+    border-color: var(--color-accent-ink);
+    color: var(--color-accent-ink);
   }
 
   .sc-icon-btn--danger:hover {
@@ -236,7 +264,7 @@
   .sc-input:focus,
   .sc-textarea:focus,
   .sc-select:focus {
-    border-color: var(--color-accent);
+    border-color: var(--color-accent-ink);
   }
 
   .sc-input::placeholder,
@@ -286,7 +314,7 @@
 
   .sc-segment.is-active {
     background: var(--color-ink);
-    color: #fff;
+    color: var(--color-invert-ink);
   }
 
   /* ── Pilules de filtre ── */
@@ -312,7 +340,7 @@
   .sc-pill.is-active {
     background: var(--color-ink);
     border-color: var(--color-ink);
-    color: var(--color-surface);
+    color: var(--color-invert-ink);
   }
 
   /* ── Barre d'actions groupées ── */
@@ -322,8 +350,8 @@
     gap: 10px;
     padding: 6px 8px 6px 14px;
     border-radius: 999px;
-    background: var(--color-ink);
-    color: var(--color-surface-200);
+    background: var(--color-feature-bg);
+    color: var(--color-feature-ink);
     font-size: var(--text-12);
     animation: rise 0.3s ease both;
   }
@@ -399,7 +427,7 @@
   }
   .sc-tag--ok {
     background: var(--color-ok-bg);
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
   }
   .sc-tag--info {
     background: var(--color-info-bg);
@@ -423,7 +451,7 @@
     position: fixed;
     inset: 0;
     z-index: 60;
-    background: rgb(20 24 26 / 0.42);
+    background: var(--color-scrim);
     backdrop-filter: blur(3px);
     display: grid;
     place-items: center;
@@ -492,7 +520,7 @@
     position: fixed;
     inset: 0;
     z-index: 55;
-    background: rgb(20 24 26 / 0.42);
+    background: var(--color-scrim);
     backdrop-filter: blur(3px);
     animation: var(--animate-fade);
   }
@@ -576,7 +604,7 @@
   }
 
   .sc-tenant-item.is-active {
-    border-color: var(--color-accent);
+    border-color: var(--color-accent-ink);
     background: var(--color-ok-bg-warm);
   }
 
@@ -631,7 +659,7 @@
 
   .sc-choice:hover,
   .sc-choice.is-active {
-    border-color: var(--color-accent);
+    border-color: var(--color-accent-ink);
     text-decoration: none;
     color: inherit;
   }
@@ -666,8 +694,8 @@
   }
 
   .sc-empty-tile:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+    border-color: var(--color-accent-ink);
+    color: var(--color-accent-ink);
     text-decoration: none;
   }
 

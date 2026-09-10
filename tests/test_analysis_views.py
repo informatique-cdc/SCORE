@@ -532,3 +532,63 @@ class TestBatchResolve:
         assert resp.status_code == 302
         g1.refresh_from_db()
         assert g1.resolution == "kept"
+
+
+# ---------------------------------------------------------------------------
+# Résultats — cartes de constats
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestFindingCards:
+    """The four cards render the design-system mini-bars, not an ECharts canvas."""
+
+    def test_distribution_renders_as_minibars(self, setup):
+        user, tenant, project, _ = setup
+        job = _make_job(tenant, project)
+        for action in ("merge", "merge", "delete_older"):
+            DuplicateGroup.objects.create(
+                tenant=tenant, project=project, analysis_job=job, recommended_action=action
+            )
+        client = _client(user, tenant, project)
+
+        html = client.get(f"/analysis/{job.id}/_results/").content.decode()
+
+        assert 'class="sc-minibars"' in html
+        assert "sc-minibar sc-fill--b" in html  # Fusionner
+        assert "sc-minibar sc-fill--e" in html  # Supprimer l'ancien
+        assert "--sc-fill: 100%" in html
+        assert "--sc-fill: 50%" in html
+
+    def test_the_note_carries_the_counts_the_bars_no_longer_label(self, setup):
+        user, tenant, project, _ = setup
+        job = _make_job(tenant, project)
+        DuplicateGroup.objects.create(
+            tenant=tenant, project=project, analysis_job=job, recommended_action="merge"
+        )
+        client = _client(user, tenant, project)
+
+        html = client.get(f"/analysis/{job.id}/_results/").content.decode()
+
+        assert "1 Fusionner" in html
+
+    def test_no_chart_canvas_is_left_behind(self, setup):
+        user, tenant, project, _ = setup
+        job = _make_job(tenant, project)
+        client = _client(user, tenant, project)
+
+        html = client.get(f"/analysis/{job.id}/_results/").content.decode()
+
+        assert "chart-dup-action" not in html
+        assert "compactPie" not in html
+        assert "compactBar" not in html
+
+    def test_empty_state_is_kept_when_nothing_was_found(self, setup):
+        user, tenant, project, _ = setup
+        job = _make_job(tenant, project)
+        client = _client(user, tenant, project)
+
+        html = client.get(f"/analysis/{job.id}/_results/").content.decode()
+
+        assert "aucun doublon détecté" in html
+        assert 'class="sc-minibars"' not in html

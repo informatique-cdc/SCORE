@@ -115,7 +115,7 @@
   }
 
   .sc-auth-foot a {
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
   }
 
   .sc-auth-foot-sep {
@@ -178,7 +178,7 @@
   .sc-auth input:focus,
   .sc-auth select:focus,
   .sc-auth textarea:focus {
-    border-color: var(--color-accent);
+    border-color: var(--color-accent-ink);
   }
 
   .sc-auth input::placeholder,

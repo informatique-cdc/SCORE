@@ -1,0 +1,116 @@
+{% load i18n analysis_ui %}
+{% comment %}Incluse par hallucinations.html (1re page) et par
+_hallucinations_page.html (pages suivantes chargées par Turbo).{% endcomment %}
+<article class="sc-finding sc-hallu {% if report.resolution == 'resolved' %}is-resolved{% endif %}">
+
+    <div class="sc-hallu-body">
+        <div class="sc-hallu-term">
+            {% if can_edit %}
+            <input type="checkbox" class="sc-check" form="batch-form" name="selected" value="{{ report.pk }}" data-finding-check aria-label="{% trans "Sélectionner ce constat" %}">
+            {% endif %}
+            <span class="sc-term">{{ report.term|default:report.title }}</span>
+            <span class="sc-hallu-type">{{ report.get_risk_type_display }}</span>
+            <span class="sc-tag sc-tag--sev-{{ report.severity|severity_level }}">{{ report.get_severity_display }}</span>
+            {% if report.resolution == 'resolved' %}
+            <span class="sc-tag sc-tag--ok">{% trans "Traité" %}</span>
+            {% elif report.resolution == 'kept' %}
+            <span class="sc-tag sc-tag--info">{% trans "Conservé" %}</span>
+            {% endif %}
+        </div>
+
+        <p class="sc-finding-detail">{{ report.description }}</p>
+
+        {% if report.expansions or report.evidence.examples %}
+        <div class="sc-hallu-meta mt-2.5 gap-1.5">
+            {% if report.expansions %}
+            <button type="button" class="sc-evidence-toggle w-auto" data-disclosure="hallu-exp-{{ report.pk }}" aria-expanded="false">
+                <svg class="size-3 shrink-0" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 2.5h5.5L10 5v4.5a1 1 0 01-1 1H3a1 1 0 01-1-1v-6a1 1 0 011-1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+                    <path d="M4 6.5h4M4 8.25h2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+                </svg>
+                <span>{% trans "Définitions trouvées" %} ({{ report.expansions|length }})</span>
+            </button>
+            {% endif %}
+            {% if report.evidence.examples %}
+            <button type="button" class="sc-evidence-toggle w-auto" data-disclosure="hallu-ex-{{ report.pk }}" aria-expanded="false">
+                <svg class="size-3 shrink-0" viewBox="0 0 12 12" fill="none">
+                    <path d="M3 3.5h6M3 6h6M3 8.5h3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+                </svg>
+                <span>{% trans "Exemples de contexte" %} ({{ report.evidence.examples|length }})</span>
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="sc-hallu-risk">
+        <div class="sc-hallu-risk-head">
+            <span class="sc-hallu-risk-label">{% trans "Risque" %}</span>
+            <span class="sc-hallu-risk-value sc-ink--{{ report.risk_score|duplicate_severity }}">{{ report.risk_score|percent }}</span>
+        </div>
+        <div class="sc-hallu-risk-track">
+            <div class="sc-hallu-risk-fill sc-fill--{{ report.risk_score|duplicate_severity }}" style="--sc-fill: {{ report.risk_score|percent }}%"></div>
+        </div>
+        <div class="sc-hallu-meta">
+            <span>{% blocktrans count n=report.doc_count %}{{ n }} document{% plural %}{{ n }} documents{% endblocktrans %}</span>
+            {% if report.expansions %}
+            <span>{% blocktrans count n=report.expansions|length %}{{ n }} définition trouvée{% plural %}{{ n }} définitions trouvées{% endblocktrans %}</span>
+            {% else %}
+            <span>{% trans "aucune définition trouvée" %}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="sc-hallu-actions">
+        {% if can_edit %}
+        {% if report.resolution != 'resolved' %}
+        <button type="submit" form="single-{{ report.pk }}" name="resolution" value="resolved" class="sc-btn sc-btn--ink sc-btn--sm" data-tip="{% trans "Marquer comme traité" %}">{% trans "Traité" %}</button>
+        {% endif %}
+        {% if report.resolution != 'kept' %}
+        <button type="submit" form="single-{{ report.pk }}" name="resolution" value="kept" class="sc-btn sc-btn--outline sc-btn--sm" data-tip="{% trans "Conserver tel quel" %}">{% trans "Conserver" %}</button>
+        {% endif %}
+        {% if report.resolution %}
+        <button type="submit" form="single-{{ report.pk }}" name="resolution" value="" class="sc-btn sc-btn--outline sc-btn--sm" data-tip="{% trans "Réinitialiser" %}">{% trans "Annuler" %}</button>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    {% if report.expansions %}
+    <div class="sc-hallu-panel" data-disclosure-panel="hallu-exp-{{ report.pk }}" hidden>
+        <div class="sc-evidence">
+            <div class="sc-evidence-head">
+                <span class="sc-eyebrow">{% trans "Définitions trouvées" %}</span>
+                <span class="flex-1"></span>
+                <button type="button" class="sc-icon-btn" data-disclosure="hallu-exp-{{ report.pk }}" aria-label="{% trans "Fermer" %}">✕</button>
+            </div>
+            <div class="sc-evidence-cell grid gap-2.5">
+                {% for exp in report.expansions %}
+                <div class="grid gap-1">
+                    <span class="text-13 font-semibold">{{ exp.expansion }}</span>
+                    {% if exp.doc_titles %}
+                    <span class="sc-finding-detail">{% for dt in exp.doc_titles %}{{ dt }}{% if not forloop.last %} · {% endif %}{% endfor %}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if report.evidence.examples %}
+    <div class="sc-hallu-panel" data-disclosure-panel="hallu-ex-{{ report.pk }}" hidden>
+        <div class="sc-evidence">
+            <div class="sc-evidence-head">
+                <span class="sc-eyebrow">{% trans "Exemples de contexte" %}</span>
+                <span class="flex-1"></span>
+                <button type="button" class="sc-icon-btn" data-disclosure="hallu-ex-{{ report.pk }}" aria-label="{% trans "Fermer" %}">✕</button>
+            </div>
+            <div class="sc-evidence-cell grid gap-2.5">
+                {% for ex in report.evidence.examples %}
+                <p class="sc-finding-detail">{{ ex|truncatechars:250 }}</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</article>

@@ -417,6 +417,13 @@ def _analysis_progress_page_context(job):
     return ctx
 
 
+# À incrémenter dès que la forme du contexte mis en cache change. La clé n'est
+# versionnée que par projet : sans ce repère, un déploiement qui renomme une
+# variable sert l'ancien dictionnaire pendant 24 h et les cartes retombent sur
+# leur état vide alors que les compteurs, eux, sont bons.
+_RESULTS_SCHEMA = 2
+
+
 def _analysis_results_context(job):
     """Contexte des compteurs KPI et de leurs répartitions."""
     should_poll = job.status in (AnalysisJob.Status.QUEUED, AnalysisJob.Status.RUNNING)
@@ -445,7 +452,11 @@ def _analysis_results_context(job):
 
     # Pendant que le pipeline tourne, les compteurs bougent à chaque sondage sans
     # que la version du projet change : on ne mémorise que les jobs à l'arrêt.
-    ctx = build() if should_poll else cached("results", job.project, build, job.id, job.status)
+    ctx = (
+        build()
+        if should_poll
+        else cached("results", job.project, build, _RESULTS_SCHEMA, job.id, job.status)
+    )
     return {**ctx, "job": job, "should_poll": should_poll}
 
 

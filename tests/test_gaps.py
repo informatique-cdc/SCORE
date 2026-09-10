@@ -9,7 +9,7 @@ from django.utils import timezone
 
 pytest.importorskip("openai", reason="openai not installed")
 
-from analysis.gaps import GapDetector  # noqa: E402
+from analysis.gaps import GapDetector, flatten_text  # noqa: E402
 from analysis.models import ClusterMembership, GapReport, TopicCluster
 from tests.conftest import make_chunk, make_document, make_llm_response, random_embedding
 
@@ -73,13 +73,15 @@ class TestOrphanTopics:
         gaps = det._orphan_topics([cluster])
         assert len(gaps) == 0
 
-    def test_orphan_coverage_score(self, tenant, project, analysis_job):
+    def test_detector_does_not_invent_a_coverage_score(self, tenant, project, analysis_job):
+        """Un nombre de documents n'est pas une couverture ; _measure_coverage tranche."""
         cluster = _make_cluster(tenant, project, analysis_job, label="Small", doc_count=2)
         det = _make_detector(tenant, analysis_job, project, orphan_max_size=2)
 
         gaps = det._orphan_topics([cluster])
         assert len(gaps) == 1
-        assert gaps[0].coverage_score == pytest.approx(2.0 / 5.0)
+        assert gaps[0].coverage_score is None
+        assert gaps[0].evidence["doc_count"] == 2
 
     def test_zero_doc_count_skipped(self, tenant, project, analysis_job):
         cluster = _make_cluster(tenant, project, analysis_job, label="Empty", doc_count=0)
@@ -465,3 +467,273 @@ class TestGetAdjacentClusters:
         det = _make_detector(tenant, analysis_job, project)
         adjacent = det._get_adjacent_clusters(no_centroid, [no_centroid, other])
         assert adjacent == []
+
+
+# ---------------------------------------------------------------------------
+# Coverage measurement
+# ---------------------------------------------------------------------------
+
+
+def _gap(tenant, project, analysis_job, gap_type, **kwargs):
+    return GapReport.objects.create(
+        tenant=tenant,
+        project=project,
+        analysis_job=analysis_job,
+        gap_type=gap_type,
+        title=kwargs.pop("title", "Titre"),
+        description=kwargs.pop("description", "Description"),
+        severity="medium",
+        **kwargs,
+    )
+
+
+@pytest.mark.django_db
+class TestProbe:
+    """Chaque stratégie vise autre chose ; la sonde doit interroger le bon sujet."""
+
+    def test_concept_island_probes_its_concepts(self, tenant, project, analysis_job):
+        det = _make_detector(tenant, analysis_job, project)
+        gap = _gap(
+            tenant,
+            project,
+            analysis_job,
+            GapReport.GapType.CONCEPT_ISLAND,
+            evidence={"concepts": ["ayant droit", "orphelin"]},
+        )
+
+        assert det._probe(gap) == "ayant droit, orphelin"
+
+    def test_weak_bridge_probes_both_ends(self, tenant, project, analysis_job):
+        det = _make_detector(tenant, analysis_job, project)
+        gap = _gap(
+            tenant,
+            project,
+            analysis_job,
+            GapReport.GapType.WEAK_BRIDGE,
+            evidence={"bridge": ["PASS", "plafond"]},
+        )
+
+        assert det._probe(gap) == "PASS plafond"
+
+    def test_cluster_gap_probes_the_label_not_the_prefixed_title(
+        self, tenant, project, analysis_job
+    ):
+        """« Zone obsolète : X » fausserait la sonde ; le libellé du cluster nomme le sujet."""
+        cluster = _make_cluster(tenant, project, analysis_job, label="Cotisations")
+        det = _make_detector(tenant, analysis_job, project)
+        gap = _gap(
+            tenant,
+            project,
+            analysis_job,
+            GapReport.GapType.STALE_AREA,
+            title="Zone obsolète : Cotisations",
+            related_cluster=cluster,
+        )
+
+        assert det._probe(gap) == "Cotisations"
+
+    def test_missing_topic_probes_the_suggested_title(self, tenant, project, analysis_job):
+        cluster = _make_cluster(tenant, project, analysis_job, label="Retraite")
+        det = _make_detector(tenant, analysis_job, project)
+        gap = _gap(
+            tenant,
+            project,
+            analysis_job,
+            GapReport.GapType.MISSING_TOPIC,
+            title="Cumul emploi-retraite à l'étranger",
+            related_cluster=cluster,
+        )
+
+        assert det._probe(gap) == "Cumul emploi-retraite à l'étranger"
+
+
+@pytest.mark.django_db
+class TestCoverageFrom:
+    """L'échelle réutilise les bornes que QG/RAG applique déjà."""
+
+    def test_silent_corpus_scores_zero(self, tenant, project, analysis_job):
+        det = _make_detector(tenant, analysis_job, project)
+        assert det._coverage_from([{"similarity": 0.20}]) == 0.0
+
+    def test_answering_corpus_saturates_at_one(self, tenant, project, analysis_job):
+        det = _make_detector(tenant, analysis_job, project)
+        assert det._coverage_from([{"similarity": 0.95}]) == 1.0
+
+    def test_midpoint_lands_mid_scale(self, tenant, project, analysis_job):
+        det = _make_detector(tenant, analysis_job, project)
+        midpoint = (0.35 + 0.82) / 2
+
+        assert det._coverage_from([{"similarity": midpoint}]) == pytest.approx(0.5, abs=1e-3)
+
+    def test_one_close_passage_does_not_make_a_coverage(self, tenant, project, analysis_job):
+        """La moyenne sur trois empêche un extrait chanceux de porter le score."""
+        det = _make_detector(tenant, analysis_job, project)
+
+        lone = det._coverage_from(
+            [{"similarity": 0.95}, {"similarity": 0.30}, {"similarity": 0.30}]
+        )
+        broad = det._coverage_from(
+            [{"similarity": 0.95}, {"similarity": 0.90}, {"similarity": 0.88}]
+        )
+
+        assert lone < broad
+
+    def test_no_hits_scores_zero(self, tenant, project, analysis_job):
+        det = _make_detector(tenant, analysis_job, project)
+        assert det._coverage_from([]) == 0.0
+
+
+@pytest.mark.django_db
+class TestMeasureCoverage:
+    def test_writes_a_measured_score_to_the_database(self, tenant, project, analysis_job):
+        det = _make_detector(tenant, analysis_job, project)
+        gap = _gap(
+            tenant,
+            project,
+            analysis_job,
+            GapReport.GapType.CONCEPT_ISLAND,
+            evidence={"concepts": ["ayant droit"]},
+        )
+        det.llm.embed.return_value = [random_embedding().tolist()]
+        det.vec_store.search_batch.return_value = [[{"similarity": 0.82}]]
+
+        det._measure_coverage([gap])
+
+        gap.refresh_from_db()
+        assert gap.coverage_score == 1.0
+
+    def test_leaves_the_llm_measured_type_alone(self, tenant, project, analysis_job):
+        """LOW_COVERAGE mesure déjà cela, question par question et vérifié."""
+        det = _make_detector(tenant, analysis_job, project)
+        gap = _gap(
+            tenant,
+            project,
+            analysis_job,
+            GapReport.GapType.LOW_COVERAGE,
+            coverage_score=0.0,
+        )
+
+        det._measure_coverage([gap])
+
+        gap.refresh_from_db()
+        assert gap.coverage_score == 0.0
+        det.llm.embed.assert_not_called()
+
+    def test_a_failed_measurement_keeps_the_findings(self, tenant, project, analysis_job):
+        """Les constats sont en base : une panne d'embedding ne doit pas couler la phase."""
+        det = _make_detector(tenant, analysis_job, project)
+        gap = _gap(
+            tenant,
+            project,
+            analysis_job,
+            GapReport.GapType.CONCEPT_ISLAND,
+            evidence={"concepts": ["ayant droit"]},
+        )
+        det.llm.embed.side_effect = RuntimeError("embedding endpoint down")
+
+        det._measure_coverage([gap])
+
+        gap.refresh_from_db()
+        assert gap.coverage_score is None
+
+    def test_gaps_without_a_subject_are_skipped(self, tenant, project, analysis_job):
+        det = _make_detector(tenant, analysis_job, project)
+        gap = _gap(tenant, project, analysis_job, GapReport.GapType.CONCEPT_ISLAND, evidence={})
+
+        det._measure_coverage([gap])
+
+        det.llm.embed.assert_not_called()
+        gap.refresh_from_db()
+        assert gap.coverage_score is None
+
+
+# ---------------------------------------------------------------------------
+# flatten_text
+# ---------------------------------------------------------------------------
+
+
+class TestFlattenText:
+    """Le modèle rend parfois un objet là où le prompt demande une chaîne."""
+
+    def test_plain_string_is_kept(self):
+        assert flatten_text("  Délais de traitement  ") == "Délais de traitement"
+
+    def test_dict_keeps_the_sentences_and_drops_the_invented_keys(self):
+        value = {
+            "conditions_eligibilite": "Critères précis d'éligibilité.",
+            "modalites_calcul": "Formule de calcul détaillée.",
+        }
+
+        assert (
+            flatten_text(value) == "Critères précis d'éligibilité. ; Formule de calcul détaillée."
+        )
+
+    def test_list_is_joined(self):
+        assert flatten_text(["Délais", "Interlocuteurs"]) == "Délais ; Interlocuteurs"
+
+    def test_nested_structures_are_flattened(self):
+        value = {"etapes": ["Formulaire à compléter", "Pièces à fournir"]}
+
+        assert flatten_text(value) == "Formulaire à compléter ; Pièces à fournir"
+
+    def test_no_python_syntax_survives(self):
+        """C'est tout l'objet du correctif : plus de repr dans le titre affiché."""
+        rendered = flatten_text({"a": ["x", "y"], "b": "z"})
+
+        for token in ("{", "}", "[", "]", "'", '"'):
+            assert token not in rendered
+
+    def test_empty_parts_are_dropped(self):
+        assert flatten_text({"a": "", "b": "Reste", "c": None}) == "Reste"
+
+    def test_none_becomes_empty(self):
+        assert flatten_text(None) == ""
+
+    def test_number_is_stringified(self):
+        assert flatten_text(10) == "10"
+
+
+@pytest.mark.django_db
+class TestQGRagTitleStaysReadable:
+    def test_structured_missing_info_does_not_leak_into_the_title(
+        self, tenant, project, connector, analysis_job
+    ):
+        cluster = _make_cluster(tenant, project, analysis_job, label="Congés")
+        det = _make_detector(tenant, analysis_job, project, question_count=1)
+        det.llm.chat_batch_or_concurrent.side_effect = [
+            [
+                make_llm_response(
+                    json.dumps({"questions": [{"question": "Q1 ?", "importance": "high"}]})
+                )
+            ],
+            [
+                make_llm_response(
+                    json.dumps(
+                        {
+                            "answered": False,
+                            "confidence": 0.1,
+                            "missing_info": {
+                                "delais": "Délais de préavis.",
+                                "etapes": ["Formulaire"],
+                            },
+                        }
+                    )
+                )
+            ],
+        ]
+        det.llm.embed.return_value = [random_embedding().tolist()]
+        det.vec_store.search_batch.return_value = [
+            [{"similarity": 0.5, "chunk_id": "c", "document_id": "d"}]
+        ]
+
+        doc = make_document(tenant, project, connector, title="Doc")
+        chunk = make_chunk(tenant, doc, 0, "Contenu")
+        det.vec_store.search_batch.return_value = [
+            [{"similarity": 0.5, "chunk_id": str(chunk.id), "document_id": str(doc.id)}]
+        ]
+
+        gaps = det._qg_rag_gaps([cluster])
+
+        assert len(gaps) == 1
+        assert gaps[0].title == "Manquant : Délais de préavis. ; Formulaire"
+        assert "{" not in gaps[0].title

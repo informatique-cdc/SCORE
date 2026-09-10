@@ -222,6 +222,9 @@ MAX_GRAPH_SEEDS = 8
 MAX_GRAPH_RELATIONS = 20
 
 
+MAX_EVIDENCE_PER_RELATION = 2
+
+
 def graph_rag_context(question, project, sources=None):
     """Extract relational context from the knowledge graph.
 
@@ -233,7 +236,11 @@ def graph_rag_context(question, project, sources=None):
     retrieval: it surfaces relations about the very documents being cited.
 
     Falls back to the nsg concept graph for projects analysed before the
-    knowledge graph existed. Returns "" when neither is available.
+    knowledge graph existed. Returns None when neither is available.
+
+    Returns a dict with the prompt fragment *and* the relations behind it, each
+    carrying its source documents and snippets. The caller needs both: the graph
+    is worthless to the user if it can only be read as an opaque block of prompt.
     """
     from analysis.models import KGRelation, KnowledgeGraphRun
 
@@ -243,19 +250,20 @@ def graph_rag_context(question, project, sources=None):
 
     seeds = _graph_seeds(run, question, sources)
     if not seeds:
-        return ""
+        return None
 
     candidates = (
         KGRelation.objects.filter(run=run)
         .filter(Q(subject__in=seeds) | Q(object__in=seeds))
         .select_related("subject", "object")
+        .prefetch_related("documents")
         # Observed first, then heaviest: an inferred edge must never crowd out
         # something the corpus actually states.
         .order_by("inferred", "-weight", "-confidence")[: MAX_GRAPH_RELATIONS * 6]
     )
     relations = _spread_over_seeds(candidates, {e.id for e in seeds})
     if not relations:
-        return ""
+        return None
 
     lines = [
         f"  {r.subject.label} —[{r.predicate}]→ {r.object.label}"
@@ -268,10 +276,62 @@ def graph_rag_context(question, project, sources=None):
         len(relations),
         project.id,
     )
-    return get_prompt("KG_GRAPH_CONTEXT").format(
+    prompt = get_prompt("KG_GRAPH_CONTEXT").format(
         entities=", ".join(e.label for e in seeds),
         relationships="\n".join(lines),
     )
+    return {
+        "prompt": prompt,
+        "seeds": [e.label for e in seeds],
+        "relations": [_relation_trace(r) for r in relations],
+    }
+
+
+def graph_trace_payload(traces):
+    """Fold graph contexts into the trace shown to the user and stored on the message.
+
+    The prompt fragment is dropped on purpose: it is an implementation detail of
+    the call, whereas the relations are the evidence the answer rests on.
+    """
+    seeds = []
+    relations = []
+    seen_seeds = set()
+    seen_relations = set()
+    for trace in traces:
+        if not trace:
+            continue
+        for seed in trace["seeds"]:
+            if seed not in seen_seeds:
+                seen_seeds.add(seed)
+                seeds.append(seed)
+        for relation in trace["relations"]:
+            key = (relation["subject"], relation["predicate"], relation["object"])
+            if key not in seen_relations:
+                seen_relations.add(key)
+                relations.append(relation)
+    if not relations:
+        return {}
+    return {"seeds": seeds, "relations": relations}
+
+
+def _relation_trace(relation):
+    """One edge, with the provenance that makes it checkable rather than asserted."""
+    return {
+        "subject": relation.subject.label,
+        "predicate": relation.predicate,
+        "object": relation.object.label,
+        "inferred": relation.inferred,
+        "inference_kind": relation.inference_kind,
+        "evidence": [str(e) for e in (relation.evidence or [])[:MAX_EVIDENCE_PER_RELATION]],
+        "documents": [
+            {
+                "document_id": str(doc.id),
+                "title": doc.title,
+                "connector_id": str(doc.connector_id) if doc.connector_id else "",
+            }
+            for doc in relation.documents.all()
+        ],
+    }
 
 
 def _spread_over_seeds(candidates, seed_ids, per_seed=3):
@@ -341,32 +401,47 @@ def _graph_seeds(run, question, sources):
 
 
 def _concept_graph_context(question, project):
-    """Legacy path: the nsg co-occurrence graph, whose edges carry no predicate."""
+    """Legacy path: the nsg co-occurrence graph, whose edges carry no provenance."""
     try:
         from analysis.semantic_graph import load_graph
 
         nsg = load_graph(str(project.id))
         if not nsg or nsg.graph.number_of_nodes() == 0:
-            return ""
+            return None
 
         subgraph = nsg.query_subgraph(question, top_k=5, hops=1, max_nodes=20)
         seeds = subgraph.get("seeds", [])
-        edges = subgraph.get("edges", [])
+        edges = subgraph.get("edges", [])[:15]
         if not seeds:
-            return ""
+            return None
 
         seed_labels = [s["concept"] for s in seeds[:5]]
-        rel_lines = []
-        for e in edges[:15]:
-            rel_lines.append(f"  {e['source']} —[{e['relation_type']}]→ {e['target']}")
+        rel_lines = [f"  {e['source']} —[{e['relation_type']}]→ {e['target']}" for e in edges]
 
-        return get_prompt("CONCEPT_CONTEXT").format(
+        prompt = get_prompt("CONCEPT_CONTEXT").format(
             seed_concepts=", ".join(seed_labels),
             relationships="\n".join(rel_lines) if rel_lines else "(aucune relation directe)",
         )
+        return {
+            "prompt": prompt,
+            "seeds": seed_labels,
+            # No documents and no evidence: co-occurrence edges are not sourced.
+            "relations": [
+                {
+                    "subject": e["source"],
+                    "predicate": e["relation_type"],
+                    "object": e["target"],
+                    "inferred": False,
+                    "inference_kind": "",
+                    "evidence": [],
+                    "documents": [],
+                }
+                for e in edges
+            ],
+        }
     except (ImportError, FileNotFoundError, AttributeError, ValueError):
         logger.debug("Graph RAG unavailable for project %s", project.id, exc_info=True)
-        return ""
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -489,6 +564,7 @@ def agentic_rag(question, tenant, project, history, llm, vec_store, max_steps=3)
     scratchpad_entries = []
     all_chunk_ids = set()
     all_doc_ids = set()
+    graph_traces = []
 
     for step in range(max_steps):
         # Build scratchpad text
@@ -521,7 +597,7 @@ def agentic_rag(question, tenant, project, history, llm, vec_store, max_steps=3)
 
         if action_type == "answer":
             answer_text = action.get("content", "")
-            return _finalize_agentic(answer_text, all_chunk_ids, all_doc_ids)
+            return _finalize_agentic(answer_text, all_chunk_ids, all_doc_ids, graph_traces)
 
         if action_type == "search":
             query = action.get("query", question)
@@ -540,9 +616,12 @@ def agentic_rag(question, tenant, project, history, llm, vec_store, max_steps=3)
 
         elif action_type == "search_graph":
             query = action.get("query", question)
-            ctx = graph_rag_context(query, project)
-            if ctx:
-                scratchpad_entries.append(f"Graphe de concepts pour « {query} » :\n{ctx}")
+            trace = graph_rag_context(query, project)
+            if trace:
+                graph_traces.append(trace)
+                scratchpad_entries.append(
+                    f"Graphe de concepts pour « {query} » :\n{trace['prompt']}"
+                )
             else:
                 scratchpad_entries.append(f"Graphe de concepts pour « {query} » : aucun résultat.")
 
@@ -561,10 +640,10 @@ def agentic_rag(question, tenant, project, history, llm, vec_store, max_steps=3)
         "Cite les sources [Nom du document] et ajoute 3 suggestions « >> »."
     )
     resp = llm.chat(fallback_prompt, temperature=0.3, max_tokens=2048)
-    return _finalize_agentic(resp.content, all_chunk_ids, all_doc_ids)
+    return _finalize_agentic(resp.content, all_chunk_ids, all_doc_ids, graph_traces)
 
 
-def _finalize_agentic(answer_text, all_chunk_ids, all_doc_ids):
+def _finalize_agentic(answer_text, all_chunk_ids, all_doc_ids, graph_traces):
     """Build the final response dict for agentic RAG."""
     from ingestion.models import Document
 
@@ -598,5 +677,6 @@ def _finalize_agentic(answer_text, all_chunk_ids, all_doc_ids):
     return {
         "answer": "\n".join(answer_lines).rstrip(),
         "sources": sources,
+        "graph_trace": graph_trace_payload(graph_traces),
         "suggestions": suggestions[:3],
     }

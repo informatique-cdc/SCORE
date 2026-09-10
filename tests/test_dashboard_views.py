@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.test import Client
 
 from dashboard.models import Feedback
+from dashboard.views import _spark_points, _spark_trend
 from tenants.models import Project, ProjectMembership, Tenant, TenantMembership
 
 
@@ -28,6 +29,32 @@ def _client(user, tenant, project):
     session["project_id"] = str(project.id)
     session.save()
     return c
+
+
+class TestSparkPoints:
+    def test_spans_the_full_band(self):
+        assert _spark_points([0, 5, 10]) == "0.0,24.0 60.0,13.0 120.0,2.0"
+
+    def test_flat_series_sits_mid_height(self):
+        assert _spark_points([4, 4, 4]) == "0.0,13.0 60.0,13.0 120.0,13.0"
+
+    def test_needs_two_points(self):
+        assert _spark_points([7]) == ""
+        assert _spark_points([]) == ""
+
+
+class TestSparkTrend:
+    def test_rise_is_flagged_orange(self):
+        assert _spark_trend([3, 8]) == {"label": "+5", "tone": "d"}
+
+    def test_drop_is_flagged_green(self):
+        assert _spark_trend([8, 3]) == {"label": "−5", "tone": "a"}
+
+    def test_no_change_is_stable(self):
+        assert _spark_trend([3, 3])["tone"] == "none"
+
+    def test_needs_two_points(self):
+        assert _spark_trend([3]) is None
 
 
 @pytest.mark.django_db

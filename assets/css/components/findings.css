@@ -13,6 +13,14 @@
     display: contents;
   }
 
+  /* Tant qu'elle n'est pas remplie, la frame doit garder une boîte : Turbo
+     déclenche le chargement paresseux via un IntersectionObserver, et une boîte
+     en `display: contents` mesure 0 × 0, donc n'entre jamais dans le viewport.
+     Sans cette exception, la page suivante ne se charge pas du tout. */
+  .sc-findings turbo-frame:not([complete]) {
+    display: block;
+  }
+
   /* ── Fiche de constat (contradictions, lacunes, hallucinations) ── */
   .sc-finding {
     background: var(--color-surface);
@@ -58,6 +66,196 @@
     color: var(--color-ink-500);
   }
 
+  /* ── Fiche de lacune ── */
+  /* Trois colonnes : le taux de couverture, le constat, les termes et actions.
+     Ce taux ordonne la page — il tient la première colonne pour que la liste se
+     lise en descendant les chiffres, sans entrer dans chaque fiche. */
+  .sc-gap {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) 220px;
+    gap: 20px;
+    align-items: center;
+  }
+
+  /* Les deux colonnes fixes et leurs gouttières occupent 356px : sous 1080px de
+     fenêtre, une fois le rail déduit, il ne reste pas de quoi lire le constat et
+     la fiche repasse en pile. Le seuil est en largeur de fenêtre comme le reste
+     de la feuille, le rail étant de largeur constante. */
+  @media (max-width: 1080px) {
+    .sc-gap {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    /* Empilé, le taux se relit en ligne : pleine largeur et centré, il cesserait
+       d'être le repère compact qui ouvre la fiche. */
+    .sc-gap-cov {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .sc-gap-cov-label {
+      margin-bottom: 0;
+    }
+
+    .sc-gap-cov-track {
+      flex: 1;
+    }
+  }
+
+  /* Le panneau de preuves se déplie sous les trois colonnes. */
+  .sc-gap-panel {
+    grid-column: 1 / -1;
+  }
+
+  /* `min-width: auto` est la valeur par défaut d'un élément de grille : sans
+     cette remise à zéro, un concept extrait sous forme d'URL encodée élargit sa
+     colonne et fait déborder la carte hors de la page. */
+  .sc-gap-body,
+  .sc-gap-side {
+    min-width: 0;
+  }
+
+  .sc-gap-body {
+    overflow-wrap: anywhere;
+  }
+
+  .sc-gap-cov {
+    text-align: center;
+  }
+
+  .sc-gap-cov-value {
+    font-family: var(--font-display);
+    font-size: var(--text-24);
+    font-weight: 600;
+    letter-spacing: var(--tracking-metric);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-gap-cov-label {
+    font-size: var(--text-10p5);
+    color: var(--color-ink-500);
+    margin-bottom: 7px;
+  }
+
+  .sc-gap-cov-track {
+    height: 5px;
+    border-radius: var(--radius-5);
+    background: var(--color-surface-200);
+    overflow: hidden;
+  }
+
+  /* Plancher de 3 % : à zéro le rail paraîtrait vide plutôt que vide de sens.
+     Le chiffre au-dessus reste la valeur exacte. */
+  .sc-gap-cov-fill {
+    height: 100%;
+    width: max(3%, var(--sc-fill, 0%));
+    border-radius: var(--radius-5);
+    transition: width 0.9s var(--ease-expo);
+  }
+
+  .sc-gap-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-bottom: 6px;
+  }
+
+  .sc-gap-cluster {
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+  }
+
+  .sc-gap-terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  .sc-gap-term {
+    max-width: 100%;
+    padding: 3px 8px;
+    border-radius: var(--radius-6);
+    background: var(--color-surface-100);
+    font-size: var(--text-11);
+    color: var(--color-ink-700);
+    overflow-wrap: anywhere;
+  }
+
+  .sc-gap-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* ── Fiche de contradiction ── */
+  /* En-tête, confrontation, pied d'actions. La confiance tient dans l'en-tête
+     sur une jauge fine : elle qualifie le constat sans lui disputer la place,
+     que se partagent les deux affirmations. */
+  .sc-contra-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .sc-contra-conf {
+    font-size: var(--text-12);
+    color: var(--color-ink-500);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-contra-conf-track {
+    flex: 1;
+    max-width: 120px;
+    height: 4px;
+    border-radius: var(--radius-4);
+    background: var(--color-surface-200);
+    overflow: hidden;
+  }
+
+  .sc-contra-conf-fill {
+    height: 100%;
+    width: var(--sc-fill, 0%);
+    transition: width 0.9s var(--ease-expo);
+  }
+
+  .sc-contra-state {
+    font-size: var(--text-11p5);
+    font-weight: 500;
+  }
+
+  /* Un constat encore ouvert est ce qui reste à faire : il se signale. */
+  .sc-contra-state--open {
+    color: var(--color-danger-ink);
+  }
+
+  .sc-contra-state--closed {
+    color: var(--color-accent-ink);
+  }
+
+  .sc-contra-foot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  /* Le dépliant de preuve est calibré pour les lignes de tableau, plus serrées.
+     Posé ici entre deux actions, il doit prendre leur gabarit : trois hauteurs
+     sur une même ligne se lisent comme un défaut d'alignement. */
+  .sc-contra-foot .sc-evidence-toggle {
+    padding: 7px 12px;
+    font-size: var(--text-12);
+  }
+
   /* ── Comparaison de deux affirmations contradictoires ── */
   .sc-claims {
     display: grid;
@@ -66,7 +264,11 @@
     gap: 0;
   }
 
+  /* `min-width: 0` : sans lui, la colonne `1fr` ne peut pas descendre sous la
+     largeur du nom de fichier source, qui est en `nowrap`. La carte débordait
+     alors de plus de cent pixels vers la droite, texte coupé au bord. */
   .sc-claim {
+    min-width: 0;
     padding: 14px 16px;
     border: 1px solid var(--color-surface-200);
     border-radius: var(--radius-14);
@@ -85,6 +287,11 @@
     text-transform: uppercase;
     color: var(--color-ink-500);
     margin-bottom: 6px;
+  }
+
+  /* Dit laquelle des deux fait foi, dans la teinte du cadre qui la porte. */
+  .sc-claim-ref {
+    color: var(--color-accent-ink);
   }
 
   .sc-claim-text {
@@ -120,8 +327,8 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: var(--color-ink);
-    color: var(--color-surface-200);
+    background: var(--color-feature-bg);
+    color: var(--color-feature-ink);
     display: grid;
     place-items: center;
     font-size: var(--text-12);
@@ -161,6 +368,116 @@
     font-family: var(--font-display);
     font-size: var(--text-16);
     font-weight: 600;
+  }
+
+  /* ── Fiche de risque d'hallucination ── */
+  /* Le terme et son explication, le risque chiffré, les actions. Le risque tient
+     sa propre colonne : c'est lui qui ordonne l'écran. */
+  .sc-hallu {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px 150px;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .sc-hallu-panel {
+    grid-column: 1 / -1;
+  }
+
+  /* Les termes relevés sont parfois des fragments collés sans espace. */
+  .sc-hallu-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sc-hallu-term {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+
+  .sc-hallu-type {
+    font-size: var(--text-11p5);
+    color: var(--color-ink-500);
+  }
+
+  .sc-hallu-risk {
+    min-width: 0;
+  }
+
+  .sc-hallu-risk-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .sc-hallu-risk-label {
+    font-size: var(--text-11);
+    color: var(--color-ink-500);
+  }
+
+  .sc-hallu-risk-value {
+    font-family: var(--font-display);
+    font-size: var(--text-15);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sc-hallu-risk-track {
+    height: 6px;
+    border-radius: var(--radius-6);
+    background: var(--color-surface-200);
+    overflow: hidden;
+  }
+
+  .sc-hallu-risk-fill {
+    height: 100%;
+    width: var(--sc-fill, 0%);
+    border-radius: var(--radius-6);
+    transition: width 0.9s var(--ease-expo);
+  }
+
+  .sc-hallu-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: var(--text-11);
+    color: var(--color-ink-400);
+  }
+
+  .sc-hallu-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  /* Même seuil que les lacunes : les 350px de colonnes fixes ne laissent plus de
+     quoi lire le constat une fois le rail déduit. Déclaré après les règles de
+     base — à spécificité égale, une requête média ne l'emporte pas d'elle-même. */
+  @media (max-width: 1080px) {
+    .sc-hallu {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .sc-hallu-actions {
+      justify-content: flex-start;
+    }
+  }
+
+  /* Bandeau d'ouverture : ce que l'écran mesure, et ce qu'il ne mesure pas. */
+  .sc-hallu-note {
+    font-size: var(--text-13p5);
+    line-height: var(--leading-claim);
+    max-width: 70ch;
+    text-wrap: pretty;
   }
 
   /* ── Paliers de sévérité ── */
@@ -315,7 +632,7 @@
 
   .sc-step.is-done .sc-step-n {
     background: var(--color-ink);
-    color: #fff;
+    color: var(--color-invert-ink);
   }
 
   .sc-step-label {
@@ -362,7 +679,7 @@
     margin-left: -7px;
     border-radius: 50%;
     background: #fff;
-    border: 2px solid var(--color-accent);
+    border: 2px solid var(--color-accent-ink);
     box-shadow: var(--shadow-thumb);
   }
 

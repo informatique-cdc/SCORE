@@ -50,6 +50,27 @@ def duplicate_severity(value):
 
 
 @register.filter
+def gap_terms(gap):
+    """Termes que la preuve rattache à la lacune, avec l'intitulé qui les décrit.
+
+    Les trois formes proviennent de détecteurs différents et ne désignent pas la
+    même chose : un îlot conceptuel liste ce qui est coupé du reste, un pont
+    fragile ses deux extrémités, un sujet manquant les voisins qui l'encadrent.
+    Un intitulé unique ferait lire les trois comme des manques.
+    """
+    evidence = gap.evidence or {}
+    for key, label in (
+        ("concepts", _("Concepts isolés")),
+        ("bridge", _("Concepts reliés")),
+        ("adjacent_clusters", _("Sujets voisins")),
+    ):
+        items = evidence.get(key)
+        if items:
+            return {"label": label, "items": [str(i) for i in items][:8]}
+    return None
+
+
+@register.filter
 def severity_level(value):
     """Normalise les libellés de sévérité vers high / medium / low."""
     key = str(value or "").lower()

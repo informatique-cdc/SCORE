@@ -34,105 +34,17 @@
         </div>
     </section>
 
+    {% url 'analysis-duplicates' job.pk as dup_url %}
+    {% url 'analysis-contradictions' job.pk as contra_url %}
+    {% url 'analysis-gaps' job.pk as gap_url %}
+    {% url 'analysis-hallucinations' job.pk as hallu_url %}
     <section class="grid grid-cols-4 gap-3">
-        <a href="{% url 'analysis-duplicates' job.pk %}" class="sc-kpi" data-turbo-frame="_top">
-            <div class="sc-kpi-head">
-                <span class="sc-kpi-label">{% trans "Doublons" %}</span>
-                <span class="sc-kpi-dot sc-fill--d"></span>
-            </div>
-            <div class="sc-kpi-value"><span class="sc-metric">{{ dup_count }}</span></div>
-            {% if dup_count %}
-            <div id="chart-dup-action" class="h-[92px] w-full"></div>
-            {% else %}
-            <div class="sc-kpi-note">{% trans "aucun doublon détecté" %}</div>
-            {% endif %}
-        </a>
-
-        <a href="{% url 'analysis-contradictions' job.pk %}" class="sc-kpi" data-turbo-frame="_top">
-            <div class="sc-kpi-head">
-                <span class="sc-kpi-label">{% trans "Contradictions" %}</span>
-                <span class="sc-kpi-dot sc-fill--e"></span>
-            </div>
-            <div class="sc-kpi-value"><span class="sc-metric">{{ contra_count }}</span></div>
-            {% if contra_count %}
-            <div id="chart-contra-severity" class="h-[92px] w-full"></div>
-            {% else %}
-            <div class="sc-kpi-note">{% trans "aucune détectée" %}</div>
-            {% endif %}
-        </a>
-
-        <a href="{% url 'analysis-gaps' job.pk %}" class="sc-kpi" data-turbo-frame="_top">
-            <div class="sc-kpi-head">
-                <span class="sc-kpi-label">{% trans "Lacunes" %}</span>
-                <span class="sc-kpi-dot sc-fill--c"></span>
-            </div>
-            <div class="sc-kpi-value"><span class="sc-metric">{{ gap_count }}</span></div>
-            {% if gap_count %}
-            <div id="chart-gap-type" class="h-[92px] w-full"></div>
-            {% else %}
-            <div class="sc-kpi-note">{% trans "bonne couverture" %}</div>
-            {% endif %}
-        </a>
-
-        <a href="{% url 'analysis-hallucinations' job.pk %}" class="sc-kpi" data-turbo-frame="_top">
-            <div class="sc-kpi-head">
-                <span class="sc-kpi-label">{% trans "Risques d'hallucination" %}</span>
-                <span class="sc-kpi-dot sc-fill--b"></span>
-            </div>
-            <div class="sc-kpi-value"><span class="sc-metric">{{ hallu_count }}</span></div>
-            {% if hallu_count %}
-            <div id="chart-hallu-type" class="h-[92px] w-full"></div>
-            {% else %}
-            <div class="sc-kpi-note">{% trans "aucun risque signalé" %}</div>
-            {% endif %}
-        </a>
+        {% include "analysis/_finding_kpi.html" with label=_("Doublons") tone="d" count=dup_count bars=dup_bars url=dup_url empty_note=_("aucun doublon détecté") %}
+        {% include "analysis/_finding_kpi.html" with label=_("Contradictions") tone="e" count=contra_count bars=contra_bars url=contra_url empty_note=_("aucune détectée") %}
+        {% include "analysis/_finding_kpi.html" with label=_("Lacunes") tone="c" count=gap_count bars=gap_bars url=gap_url empty_note=_("bonne couverture") %}
+        {% include "analysis/_finding_kpi.html" with label=_("Risques d'hallucination") tone="b" count=hallu_count bars=hallu_bars url=hallu_url empty_note=_("aucun risque signalé") %}
     </section>
 </div>
-
-{# Données et init gardées dans la frame : sortis d'ici, les graphiques restaient vides après un sondage. #}
-{{ dup_by_action_json|json_script:"chart-dup-action-data" }}
-{{ contra_by_severity_json|json_script:"chart-contra-severity-data" }}
-{{ gap_by_type_json|json_script:"chart-gap-type-data" }}
-{{ hallu_by_type_json|json_script:"chart-hallu-type-data" }}
-
-{% trans "Élevée" as l_sev_high %}
-{% trans "Moyenne" as l_sev_medium %}
-{% trans "Faible" as l_sev_low %}
-{% trans "Fusionner" as l_act_merge %}
-{% trans "Supprimer l'ancien" as l_act_delete %}
-{% trans "Vérification manuelle" as l_act_review %}
-{% trans "Conserver les deux (liés, pas doublons)" as l_act_keep %}
-<script>
-(function() {
-    "use strict";
-    if (!window.scChart) return;
-
-    // Les présenteurs renvoient des libellés traduits : les tables de couleurs
-    // sont indexées par les mêmes chaînes pour rester justes en toutes langues.
-    // Elles sont rebâties à chaque rendu, les jetons changeant avec le thème.
-    function severityColors(t) {
-        var map = {};
-        map["{{ l_sev_high|escapejs }}"] = t.e;
-        map["{{ l_sev_medium|escapejs }}"] = t.d;
-        map["{{ l_sev_low|escapejs }}"] = t.a;
-        return map;
-    }
-
-    function actionColors(t) {
-        var map = {};
-        map["{{ l_act_merge|escapejs }}"] = t.b;
-        map["{{ l_act_delete|escapejs }}"] = t.e;
-        map["{{ l_act_review|escapejs }}"] = t.d;
-        map["{{ l_act_keep|escapejs }}"] = t.a;
-        return map;
-    }
-
-    scChart.compactPie("chart-dup-action", "chart-dup-action-data", actionColors);
-    scChart.compactBar("chart-contra-severity", "chart-contra-severity-data", severityColors);
-    scChart.compactBar("chart-gap-type", "chart-gap-type-data", null);
-    scChart.compactBar("chart-hallu-type", "chart-hallu-type-data", null);
-})();
-</script>
 
 </div>
 </turbo-frame>

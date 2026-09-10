@@ -289,6 +289,19 @@
     }
   });
 
+  /* « Système » se traduit par l'absence de préférence stockée : il faut alors
+     suivre le réglage du système, y compris quand il change en cours de session. */
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (e) {
+    var stored = null;
+    try {
+      stored = localStorage.getItem("ds-theme");
+    } catch (err) {
+      /* stockage indisponible */
+    }
+    if (stored === "light" || stored === "dark") return;
+    document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+  });
+
   /* ─────────────────────────── Confirmation ─────────────────────────── */
 
   var confirmState = { resolve: null, form: null, word: null };

@@ -35,38 +35,24 @@
     </turbo-frame>
 
     <section class="grid grid-cols-4 gap-3">
-        <a href="{% url 'connector-list' %}" class="sc-kpi">
+        {% for k in kpis %}
+        <a href="{{ k.url }}" class="sc-kpi">
             <div class="sc-kpi-head">
-                <span class="sc-kpi-label">{% trans "Documents" %}</span>
-                <span class="sc-kpi-dot sc-fill--a"></span>
+                <span class="sc-kpi-label">{{ k.label }}</span>
+                <span class="sc-kpi-dot sc-fill--{{ k.tone }}"></span>
             </div>
-            <div class="sc-kpi-value"><span class="sc-metric">{{ doc_count }}</span></div>
-            <div class="sc-kpi-note">{% trans "indexés dans le projet" %}</div>
-        </a>
-        <a href="{% if latest_analysis %}{% url 'analysis-duplicates' latest_analysis.pk %}{% else %}{% url 'analysis-list' %}{% endif %}" class="sc-kpi">
-            <div class="sc-kpi-head">
-                <span class="sc-kpi-label">{% trans "Doublons" %}</span>
-                <span class="sc-kpi-dot sc-fill--d"></span>
+            <div class="sc-kpi-value">
+                <span class="sc-metric">{{ k.value }}</span>
+                {% if k.trend %}<span class="sc-kpi-trend sc-ink--{{ k.trend.tone }}">{{ k.trend.label }}</span>{% endif %}
             </div>
-            <div class="sc-kpi-value"><span class="sc-metric">{{ dup_count }}</span></div>
-            <div class="sc-kpi-note">{% if dup_count %}{% trans "groupes détectés" %}{% else %}{% trans "aucun doublon" %}{% endif %}</div>
+            {% if k.spark %}
+            <svg class="sc-spark" viewBox="0 0 120 26" preserveAspectRatio="none" aria-hidden="true">
+                <polyline class="sc-stroke--{{ k.tone }}" points="{{ k.spark }}" fill="none" stroke-width="1.8" stroke-linejoin="round" />
+            </svg>
+            {% endif %}
+            <div class="sc-kpi-note">{{ k.note }}</div>
         </a>
-        <a href="{% if latest_analysis %}{% url 'analysis-contradictions' latest_analysis.pk %}{% else %}{% url 'analysis-list' %}{% endif %}" class="sc-kpi">
-            <div class="sc-kpi-head">
-                <span class="sc-kpi-label">{% trans "Contradictions" %}</span>
-                <span class="sc-kpi-dot sc-fill--e"></span>
-            </div>
-            <div class="sc-kpi-value"><span class="sc-metric">{{ contra_count }}</span></div>
-            <div class="sc-kpi-note">{% if contra_count %}{% trans "à arbitrer" %}{% else %}{% trans "aucune détectée" %}{% endif %}</div>
-        </a>
-        <a href="{% if latest_analysis %}{% url 'analysis-gaps' latest_analysis.pk %}{% else %}{% url 'analysis-list' %}{% endif %}" class="sc-kpi">
-            <div class="sc-kpi-head">
-                <span class="sc-kpi-label">{% trans "Lacunes" %}</span>
-                <span class="sc-kpi-dot sc-fill--c"></span>
-            </div>
-            <div class="sc-kpi-value"><span class="sc-metric">{{ gap_count }}</span></div>
-            <div class="sc-kpi-note">{% if gap_count %}{% trans "zones à compléter" %}{% else %}{% trans "bonne couverture" %}{% endif %}</div>
-        </a>
+        {% endfor %}
     </section>
 
     <section class="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-4">

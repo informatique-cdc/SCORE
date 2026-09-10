@@ -57,6 +57,9 @@ class Message(models.Model):
     content = models.TextField()
     sources = models.JSONField(default=list, blank=True)
     suggestions = models.JSONField(default=list, blank=True)
+    graph_trace = models.JSONField(
+        default=dict, blank=True, help_text="Relations du graphe ayant étayé la réponse"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

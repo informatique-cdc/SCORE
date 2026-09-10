@@ -117,7 +117,7 @@
   }
 
   .sc-evidence-toggle:hover {
-    border-color: var(--color-accent);
+    border-color: var(--color-accent-ink);
     text-decoration: none;
   }
 
@@ -179,7 +179,7 @@
     height: 18px;
     border-radius: var(--radius-5);
     background: var(--color-ink);
-    color: #fff;
+    color: var(--color-invert-ink);
     display: grid;
     place-items: center;
     font-size: var(--text-10);

@@ -22,8 +22,8 @@
   }
 
   .sc-card--dark {
-    background: var(--color-ink);
-    color: var(--color-surface-200);
+    background: var(--color-feature-bg);
+    color: var(--color-feature-ink);
     border: 0;
     position: relative;
     overflow: hidden;

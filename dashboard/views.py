@@ -1,8 +1,10 @@
 """Dashboard views: home, stats, navigation."""
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
@@ -53,6 +55,130 @@ def _has_active_jobs(project):
     return False
 
 
+SPARK_POINTS = 7
+
+
+def _spark_points(values):
+    """Polyline d'un sparkline sur la grille 120×26 de la maquette.
+
+    Une série plate se dessine à mi-hauteur, plutôt qu'en butée haute ou basse.
+    """
+    if len(values) < 2:
+        return ""
+    low, high = min(values), max(values)
+    span = high - low
+    step = 120 / (len(values) - 1)
+    return " ".join(
+        f"{i * step:.1f},{24 - (0.5 if span == 0 else (v - low) / span) * 22:.1f}"
+        for i, v in enumerate(values)
+    )
+
+
+def _spark_trend(values):
+    """Écart avec l'instantané précédent. Une baisse est la bonne direction, d'où le vert."""
+    if len(values) < 2:
+        return None
+    delta = values[-1] - values[-2]
+    if delta == 0:
+        return {"label": _("stable"), "tone": "none"}
+    if delta < 0:
+        return {"label": f"−{-delta}", "tone": "a"}
+    return {"label": f"+{delta}", "tone": "d"}
+
+
+def _kpi_history(project):
+    """Compte les quatre métriques sur les derniers instantanés d'analyse terminés."""
+    jobs = list(
+        AnalysisJob.objects.filter(project=project, status=AnalysisJob.Status.COMPLETED).order_by(
+            "-created_at"
+        )[:SPARK_POINTS]
+    )
+    if len(jobs) < 2:
+        return {}
+    jobs.reverse()
+    job_ids = [job.pk for job in jobs]
+
+    def per_job(queryset):
+        counts = {
+            row["analysis_job_id"]: row["n"]
+            for row in queryset.filter(analysis_job_id__in=job_ids)
+            .values("analysis_job_id")
+            .annotate(n=Count("id"))
+        }
+        return [counts.get(job_id, 0) for job_id in job_ids]
+
+    documents = Document.objects.filter(project=project).exclude(status=Document.Status.DELETED)
+    return {
+        "documents": [
+            documents.filter(created_at__lte=job.completed_at or job.created_at).count()
+            for job in jobs
+        ],
+        "duplicates": per_job(DuplicateGroup.objects.all()),
+        "contradictions": per_job(
+            ContradictionPair.objects.filter(classification__in=["contradiction", "outdated"])
+        ),
+        "gaps": per_job(GapReport.objects.all()),
+    }
+
+
+def _build_kpis(project, latest_analysis, counts):
+    """Les quatre cartes de tête : valeur du dernier instantané, tendance et sparkline."""
+    history = _kpi_history(project)
+
+    def findings_url(url_name):
+        if latest_analysis:
+            return reverse(url_name, args=[latest_analysis.pk])
+        return reverse("analysis-list")
+
+    def card(key, label, tone, value, url, note):
+        series = history.get(key, [])
+        return {
+            "label": label,
+            "tone": tone,
+            "value": value,
+            "url": url,
+            "note": note,
+            "spark": _spark_points(series),
+            "trend": _spark_trend(series),
+        }
+
+    dup, contra, gap = counts["dup_count"], counts["contra_count"], counts["gap_count"]
+    return [
+        card(
+            "documents",
+            _("Documents"),
+            "a",
+            counts["doc_count"],
+            reverse("connector-list"),
+            _("indexés dans le projet"),
+        ),
+        card(
+            "duplicates",
+            _("Doublons"),
+            "d",
+            dup,
+            findings_url("analysis-duplicates"),
+            _("groupes détectés") if dup else _("aucun doublon"),
+        ),
+        card(
+            "contradictions",
+            _("Contradictions"),
+            "e",
+            contra,
+            findings_url("analysis-contradictions"),
+            _("à arbitrer") if contra else _("aucune détectée"),
+        ),
+        card(
+            "gaps",
+            _("Lacunes"),
+            "c",
+            gap,
+            findings_url("analysis-gaps"),
+            _("zones à compléter") if gap else _("bonne couverture"),
+        ),
+    ]
+
+
 def _dashboard_stats_context(project):
     """Build context dict for dashboard stats partial."""
     should_poll = _has_active_jobs(project)
@@ -74,14 +200,17 @@ def _dashboard_stats_context(project):
                 classification__in=["contradiction", "outdated"],
             ).count()
             gap_count = GapReport.objects.filter(analysis_job=latest_analysis).count()
-        return {
+        counts = {
             "doc_count": doc_count,
             "dup_count": dup_count,
             "contra_count": contra_count,
             "gap_count": gap_count,
         }
+        return {**counts, "kpis": _build_kpis(project, latest_analysis, counts)}
 
-    ctx = build() if should_poll else cached("dashboard-stats", project, build)
+    # Nom de composant distinct de l'ancien « dashboard-stats » : les entrées déjà en
+    # base ne portent pas « kpis » et resteraient servies jusqu'à leur expiration.
+    ctx = build() if should_poll else cached("dashboard-kpis", project, build)
     return {**ctx, "should_poll": should_poll}
 
 

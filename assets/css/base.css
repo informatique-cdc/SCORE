@@ -12,7 +12,7 @@
   }
 
   a {
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
     text-decoration: none;
   }
 
@@ -37,7 +37,7 @@
   }
 
   [data-scroll]::-webkit-scrollbar-thumb {
-    background: var(--color-line-300);
+    background: var(--color-scrollbar);
     border-radius: 8px;
     border: 3px solid transparent;
     background-clip: content-box;

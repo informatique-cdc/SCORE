@@ -146,6 +146,48 @@ class TestConversationMessages:
         data = resp.json()
         assert len(data["messages"]) == 2
 
+    @patch("chat.views.get_llm_client")
+    @patch("chat.views.ask_documents")
+    def test_graph_trace_survives_a_reload(self, mock_ask, mock_llm, chat_setup):
+        """The discovery path is worthless if it vanishes when the page reloads."""
+        user, tenant, project = chat_setup
+        mock_resp = MagicMock()
+        mock_resp.content = "Test Title"
+        mock_llm.return_value.chat.return_value = mock_resp
+        trace = {
+            "seeds": ["IPSEC"],
+            "relations": [
+                {
+                    "subject": "IPSEC",
+                    "predicate": "propose",
+                    "object": "garantie",
+                    "inferred": False,
+                    "inference_kind": "",
+                    "evidence": ["IPSEC propose une garantie."],
+                    "documents": [],
+                }
+            ],
+        }
+        mock_ask.return_value = {
+            "answer": "Reply",
+            "sources": [],
+            "suggestions": [],
+            "graph_trace": trace,
+        }
+        client = _client(user, tenant, project)
+
+        resp = client.post(
+            "/chat/ask/",
+            json.dumps({"message": "Que propose IPSEC ?", "tools": ["graph-rag"]}),
+            content_type="application/json",
+        )
+        assert resp.json()["graph_trace"] == trace
+        conv_id = resp.json()["conversation_id"]
+
+        reloaded = client.get(f"/chat/conversations/{conv_id}/messages/").json()
+
+        assert reloaded["messages"][1]["graph_trace"] == trace
+
     def test_other_users_conversation_404(self, chat_setup):
         user, tenant, project = chat_setup
         other = User.objects.create_user("other", "other@example.com", "pass1234")

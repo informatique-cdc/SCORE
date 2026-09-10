@@ -126,6 +126,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var UNTITLED = '{% trans "Sans titre" %}';
     var NEW_CONV_LABEL = '{% trans "Nouvelle conversation" %}';
+    var GRAPH_TRACE_LABEL = '{% trans "Chemin de découverte" %}';
+    var SEEDS_LABEL = '{% trans "Entités de départ :" %}';
+    var INFERRED_LABEL = '{% trans "déduite" %}';
 
     var thread = document.getElementById('chatThread');
     var threadEmpty = document.getElementById('chatThreadEmpty');
@@ -299,7 +302,89 @@ document.addEventListener('DOMContentLoaded', function() {
         return el;
     }
 
-    function addMessage(role, content, sources) {
+    /* ─────────────────────── Chemin de découverte ─────────────────────── */
+
+    // Les noms de « disclosure » sont résolus globalement par ui.js : chaque bloc
+    // ajouté au fil a donc besoin du sien.
+    var traceSeq = 0;
+
+    function relationElement(rel) {
+        var row = document.createElement('div');
+        row.className = 'sc-gt-rel';
+
+        var path = document.createElement('div');
+        path.className = 'sc-gt-path';
+        appendText(path, 'sc-gt-entity', rel.subject);
+        appendText(path, 'sc-gt-pred', rel.predicate);
+        appendText(path, 'sc-gt-entity', rel.object);
+        if (rel.inferred) appendText(path, 'sc-gt-inferred', INFERRED_LABEL);
+        row.appendChild(path);
+
+        (rel.evidence || []).forEach(function(snippet) {
+            appendText(row, 'sc-gt-evidence', snippet);
+        });
+
+        (rel.documents || []).forEach(function(doc) {
+            var el;
+            if (doc.connector_id && doc.document_id) {
+                el = document.createElement('button');
+                el.type = 'button';
+                el.className = 'sc-gt-doc doc-read-btn';
+                el.setAttribute('data-url', docUrl(doc.connector_id, doc.document_id));
+            } else {
+                el = document.createElement('span');
+                el.className = 'sc-gt-doc';
+            }
+            el.textContent = doc.title || UNTITLED;
+            row.appendChild(el);
+        });
+
+        return row;
+    }
+
+    function appendText(parent, className, text) {
+        var el = document.createElement('span');
+        el.className = className;
+        el.textContent = text;
+        parent.appendChild(el);
+        return el;
+    }
+
+    function renderGraphTrace(trace) {
+        if (!trace || !trace.relations || !trace.relations.length) return null;
+
+        var name = 'graphTrace-' + (++traceSeq);
+
+        var block = document.createElement('div');
+        block.className = 'sc-graph-trace';
+
+        var toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'sc-disclosure';
+        toggle.setAttribute('data-disclosure', name);
+        toggle.setAttribute('aria-expanded', 'false');
+        appendText(toggle, '', GRAPH_TRACE_LABEL);
+        appendText(toggle, 'sc-tag sc-tag--info', String(trace.relations.length));
+        toggle.insertAdjacentHTML('beforeend',
+            '<svg class="sc-disclosure-chevron size-3" viewBox="0 0 12 12" fill="none">'
+            + '<path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" '
+            + 'stroke-linecap="round" stroke-linejoin="round"/></svg>');
+        block.appendChild(toggle);
+
+        var panel = document.createElement('div');
+        panel.className = 'sc-gt-panel';
+        panel.setAttribute('data-disclosure-panel', name);
+        panel.hidden = true;
+        if (trace.seeds && trace.seeds.length) {
+            appendText(panel, 'sc-gt-seeds', SEEDS_LABEL + ' ' + trace.seeds.join(' · '));
+        }
+        trace.relations.forEach(function(rel) { panel.appendChild(relationElement(rel)); });
+        block.appendChild(panel);
+
+        return block;
+    }
+
+    function addMessage(role, content, sources, graphTrace) {
         threadEmpty.hidden = true;
 
         var wrapper = document.createElement('div');
@@ -313,6 +398,11 @@ document.addEventListener('DOMContentLoaded', function() {
             bubble.textContent = content;
         }
         wrapper.appendChild(bubble);
+
+        if (role === 'assistant') {
+            var trace = renderGraphTrace(graphTrace);
+            if (trace) wrapper.appendChild(trace);
+        }
 
         if (role === 'assistant' && sources && sources.length) {
             var cites = document.createElement('div');
@@ -470,7 +560,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(data) {
                 titleEl.textContent = data.title || UNTITLED;
                 (data.messages || []).forEach(function(m) {
-                    addMessage(m.role, m.content, m.sources);
+                    addMessage(m.role, m.content, m.sources, m.graph_trace);
                     history.push({ role: m.role, content: m.content });
                 });
                 if (data.title) updateSidebarTitle(id, data.title);
@@ -560,7 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 setActiveConversation(data.conversation_id);
             }
 
-            addMessage('assistant', data.answer, data.sources);
+            addMessage('assistant', data.answer, data.sources, data.graph_trace);
             history.push({ role: 'assistant', content: data.answer });
             // Le contexte envoyé au serveur reste borné aux vingt derniers tours.
             if (history.length > 20) history = history.slice(-20);

@@ -1,0 +1,19 @@
+{% load i18n %}
+{# Carte « constats » : compteur, mini-barres, puis les comptes par catégorie. #}
+<a href="{{ url }}" class="sc-kpi" data-turbo-frame="_top">
+    <div class="sc-kpi-head">
+        <span class="sc-kpi-label">{{ label }}</span>
+        <span class="sc-kpi-dot sc-fill--{{ tone }}"></span>
+    </div>
+    <div class="sc-kpi-value"><span class="sc-metric">{{ count }}</span></div>
+    {% if bars %}
+    <div class="sc-minibars">
+        {% for bar in bars %}
+        <span class="sc-minibar sc-fill--{{ bar.tone }}" style="--sc-fill: {{ bar.pct }}%"></span>
+        {% endfor %}
+    </div>
+    <div class="sc-kpi-note truncate">{% for bar in bars %}{% if not forloop.first %} · {% endif %}{{ bar.value }} {{ bar.label }}{% endfor %}</div>
+    {% else %}
+    <div class="sc-kpi-note">{{ empty_note }}</div>
+    {% endif %}
+</a>

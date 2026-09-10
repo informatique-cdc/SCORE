@@ -84,6 +84,12 @@
     opacity: 1;
   }
 
+  /* Le thème sombre impose déjà le rail sombre (voir theme.css) : le bouton
+     n'aurait plus rien à basculer. */
+  [data-theme="dark"] .sc-rail-toggle {
+    display: none;
+  }
+
   /* ── Sélecteur de projet ── */
   .sc-rail-picker {
     display: flex;
@@ -245,7 +251,7 @@
   .sc-setup-fill {
     height: 100%;
     width: var(--sc-fill, 0%);
-    background: #fff;
+    background: currentColor;
   }
 
   .sc-setup-item {
@@ -414,34 +420,6 @@
     gap: 8px;
     flex: 0 0 auto;
     align-items: center;
-  }
-
-  /* ── Bascule de langue ── */
-  .sc-lang {
-    display: flex;
-    gap: 2px;
-    padding: 2px;
-    border-radius: var(--radius-9);
-    border: 1px solid var(--color-line);
-    background: var(--color-surface);
-    margin-right: 4px;
-  }
-
-  .sc-lang-btn {
-    padding: 5px 9px;
-    border-radius: var(--radius-7);
-    border: 0;
-    background: transparent;
-    color: var(--color-ink-500);
-    font-family: inherit;
-    font-size: var(--text-11p5);
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .sc-lang-btn.is-active {
-    background: var(--color-ink);
-    color: var(--color-surface);
   }
 
   /* ── Onglets ── */

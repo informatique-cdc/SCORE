@@ -7,6 +7,7 @@ pytest.importorskip("networkx", reason="networkx not installed")
 from nsg.config import NSGConfig  # noqa: E402
 from nsg.graph import NeuralSemanticGraph  # noqa: E402
 from nsg import persistence  # noqa: E402
+from tests.nsg.conftest import requires_english_model
 
 
 SAMPLE_TEXT = (
@@ -15,6 +16,7 @@ SAMPLE_TEXT = (
 )
 
 
+@requires_english_model
 class TestPersistence:
     def test_round_trip(self, tmp_path: "pytest.TempPathFactory") -> None:
         # Build a graph.
