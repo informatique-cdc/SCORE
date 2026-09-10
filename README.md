@@ -1,11 +1,11 @@
 # SCORE - _SCORE Curates Organizational Repository for Embeddings_
 
-Enterprise document repository analysis tool. Ingests documents from multiple sources, detects duplicates, extracts claims, finds contradictions, clusters topics, identifies documentation gaps, flags hallucination risks, runs RAG quality audits, and produces a Nutri-Score-style quality grade (A-E).
+Enterprise document repository analysis tool. Ingests documents from multiple sources, detects duplicates, extracts claims, finds contradictions, clusters topics, builds a knowledge graph of named entities and the relations between them, identifies documentation gaps, flags hallucination risks, runs RAG quality audits, and produces a Nutri-Score-style quality grade (A-E).
 
 Built with Django, SQLite + sqlite-vec, Celery, OpenAI/Azure OpenAI, and spaCy.
 
 <p align="center">
-  <img src="docs/assets/welcome.png" alt="Welcome" width="45%" />
+  <img src="docs/assets/welcome.png" alt="Getting started" width="45%" />
   <img src="docs/assets/dashboard.png" alt="Dashboard" width="45%" />
 </p>
 <p align="center">
@@ -13,7 +13,10 @@ Built with Django, SQLite + sqlite-vec, Celery, OpenAI/Azure OpenAI, and spaCy.
   <img src="docs/assets/analysis.png" alt="Analysis" width="45%" />
 </p>
 <p align="center">
+  <img src="docs/assets/knowledge_graph.png" alt="Knowledge graph" width="45%" />
   <img src="docs/assets/rag_audit.png" alt="RAG Audit" width="45%" />
+</p>
+<p align="center">
   <img src="docs/assets/chatbot.png" alt="Chatbot" width="45%" />
 </p>
 
