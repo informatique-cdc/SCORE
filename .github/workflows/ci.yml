@@ -14,7 +14,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      # Version épinglée : `pip install ruff` prend la dernière publiée, et une
+      # version mineure qui active de nouvelles règles par défaut fait rougir la
+      # CI sans qu'aucun commit ne l'ait provoqué. Monter cette version est un
+      # changement délibéré, accompagné des corrections qu'il entraîne.
+      - run: pip install ruff==0.15.5
       - run: ruff check .
       - run: ruff format --check .
 
