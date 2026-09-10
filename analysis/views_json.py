@@ -296,9 +296,7 @@ def _kg_payload(run):
             "confidence": round(r.confidence, 2),
             "evidence": r.evidence or [],
         }
-        for r in KGRelation.objects.filter(
-            run=run, subject_id__in=shown, object_id__in=shown
-        ).only(
+        for r in KGRelation.objects.filter(run=run, subject_id__in=shown, object_id__in=shown).only(
             "subject_id",
             "object_id",
             "predicate",
