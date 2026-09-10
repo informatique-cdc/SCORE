@@ -155,11 +155,12 @@
         tooltip: { trigger: "item" },
         radar: {
           indicator: [
-            { name: "Redondance", max: 100 },
+            { name: "Unicité", max: 100 },
             { name: "Cohérence", max: 100 },
             { name: "Couverture", max: 100 },
             { name: "Structure", max: 100 },
-            { name: "Retrouvabilité", max: 100 },
+            { name: "Santé", max: 100 },
+            { name: "Repérabilité", max: 100 },
             { name: "Gouvernance", max: 100 },
           ],
           radius: "68%",
@@ -175,14 +176,14 @@
             symbolSize: 4,
             data: [
               {
-                value: [92, 88, 84, 90, 86, 80],
+                value: [92, 88, 84, 90, 95, 86, 80],
                 name: "Cible",
                 lineStyle: { color: t.line300, type: "dashed", width: 1.5 },
                 itemStyle: { color: t.line300 },
                 areaStyle: { color: alpha(t.line300, 0.12) },
               },
               {
-                value: [48, 55, 72, 81, 64, 76],
+                value: [48, 55, 72, 81, 88, 64, 76],
                 name: "Base support N2",
                 lineStyle: { color: t.accent, width: 2 },
                 itemStyle: { color: t.accent },
@@ -194,14 +195,27 @@
       };
     });
 
+    // Plafonds de pénalité repris de score/scoring.py, où leur somme fait 100.
     var drops = [
-      { name: "Redondance", v: 10.4, c: t.e },
-      { name: "Cohérence", v: 11.3, c: t.d },
-      { name: "Couverture", v: 5.6, c: t.c },
-      { name: "Structure", v: 2.9, c: t.b },
-      { name: "Retrouvabilité", v: 4.3, c: t.b },
-      { name: "Gouvernance", v: 1.9, c: t.a },
+      { name: "Unicité", v: 8.1, max: 15 },
+      { name: "Cohérence", v: 7.4, max: 15 },
+      { name: "Couverture", v: 5.6, max: 20 },
+      { name: "Structure", v: 2.9, max: 15 },
+      { name: "Santé", v: 1.2, max: 10 },
+      { name: "Repérabilité", v: 4.3, max: 15 },
+      { name: "Gouvernance", v: 2.5, max: 10 },
     ];
+
+    // La couleur encode la part du plafond consommée, pas la perte absolue :
+    // 8 points perdus sur 15 sont plus graves que 8 sur 20.
+    var dropColor = function (d) {
+      var ratio = d.v / d.max;
+      if (ratio >= 0.5) return t.e;
+      if (ratio >= 0.4) return t.d;
+      if (ratio >= 0.25) return t.c;
+      if (ratio >= 0.15) return t.b;
+      return t.a;
+    };
     // Cascade : une série transparente porte les barres visibles à la hauteur
     // du cumul restant.
     var run = 100;
@@ -210,7 +224,7 @@
     drops.forEach(function (d) {
       run -= d.v;
       base.push(run);
-      visible.push({ value: d.v, itemStyle: { color: d.c, borderRadius: [3, 3, 0, 0] } });
+      visible.push({ value: d.v, itemStyle: { color: dropColor(d), borderRadius: [3, 3, 0, 0] } });
     });
 
     mount("sc-v-waterfall", function () {
@@ -224,7 +238,8 @@
             var bar = p.find(function (x) {
               return x.seriesName === "perte";
             });
-            return bar ? bar.name + " — " + bar.value + " pts perdus" : "";
+            if (!bar) return "";
+            return bar.name + " — " + bar.value + " pts perdus sur " + drops[bar.dataIndex].max;
           },
         },
         xAxis: {

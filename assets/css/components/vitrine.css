@@ -848,6 +848,12 @@
     padding: 26px 24px;
   }
 
+  /* Sept cartes ne remplissent pas une grille de trois colonnes : sans cela la
+     dernière rangée laisse voir le fond gris qui sert à dessiner les filets. */
+  .sc-v-axis:last-child {
+    grid-column: 1 / -1;
+  }
+
   .sc-v-axis:hover {
     background: var(--color-surface-50);
   }
