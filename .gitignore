@@ -20,6 +20,8 @@ htmlcov/
 media/
 node_modules/
 Refonte interface SCORE/
+score-vitrine/
 kg-plan.md
 dashboard/static/css/app.css
 dashboard/static/fonts/
+_site/

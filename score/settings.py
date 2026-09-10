@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "django.contrib.humanize",
     # Auth
     "allauth",
     "allauth.account",
@@ -70,6 +71,7 @@ INSTALLED_APPS = [
     "reports",
     "dashboard",
     "chat",
+    "vitrine",
 ]
 
 SITE_ID = 1
@@ -347,6 +349,25 @@ AUDIT_CONFIG = APP_CONFIG.get("audit", {})
 
 # --- Vector dimensions ---
 EMBEDDING_DIMENSIONS = _llm_yaml.get("embedding_dimensions", 1536)
+
+# --- Vitrine ---
+# Chiffres du dépôt affichés par la page publique, saisis à la main dans
+# config.yaml. L'API GitHub a été écartée : son quota anonyme est de 60 requêtes
+# par heure et par IP *sortante*, or derrière le proxy d'entreprise cette IP est
+# partagée et le quota déjà épuisé en permanence.
+# Un champ laissé à 0 ou vide n'est pas affiché plutôt que rendu tel quel.
+VITRINE = {
+    "repo": "informatique-cdc/SCORE",
+    "stars": 0,
+    "contributors": 0,
+    "open_issues": 0,
+    "license_name": "Apache",
+    "license_version": "2.0",
+    "version": "",
+    "branch": "main",
+    "commit": "",
+    **APP_CONFIG.get("vitrine", {}),
+}
 
 # --- Logging ---
 LOGGING = {

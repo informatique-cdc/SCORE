@@ -1,0 +1,486 @@
+{% load static i18n humanize %}
+<!DOCTYPE html>
+{# La vitrine n'a pas de thème sombre : la maquette n'en dessine pas. #}
+<html lang="{{ LANGUAGE_CODE|default:'fr' }}" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "SCORE — l'audit de vos bases de connaissances" %}</title>
+    <meta name="description" content="{% trans "SCORE audite vos documents avant qu'un LLM ne s'en serve : doublons, contradictions, lacunes, risque d'hallucination." %}">
+
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" defer></script>
+    <script src="{% static 'js/ui.js' %}" defer></script>
+    <script src="{% static 'js/vitrine.js' %}" defer></script>
+</head>
+<body class="sc-v">
+
+<header class="sc-v-header">
+    <nav class="sc-v-nav">
+        <a class="sc-v-brand" href="#top">
+            <span class="sc-v-brand-mark">S</span>
+            <span class="sc-v-brand-name">SCORE</span>
+            {% if gh.version %}<span class="sc-v-brand-tag">{{ gh.version }}</span>{% endif %}
+        </a>
+        <div class="sc-v-nav-links">
+            <a href="#probleme">{% trans "Le problème" %}</a>
+            <a href="#score">{% trans "Le score" %}</a>
+            <a href="#axes">{% trans "Axes d'audit" %}</a>
+            <a href="#interface">{% trans "Interface" %}</a>
+            <a href="#demarrer">{% trans "Démarrer" %}</a>
+            <a href="#contribuer">{% trans "Contribuer" %}</a>
+        </div>
+        <div class="sc-v-nav-actions">
+            <a class="sc-v-ghlink" href="https://github.com/{{ gh.repo }}">
+                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.07-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A7.995 7.995 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                {% if gh.stars %}{{ gh.stars|intcomma }}{% else %}GitHub{% endif %}
+            </a>
+            <a class="sc-v-btn sc-v-btn--accent sc-v-btn--sm" href="#demarrer">{% trans "Installer" %}</a>
+        </div>
+    </nav>
+</header>
+
+<section class="sc-v-hero" id="top">
+    <div class="sc-v-hero-grid">
+        <div class="sc-v-rise">
+            <div class="sc-v-pill">
+                <span class="sc-v-pill-dot"></span>
+                {% blocktrans with name=gh.license_name version=gh.license_version %}Open source · {{ name }}-{{ version }} · auto-hébergeable{% endblocktrans %}
+            </div>
+            <h1 class="sc-v-h1">{% trans "Un Nutri-Score pour vos bases de connaissances." %}</h1>
+            <p class="sc-v-hero-lede">{% trans "SCORE audite vos documents avant qu'un LLM ne s'en serve : doublons, contradictions, lacunes, risque d'hallucination. Une note de A à E, six axes mesurés, et la trace complète de chaque calcul." %}</p>
+            <div class="sc-v-cta">
+                <a class="sc-v-btn sc-v-btn--accent sc-v-btn--lg" href="#demarrer">
+                    {% trans "Démarrer en 5 minutes" %}
+                    <span class="sc-v-btn-arrow">→</span>
+                </a>
+                <a class="sc-v-btn sc-v-btn--ghost sc-v-btn--lg" href="#interface">{% trans "Voir l'interface" %}</a>
+            </div>
+            <div class="sc-v-hero-stats">
+                <div>
+                    <div class="sc-v-hero-stat-value">14</div>
+                    <div class="sc-v-hero-stat-label">{% trans "connecteurs" %}</div>
+                </div>
+                <div>
+                    <div class="sc-v-hero-stat-value">6</div>
+                    <div class="sc-v-hero-stat-label">{% trans "axes d'audit" %}</div>
+                </div>
+                <div>
+                    <div class="sc-v-hero-stat-value">100 %</div>
+                    <div class="sc-v-hero-stat-label">{% trans "on-premise" %}</div>
+                </div>
+                <div>
+                    <div class="sc-v-hero-stat-value">FR / EN</div>
+                    <div class="sc-v-hero-stat-label">{% trans "bilingue" %}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sc-v-rise sc-v-rise--late">
+            <div class="sc-v-window">
+                <div class="sc-v-window-bar">
+                    <span class="sc-v-window-dot"></span>
+                    <span class="sc-v-window-dot"></span>
+                    <span class="sc-v-window-dot"></span>
+                    <span class="sc-v-window-url">score.local / analyses / base-support-n2</span>
+                </div>
+                <div class="sc-v-window-body">
+                    <div class="sc-v-score-head">
+                        <div>
+                            <div class="sc-v-score-label">{% trans "Score global" %}</div>
+                            <div class="sc-v-score-value">
+                                <span class="sc-v-score-number">68</span>
+                                <span class="sc-v-score-total">/ 100</span>
+                            </div>
+                        </div>
+                        <div class="sc-v-grade sc-v-grade--c">C</div>
+                    </div>
+                    <div class="sc-v-scale">
+                        <div class="sc-v-scale-step sc-v-scale-step--a"></div>
+                        <div class="sc-v-scale-step sc-v-scale-step--b"></div>
+                        <div class="sc-v-scale-step sc-v-scale-step--c is-active"></div>
+                        <div class="sc-v-scale-step sc-v-scale-step--d"></div>
+                        <div class="sc-v-scale-step sc-v-scale-step--e"></div>
+                    </div>
+                    <div class="sc-v-scale-legend">
+                        <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span>
+                    </div>
+                    <div class="sc-v-chart sc-v-chart--radar" id="sc-v-radar"></div>
+                    <div class="sc-v-kpis">
+                        <div class="sc-v-kpi sc-v-kpi--danger">
+                            <div class="sc-v-kpi-value">312</div>
+                            <div class="sc-v-kpi-label">{% trans "doublons" %}</div>
+                        </div>
+                        <div class="sc-v-kpi sc-v-kpi--warn">
+                            <div class="sc-v-kpi-value">47</div>
+                            <div class="sc-v-kpi-label">{% trans "contradictions" %}</div>
+                        </div>
+                        <div class="sc-v-kpi sc-v-kpi--info">
+                            <div class="sc-v-kpi-value">18 %</div>
+                            <div class="sc-v-kpi-label">{% trans "lacunes" %}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sc-v-window-caption">{% trans "audit terminé en 4 min 12 s · 8 412 documents" %}</div>
+        </div>
+    </div>
+</section>
+
+<section class="sc-v-section" id="probleme">
+    <div class="sc-v-head sc-v-head--wide">
+        <div class="sc-v-eyebrow">{% trans "Le problème" %}</div>
+        <h2 class="sc-v-h2">{% trans "Un RAG ne corrige pas une base de connaissances. Il l'amplifie." %}</h2>
+        <p class="sc-v-lede">{% trans "Trois procédures contradictoires, quatre versions du même PDF, une politique de congés qui n'existe nulle part : votre assistant répondra quand même. Avec assurance." %}</p>
+    </div>
+    <div class="sc-v-cards">
+        <div class="sc-v-card">
+            <div class="sc-v-card-glyph sc-v-card-glyph--e">4×</div>
+            <h3 class="sc-v-card-title">{% trans "Le même document, quatre fois" %}</h3>
+            <p class="sc-v-card-text">{% trans "La recherche vectorielle remonte quatre extraits quasi identiques et sature la fenêtre de contexte avec une seule information." %}</p>
+        </div>
+        <div class="sc-v-card">
+            <div class="sc-v-card-glyph sc-v-card-glyph--d">≠</div>
+            <h3 class="sc-v-card-title">{% trans "Deux réponses justes, opposées" %}</h3>
+            <p class="sc-v-card-text">{% trans "« 30 jours ouvrés » et « 25 jours ouvrables » cohabitent dans deux notes internes. Le modèle en choisit une, au hasard." %}</p>
+        </div>
+        <div class="sc-v-card">
+            <div class="sc-v-card-glyph sc-v-card-glyph--mute">∅</div>
+            <h3 class="sc-v-card-title">{% trans "La question sans source" %}</h3>
+            <p class="sc-v-card-text">{% trans "18 % des intentions métier n'ont aucun document rattaché. Ce sont les zones où l'hallucination est mécaniquement garantie." %}</p>
+        </div>
+    </div>
+</section>
+
+<section class="sc-v-section" id="score">
+    <div class="sc-v-split">
+        <div>
+            <div class="sc-v-eyebrow">{% trans "La note" %}</div>
+            <h2 class="sc-v-h2">{% trans "De A à E, et vous savez pourquoi." %}</h2>
+            <p class="sc-v-lede sc-v-lede--tight">{% trans "Chaque axe est mesuré séparément, pondéré, puis agrégé sur 100. Aucun score n'est un chiffre magique : chaque point perdu renvoie aux documents qui l'ont fait perdre." %}</p>
+            <div class="sc-v-grades">
+                <div class="sc-v-grade-row">
+                    <span class="sc-v-grade sc-v-grade--sm sc-v-grade--a">A</span>
+                    <span class="sc-v-grade-text"><strong>85–100</strong> — {% trans "base saine, prête pour la production" %}</span>
+                </div>
+                <div class="sc-v-grade-row">
+                    <span class="sc-v-grade sc-v-grade--sm sc-v-grade--b">B</span>
+                    <span class="sc-v-grade-text"><strong>70–84</strong> — {% trans "quelques nettoyages ciblés" %}</span>
+                </div>
+                <div class="sc-v-grade-row">
+                    <span class="sc-v-grade sc-v-grade--sm sc-v-grade--c">C</span>
+                    <span class="sc-v-grade-text"><strong>55–69</strong> — {% trans "exploitable, sous surveillance" %}</span>
+                </div>
+                <div class="sc-v-grade-row">
+                    <span class="sc-v-grade sc-v-grade--sm sc-v-grade--d">D</span>
+                    <span class="sc-v-grade-text"><strong>40–54</strong> — {% trans "remédiation avant tout usage LLM" %}</span>
+                </div>
+                <div class="sc-v-grade-row">
+                    <span class="sc-v-grade sc-v-grade--sm sc-v-grade--e">E</span>
+                    <span class="sc-v-grade-text"><strong>0–39</strong> — {% trans "ne pas brancher en l'état" %}</span>
+                </div>
+            </div>
+        </div>
+        <div class="sc-v-panel">
+            <h3 class="sc-v-panel-title">{% trans "Décomposition du score" %}</h3>
+            <p class="sc-v-panel-sub">{% trans "Base support N2 — points retirés par axe, pondération incluse." %} <span class="sc-v-mono-strong">100 → 68</span></p>
+            <div class="sc-v-chart sc-v-chart--waterfall" id="sc-v-waterfall"></div>
+        </div>
+    </div>
+</section>
+
+<section class="sc-v-section" id="axes">
+    <div class="sc-v-head">
+        <div class="sc-v-eyebrow">{% trans "Six axes" %}</div>
+        <h2 class="sc-v-h2 sc-v-h2--flush">{% trans "Ce que SCORE mesure réellement" %}</h2>
+    </div>
+    <div class="sc-v-axes">
+        <div class="sc-v-axis">
+            <div class="sc-v-axis-head">
+                <span class="sc-v-axis-num">1</span>
+                <h3 class="sc-v-axis-title">{% trans "Redondance" %}</h3>
+                <span class="sc-v-axis-weight">×0,20</span>
+            </div>
+            <p class="sc-v-card-text">{% trans "Similarité cosinus par paires, seuil 0,88. Chaque grappe de doublons est réductible à un document pivot." %}</p>
+        </div>
+        <div class="sc-v-axis">
+            <div class="sc-v-axis-head">
+                <span class="sc-v-axis-num">2</span>
+                <h3 class="sc-v-axis-title">{% trans "Cohérence" %}</h3>
+                <span class="sc-v-axis-weight">×0,25</span>
+            </div>
+            <p class="sc-v-card-text">{% trans "Extraction d'assertions puis détection d'inférence contradictoire. Les deux extraits fautifs sont affichés côte à côte." %}</p>
+        </div>
+        <div class="sc-v-axis">
+            <div class="sc-v-axis-head">
+                <span class="sc-v-axis-num">3</span>
+                <h3 class="sc-v-axis-title">{% trans "Couverture" %}</h3>
+                <span class="sc-v-axis-weight">×0,20</span>
+            </div>
+            <p class="sc-v-card-text">{% trans "Confrontation du corpus aux intentions métier réelles. Les lacunes sortent classées par volume de requêtes." %}</p>
+        </div>
+        <div class="sc-v-axis">
+            <div class="sc-v-axis-head">
+                <span class="sc-v-axis-num">4</span>
+                <h3 class="sc-v-axis-title">{% trans "Structure" %}</h3>
+                <span class="sc-v-axis-weight">×0,15</span>
+            </div>
+            <p class="sc-v-card-text">{% trans "Titraille, longueur des sections, découpage. Un document mal structuré produit des extraits illisibles hors contexte." %}</p>
+        </div>
+        <div class="sc-v-axis">
+            <div class="sc-v-axis-head">
+                <span class="sc-v-axis-num">5</span>
+                <h3 class="sc-v-axis-title">{% trans "Retrouvabilité" %}</h3>
+                <span class="sc-v-axis-weight">×0,12</span>
+            </div>
+            <p class="sc-v-card-text">{% trans "Recall@k mesuré sur un jeu de questions de référence. Ce qui existe mais ne remonte jamais est identifié." %}</p>
+        </div>
+        <div class="sc-v-axis">
+            <div class="sc-v-axis-head">
+                <span class="sc-v-axis-num">6</span>
+                <h3 class="sc-v-axis-title">{% trans "Gouvernance" %}</h3>
+                <span class="sc-v-axis-weight">×0,08</span>
+            </div>
+            <p class="sc-v-card-text">{% trans "Fraîcheur, propriétaire, périmètre de diffusion. Un document orphelin de 2019 pèse sur le score." %}</p>
+        </div>
+    </div>
+</section>
+
+<section class="sc-v-band" id="interface">
+    <div class="sc-v-band-inner">
+        <div class="sc-v-head sc-v-head--roomy">
+            <div class="sc-v-eyebrow">{% trans "L'interface" %}</div>
+            <h2 class="sc-v-h2">{% trans "Chaque constat mène à une action" %}</h2>
+            <p class="sc-v-lede">{% trans "Pas de tableau de bord contemplatif : on clique sur un chiffre, on tombe sur les documents, on fusionne ou on archive." %}</p>
+        </div>
+
+        <div class="sc-v-showcase">
+            <div class="sc-v-tile sc-v-tile--wide">
+                <div class="sc-v-tile-head">
+                    <h3 class="sc-v-tile-title">{% trans "Carte des concepts" %}</h3>
+                    <span class="sc-v-tile-meta">{% trans "7 grappes · 312 documents redondants" %}</span>
+                </div>
+                <p class="sc-v-tile-sub">{% trans "Les grappes denses sont les candidats à la fusion." %}</p>
+                <div class="sc-v-chart sc-v-chart--graph" id="sc-v-graph"></div>
+            </div>
+            <div class="sc-v-tile">
+                <h3 class="sc-v-tile-title sc-v-tile-title--stack">{% trans "Couverture par intention" %}</h3>
+                <p class="sc-v-tile-sub">{% trans "Part des intentions métier documentées." %}</p>
+                <div class="sc-v-chart sc-v-chart--radar" id="sc-v-coverage"></div>
+            </div>
+            <div class="sc-v-tile">
+                <h3 class="sc-v-tile-title sc-v-tile-title--stack">Recall@k</h3>
+                <p class="sc-v-tile-sub">{% trans "Avant et après remédiation des doublons." %}</p>
+                <div class="sc-v-chart sc-v-chart--radar" id="sc-v-recall"></div>
+            </div>
+
+            <div class="sc-v-tile sc-v-tile--wide">
+                <div class="sc-v-tile-head sc-v-tile-head--roomy">
+                    <h3 class="sc-v-tile-title">{% trans "Contradictions détectées" %}</h3>
+                    <span class="sc-v-tile-meta">{% trans "47 au total · 12 critiques" %}</span>
+                </div>
+                <div class="sc-v-contra">
+                    <div class="sc-v-contra-grid">
+                        <div class="sc-v-contra-th">{% trans "Assertion A" %}</div>
+                        <div class="sc-v-contra-th">{% trans "Assertion B" %}</div>
+                        <div class="sc-v-contra-th">{% trans "Gravité" %}</div>
+
+                        <div class="sc-v-contra-td">
+                            <div class="sc-v-contra-claim">{% blocktrans %}Le congé sabbatique s'ouvre après <mark>36 mois</mark> d'ancienneté.{% endblocktrans %}</div>
+                            <div class="sc-v-contra-src">RH-guide-2024.pdf · p. 14</div>
+                        </div>
+                        <div class="sc-v-contra-td">
+                            <div class="sc-v-contra-claim">{% blocktrans %}Ancienneté requise pour un sabbatique : <mark>24 mois</mark>.{% endblocktrans %}</div>
+                            <div class="sc-v-contra-src">note-interne-DRH.docx · §3</div>
+                        </div>
+                        <div class="sc-v-contra-td sc-v-contra-td--sev">
+                            <span class="sc-v-sev sc-v-sev--high">{% trans "Critique" %}</span>
+                        </div>
+
+                        <div class="sc-v-contra-td">
+                            <div class="sc-v-contra-claim">{% blocktrans %}Le télétravail est plafonné à <mark>2 jours</mark> par semaine.{% endblocktrans %}</div>
+                            <div class="sc-v-contra-src">accord-tt-2023.pdf · art. 4</div>
+                        </div>
+                        <div class="sc-v-contra-td">
+                            <div class="sc-v-contra-claim">{% blocktrans %}Jusqu'à <mark>3 jours</mark> de télétravail hebdomadaires.{% endblocktrans %}</div>
+                            <div class="sc-v-contra-src">faq-collaborateurs.md · Q12</div>
+                        </div>
+                        <div class="sc-v-contra-td sc-v-contra-td--sev">
+                            <span class="sc-v-sev sc-v-sev--med">{% trans "Moyenne" %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="sc-v-section">
+    <div class="sc-v-head">
+        <div class="sc-v-eyebrow">{% trans "Le pipeline" %}</div>
+        <h2 class="sc-v-h2 sc-v-h2--flush">{% trans "Quatre étapes, toutes traçables" %}</h2>
+    </div>
+    <div class="sc-v-steps">
+        <div class="sc-v-step sc-v-step--1">
+            <div class="sc-v-step-label">{% trans "ÉTAPE 01" %}</div>
+            <h3 class="sc-v-step-title">{% trans "Collecte" %}</h3>
+            <p class="sc-v-card-text">{% trans "Un connecteur, des identifiants chiffrés, et le corpus est indexé. SharePoint, Confluence, GitLab, S3, Notion, un dossier." %}</p>
+        </div>
+        <div class="sc-v-step sc-v-step--2">
+            <div class="sc-v-step-label">{% trans "ÉTAPE 02" %}</div>
+            <h3 class="sc-v-step-title">{% trans "Normalisation" %}</h3>
+            <p class="sc-v-card-text">{% trans "Extraction du texte, découpage sémantique, embeddings locaux. Rien ne sort de votre infrastructure." %}</p>
+        </div>
+        <div class="sc-v-step sc-v-step--3">
+            <div class="sc-v-step-label">{% trans "ÉTAPE 03" %}</div>
+            <h3 class="sc-v-step-title">{% trans "Audit" %}</h3>
+            <p class="sc-v-card-text">{% trans "Les six axes tournent en parallèle. Chaque détection conserve ses paramètres, ses seuils et sa durée." %}</p>
+        </div>
+        <div class="sc-v-step sc-v-step--4">
+            <div class="sc-v-step-label">{% trans "ÉTAPE 04" %}</div>
+            <h3 class="sc-v-step-title">{% trans "Restitution" %}</h3>
+            <p class="sc-v-card-text">{% trans "Score, plan de remédiation ordonné, export PDF, et un assistant RAG pour interroger votre propre base." %}</p>
+        </div>
+    </div>
+</section>
+
+<section class="sc-v-dark" id="demarrer">
+    <div class="sc-v-split sc-v-split--dark">
+        <div>
+            <div class="sc-v-eyebrow sc-v-eyebrow--bright">{% trans "Démarrer" %}</div>
+            <h2 class="sc-v-h2 sc-v-h2--invert">{% trans "Une commande, un premier audit" %}</h2>
+            <p class="sc-v-lede sc-v-lede--tight sc-v-lede--invert">{% trans "Aucune clé d'API tierce n'est requise pour l'audit structurel. Les modèles d'embedding tournent en local ; vous branchez un LLM seulement si vous voulez l'assistant." %}</p>
+            <div class="sc-v-checks">
+                <div class="sc-v-check">
+                    <span class="sc-v-check-mark">✓</span>
+                    <span>{% trans "Python 3.11, PostgreSQL 15, Redis — tout est dans le compose" %}</span>
+                </div>
+                <div class="sc-v-check">
+                    <span class="sc-v-check-mark">✓</span>
+                    <span>{% trans "Multi-tenant, SSO OIDC, journal d'audit inclus" %}</span>
+                </div>
+                <div class="sc-v-check">
+                    <span class="sc-v-check-mark">✓</span>
+                    <span>{% trans "Aucune télémétrie sortante, par conception" %}</span>
+                </div>
+            </div>
+        </div>
+        <div class="sc-v-term" data-tabs>
+            <div class="sc-v-term-tabs" role="tablist">
+                <button type="button" class="sc-v-term-tab is-active" data-tab="docker" role="tab" aria-selected="true">Docker</button>
+                <button type="button" class="sc-v-term-tab" data-tab="pip" role="tab" aria-selected="false">Python</button>
+                <button type="button" class="sc-v-term-tab" data-tab="api" role="tab" aria-selected="false">API</button>
+            </div>
+            <div class="sc-v-term-body">
+                <div data-tab-panel="docker">
+                    <div class="sc-v-term-comment"># {% trans "cloner et lancer" %}</div>
+                    <div><span class="sc-v-term-kw">git</span> <span class="sc-v-term-arg">clone https://github.com/{{ gh.repo }}.git</span></div>
+                    <div><span class="sc-v-term-kw">cd</span> <span class="sc-v-term-arg">SCORE &amp;&amp; cp .env.example .env</span></div>
+                    <div><span class="sc-v-term-kw">docker</span> <span class="sc-v-term-arg">compose up -d</span></div>
+                    <div class="sc-v-term-comment"># {% trans "interface disponible" %}</div>
+                    <div><span class="sc-v-term-url">http://localhost:8000</span></div>
+                </div>
+                <div data-tab-panel="pip" hidden>
+                    <div class="sc-v-term-comment"># {% trans "installation locale" %}</div>
+                    <div><span class="sc-v-term-kw">python</span> <span class="sc-v-term-arg">-m venv .venv &amp;&amp; source .venv/bin/activate</span></div>
+                    <div><span class="sc-v-term-kw">pip</span> <span class="sc-v-term-arg">install -e ".[all]"</span></div>
+                    <div><span class="sc-v-term-kw">score</span> <span class="sc-v-term-arg">migrate &amp;&amp; score runserver</span></div>
+                    <div class="sc-v-term-comment"># {% trans "premier audit en ligne de commande" %}</div>
+                    <div><span class="sc-v-term-kw">score</span> <span class="sc-v-term-arg">audit ./docs --report out.pdf</span></div>
+                </div>
+                <div data-tab-panel="api" hidden>
+                    <div class="sc-v-term-comment"># {% trans "lancer une analyse via l'API" %}</div>
+                    <div><span class="sc-v-term-kw">curl</span> <span class="sc-v-term-arg">-X POST localhost:8000/api/v1/analyses \</span></div>
+                    <div><span class="sc-v-term-arg">&nbsp;&nbsp;-H "Authorization: Bearer $SCORE_TOKEN" \</span></div>
+                    <div><span class="sc-v-term-arg">&nbsp;&nbsp;-d '{"connector": 3, "axes": ["all"]}'</span></div>
+                    <div class="sc-v-term-comment"># → 202 Accepted</div>
+                    <div><span class="sc-v-term-arg">{"job": "a3f1", "status": "queued"}</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="sc-v-section" id="contribuer">
+    <div class="sc-v-split sc-v-split--top">
+        <div>
+            <div class="sc-v-eyebrow">{% trans "Contribuer" %}</div>
+            <h2 class="sc-v-h2">{% trans "Le projet est jeune. C'est le bon moment." %}</h2>
+            <p class="sc-v-lede sc-v-lede--tight">{% trans "Un connecteur manquant, une heuristique de détection, une traduction : les contributions les plus utiles sont souvent les plus petites. La documentation d'architecture est à jour." %}</p>
+            <div class="sc-v-cta">
+                <a class="sc-v-btn sc-v-btn--ink" href="https://github.com/{{ gh.repo }}/issues">{% trans "Bonnes premières issues" %}</a>
+                <a class="sc-v-btn sc-v-btn--outline" href="https://github.com/{{ gh.repo }}/blob/{{ gh.branch }}/CONTRIBUTING.md">{% trans "Guide de contribution" %}</a>
+            </div>
+        </div>
+        <div class="sc-v-repo">
+            <div class="sc-v-repo-stat">
+                <div class="sc-v-repo-value">{% if gh.stars %}{{ gh.stars|intcomma }}{% else %}—{% endif %}</div>
+                <div class="sc-v-repo-label">{% trans "étoiles GitHub" %}</div>
+            </div>
+            <div class="sc-v-repo-stat">
+                <div class="sc-v-repo-value">{% if gh.contributors %}{{ gh.contributors|intcomma }}{% else %}—{% endif %}</div>
+                <div class="sc-v-repo-label">{% trans "contributeurs" %}</div>
+            </div>
+            <div class="sc-v-repo-stat">
+                <div class="sc-v-repo-value">{% if gh.open_issues %}{{ gh.open_issues|intcomma }}{% else %}—{% endif %}</div>
+                <div class="sc-v-repo-label">{% trans "issues ouvertes" %}</div>
+            </div>
+            <div class="sc-v-repo-stat">
+                <div class="sc-v-repo-value">{{ gh.license_name }}</div>
+                <div class="sc-v-repo-label">{% trans "licence" %} {{ gh.license_version }}</div>
+            </div>
+            <div class="sc-v-repo-stat sc-v-repo-stat--next">
+                <div class="sc-v-repo-next-title">{% trans "Prochaine version — 1.0" %}</div>
+                <p class="sc-v-repo-next-text">{% trans "Détection de contradictions temporelles, connecteur Google Drive, export du plan de remédiation en tickets Jira." %}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="sc-v-footer">
+    <div class="sc-v-footer-inner">
+        <div class="sc-v-footer-cols">
+            <div>
+                <div class="sc-v-footer-brand">
+                    <span class="sc-v-brand-mark sc-v-brand-mark--sm">S</span>
+                    <span class="sc-v-footer-name">SCORE</span>
+                </div>
+                <p class="sc-v-footer-text">{% trans "Audit de qualité des bases de connaissances destinées aux systèmes RAG. Projet libre, maintenu par la communauté." %}</p>
+            </div>
+            <div>
+                <div class="sc-v-footer-title">{% trans "Produit" %}</div>
+                <div class="sc-v-footer-links">
+                    <a href="#score">{% trans "Le score" %}</a>
+                    <a href="#axes">{% trans "Axes d'audit" %}</a>
+                    <a href="#interface">{% trans "Interface" %}</a>
+                    <a href="#demarrer">{% trans "Installation" %}</a>
+                </div>
+            </div>
+            <div>
+                <div class="sc-v-footer-title">{% trans "Ressources" %}</div>
+                <div class="sc-v-footer-links">
+                    <a href="https://github.com/{{ gh.repo }}">{% trans "Dépôt GitHub" %}</a>
+                    <a href="https://github.com/{{ gh.repo }}/blob/{{ gh.branch }}/docs/architecture.md">{% trans "Architecture" %}</a>
+                    <a href="https://github.com/{{ gh.repo }}/blob/{{ gh.branch }}/docs/api.md">{% trans "Référence API" %}</a>
+                    <a href="https://github.com/{{ gh.repo }}/releases">{% trans "Notes de version" %}</a>
+                </div>
+            </div>
+            <div>
+                <div class="sc-v-footer-title">{% trans "Communauté" %}</div>
+                <div class="sc-v-footer-links">
+                    <a href="https://github.com/{{ gh.repo }}/discussions">{% trans "Discussions" %}</a>
+                    <a href="#contribuer">{% trans "Contribuer" %}</a>
+                    <a href="https://github.com/{{ gh.repo }}/blob/{{ gh.branch }}/CODE_OF_CONDUCT.md">{% trans "Code de conduite" %}</a>
+                    <a href="https://github.com/{{ gh.repo }}/security">{% trans "Sécurité" %}</a>
+                </div>
+            </div>
+        </div>
+        <div class="sc-v-footer-bottom">
+            <span>© {% now "Y" %} {% trans "contributeurs SCORE" %} · {{ gh.license_name }}-{{ gh.license_version }}</span>
+            <span class="sc-v-mono">{% if gh.version %}{{ gh.version }} · {% endif %}{{ gh.branch }}{% if gh.commit %} @ {{ gh.commit }}{% endif %}</span>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -15,6 +15,8 @@ const files = [
   ["@fontsource/space-grotesk", "space-grotesk-latin-500-normal.woff2"],
   ["@fontsource/space-grotesk", "space-grotesk-latin-600-normal.woff2"],
   ["@fontsource/space-grotesk", "space-grotesk-latin-700-normal.woff2"],
+  ["@fontsource/ibm-plex-mono", "ibm-plex-mono-latin-400-normal.woff2"],
+  ["@fontsource/ibm-plex-mono", "ibm-plex-mono-latin-500-normal.woff2"],
 ];
 
 mkdirSync(dest, { recursive: true });

@@ -19,6 +19,7 @@
 @import "./components/chat.css";
 @import "./components/settings.css";
 @import "./components/auth.css";
+@import "./components/vitrine.css";
 @import "./components/scale.css";
 
 /* Sources déclarées explicitement : la détection automatique remonterait
@@ -30,3 +31,4 @@
 @source "../../dashboard/templates";
 @source "../../reports/templates";
 @source "../../tenants/templates";
+@source "../../vitrine/templates";

@@ -4,6 +4,7 @@
 @theme {
   --font-sans: Inter, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
 
   /* Graisse des éléments de navigation inactifs. Absente de Tailwind. */
   --font-weight-450: 450;
@@ -23,15 +24,20 @@
   --text-14p5: 14.5px;
   --text-15: 15px;
   --text-16: 16px;
+  --text-16p5: 16.5px;
   --text-17: 17px;
   --text-18: 18px;
+  --text-19: 19px;
   --text-20: 20px;
   --text-22: 22px;
+  --text-23: 23px;
   --text-24: 24px;
   --text-26: 26px;
   --text-27: 27px;
   --text-30: 30px;
+  --text-31: 31px;
   --text-38: 38px;
+  --text-44: 44px;
   --text-46: 46px;
 
   --tracking-eyebrow: 0.12em;
@@ -67,6 +73,12 @@
   --color-ink-700: #454c51;
   --color-ink-500: #6c717e;
   --color-ink-400: #9aa0ab;
+
+  /* Panneau vedette : sombre dans les deux thèmes, donc distinct de --color-ink
+     qui, lui, s'inverse. En clair les deux valent #14181a, ce qui masquait
+     l'écart tant que le sombre n'était pas dessiné. */
+  --color-feature-bg: #14181a;
+  --color-feature-ink: #f1f2f4;
 
   /* ── Off-neutres chauds : ne pas fondre dans la rampe grise ── */
   --color-header-glass: rgb(246 245 241 / 0.86);
@@ -111,6 +123,11 @@
   /* Résolus à l'exécution : l'accent est un réglage et les graphiques le lisent. */
   --color-accent: var(--accent);
   --color-accent-hover: #026433;
+  /* Vert *écrit*, à distinguer du vert *rempli* : la maquette laisse l'accent
+     fixe (c'est une couleur de marque réglable, toujours doublée de blanc) et
+     éclaircit uniquement le texte en thème sombre. Même valeur qu'--accent en
+     clair, donc la bascule ne change rien au thème existant. */
+  --color-accent-ink: #038141;
   --color-rail-bg: var(--rail-bg);
   --color-rail-ink: var(--rail-ink);
   --color-rail-line: var(--rail-line);

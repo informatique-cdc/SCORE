@@ -1,0 +1,66 @@
+name: Pages
+
+# Publie la page vitrine sur GitHub Pages.
+# Prérequis côté dépôt : Settings > Pages > Source doit être « GitHub Actions ».
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "vitrine/**"
+      - "assets/css/**"
+      - "dashboard/static/js/ui.js"
+      - "dashboard/static/js/vitrine.js"
+      - "scripts/build_vitrine.py"
+      - "scripts/copy-fonts.mjs"
+      - "config.yaml"
+      - "package*.json"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une publication à la fois, sans annuler celle qui est en cours de déploiement.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Build fonts and stylesheet
+        run: npm run build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Le rendu n'a besoin que du moteur de gabarits : inutile d'installer
+      # spacy, faiss et le reste des dépendances de l'application.
+      - run: pip install "django>=5.1,<5.2" pyyaml
+      - name: Render the landing page
+        run: python scripts/build_vitrine.py
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

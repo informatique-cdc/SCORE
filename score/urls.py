@@ -17,8 +17,6 @@ urlpatterns = [
     path("reports/", include("reports.urls")),
     path("tenants/", include("tenants.urls")),
     path("chat/", include("chat.urls")),
-    # Root redirect
-    path(
-        "", lambda r: __import__("django.shortcuts", fromlist=["redirect"]).redirect("/dashboard/")
-    ),
+    # Vitrine publique — redirige vers le tableau de bord si déjà connecté
+    path("", include("vitrine.urls")),
 ]

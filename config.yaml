@@ -140,3 +140,22 @@ authority_rules:
     generic: 0.5
   # Prefer newer docs when contradictions arise
   recency_bias: true
+
+vitrine:
+  # Page publique servie à la racine. Ces chiffres sont saisis à la main : l'API
+  # GitHub limite les appels anonymes à 60 par heure et par IP *sortante*, or
+  # derrière le proxy d'entreprise cette IP est partagée par toute la CDC et son
+  # quota est épuisé en permanence. Relevés le 2026-09-10, à réactualiser.
+  # Un champ à 0 ou vide n'est pas affiché plutôt que rendu tel quel.
+  repo: informatique-cdc/SCORE
+  stars: 36
+  contributors: 3
+  open_issues: 1
+  # Le LICENSE du dépôt est Apache 2.0 ; la maquette annonçait AGPL-3.0.
+  license_name: Apache
+  license_version: "2.0"
+  branch: main
+  # Aucune release publiée à ce jour : la pastille de version reste masquée et
+  # le pied de page n'affiche que la branche. À remplir au premier tag.
+  version: ""
+  commit: ""
