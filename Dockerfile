@@ -46,7 +46,9 @@ COPY . .
 COPY --from=css /css/dashboard/static/css/app.css dashboard/static/css/app.css
 COPY --from=css /css/dashboard/static/fonts dashboard/static/fonts
 
-RUN python manage.py collectstatic --noinput 2>/dev/null || true
+# Le build n'a pas de .env : la clé ne sert qu'à charger les réglages, elle ne
+# reste pas dans l'image. Sans manifeste, DEBUG=False rend chaque page en 500.
+RUN SECRET_KEY=collectstatic-build-only python manage.py collectstatic --noinput
 
 ENV PORT=8000
 
