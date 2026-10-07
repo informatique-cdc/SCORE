@@ -14,6 +14,8 @@ from .base import BaseConnector, RawDocument, register_connector
 
 logger = logging.getLogger(__name__)
 
+_GRAPH_URL = "https://graph.microsoft.com/v1.0"
+
 
 @register_connector("sharepoint")
 class SharePointConnector(BaseConnector):
@@ -57,7 +59,8 @@ class SharePointConnector(BaseConnector):
         if not self._access_token:
             self._authenticate()
 
-        url = f"https://graph.microsoft.com/v1.0{endpoint}"
+        # Paging links (@odata.nextLink) are absolute Graph URLs.
+        url = endpoint if endpoint.startswith(_GRAPH_URL + "/") else f"{_GRAPH_URL}{endpoint}"
         resp = httpx.get(url, headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30)
         resp.raise_for_status()
         return resp.json()
@@ -77,8 +80,14 @@ class SharePointConnector(BaseConnector):
             endpoint = f"/drives/{self._drive_id}/root:/{self._folder_path.strip('/')}:/children"
 
         data = self._graph_request(endpoint)
+        items = list(data.get("value", []))
+        # Graph returns folder children in pages (200 items by default).
+        while next_link := data.get("@odata.nextLink"):
+            data = self._graph_request(next_link)
+            items.extend(data.get("value", []))
+
         docs = []
-        for item in data.get("value", []):
+        for item in items:
             if "file" not in item:
                 continue  # skip folders
             docs.append(
@@ -102,13 +111,20 @@ class SharePointConnector(BaseConnector):
         if not self._access_token:
             self._authenticate()
 
+        # Same drive as list_documents(): drive_id is optional, the site's default
+        # document library is used without it.
+        if self._drive_id:
+            drive = f"/drives/{self._drive_id}"
+        else:
+            drive = f"/sites/{self._site_url}/drive"
+
         # Get item metadata
-        meta = self._graph_request(f"/drives/{self._drive_id}/items/{source_id}")
+        meta = self._graph_request(f"{drive}/items/{source_id}")
 
         # Download content
         download_url = meta.get("@microsoft.graph.downloadUrl", "")
         if not download_url:
-            download_url = f"https://graph.microsoft.com/v1.0/drives/{self._drive_id}/items/{source_id}/content"
+            download_url = f"https://graph.microsoft.com/v1.0{drive}/items/{source_id}/content"
 
         resp = httpx.get(
             download_url,
