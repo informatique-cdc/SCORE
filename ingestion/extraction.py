@@ -14,9 +14,13 @@ import logging
 import re
 from dataclasses import dataclass, field
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment, Declaration, Doctype, NavigableString, ProcessingInstruction
 
 logger = logging.getLogger(__name__)
+
+_HEADING_TAGS = ("h1", "h2", "h3", "h4", "h5", "h6")
+# Markup that is not document text (CData stays: Confluence code macros use it).
+_NON_TEXT_STRINGS = (Comment, Declaration, Doctype, ProcessingInstruction)
 
 
 @dataclass
@@ -77,14 +81,19 @@ def _extract_html(html: str) -> ExtractedText:
     offset = 0
 
     for element in soup.descendants:
-        if element.name and element.name in ("h1", "h2", "h3", "h4", "h5", "h6"):
+        if element.name in _HEADING_TAGS:
             level = int(element.name[1])
-            heading_text = element.get_text(strip=True)
+            heading_text = element.get_text(" ", strip=True)
             headings.append({"level": level, "text": heading_text, "offset": offset})
             text_parts.append(f"\n{'#' * level} {heading_text}\n")
             offset += len(text_parts[-1])
-        elif element.string and element.parent.name not in ("h1", "h2", "h3", "h4", "h5", "h6"):
-            text = element.string.strip()
+        # Only text nodes: a tag's .string repeats the text of its single child.
+        elif (
+            isinstance(element, NavigableString)
+            and not isinstance(element, _NON_TEXT_STRINGS)
+            and element.find_parent(_HEADING_TAGS) is None
+        ):
+            text = element.strip()
             if text:
                 text_parts.append(text + " ")
                 offset += len(text) + 1
