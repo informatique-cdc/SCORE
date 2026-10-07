@@ -69,7 +69,12 @@ class IngestionPipeline:
                 connector=self.connector_config,
             ).exclude(status=Document.Status.DELETED)
 
-            known_versions = {doc.source_id: doc.source_version for doc in known_docs}
+            # A document that never reached READY (e.g. its embedding call failed)
+            # gets no version, so the connector reports it as changed and it is retried.
+            known_versions = {
+                doc.source_id: doc.source_version if doc.status == Document.Status.READY else None
+                for doc in known_docs
+            }
 
             # Step 2: Detect changes
             new_or_changed, deleted_ids = self.connector.list_changed_documents(known_versions)
@@ -191,7 +196,13 @@ class IngestionPipeline:
             source_id=source_id,
         ).first()
 
-        if existing and existing.content_hash == content_hash:
+        # Same text is only "unchanged" if it was fully indexed: a DELETED document
+        # restored at the source, or one whose embedding failed, must be rebuilt.
+        if (
+            existing
+            and existing.status == Document.Status.READY
+            and existing.content_hash == content_hash
+        ):
             self._stats["unchanged"] += 1
             return
 
