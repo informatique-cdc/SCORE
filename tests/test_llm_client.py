@@ -1,6 +1,6 @@
 """Tests for llm/client.py — LLMClient initialization, chat, embed, retry, fallback."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -294,3 +294,65 @@ class TestGetLLMClient:
         assert c1 is c2
 
         mod._client = None  # Clean up
+
+
+# ---------------------------------------------------------------------------
+# chat_concurrent: one failed call must not sink the batch
+# ---------------------------------------------------------------------------
+
+
+class TestChatConcurrentErrors:
+    @patch("llm.client.OpenAI")
+    def test_server_error_on_one_call_returns_none_for_it(self, mock_openai_cls, settings):
+        from openai import InternalServerError
+
+        settings.LLM_CONFIG = {
+            "provider": "openai",
+            "openai": {
+                "api_key": "k",
+                "chat_model": "gpt-4o",
+                "embedding_model": "e",
+                "embedding_dimensions": 1536,
+            },
+            "azure": {
+                "api_key": "",
+                "endpoint": "",
+                "api_version": "",
+                "embedding_deployment": "",
+                "embedding_endpoint": "",
+                "embedding_api_key": "",
+                "embedding_dimensions": 1536,
+            },
+            "azure_mistral": {
+                "api_key": "",
+                "endpoint": "",
+                "deployment_name": "",
+                "chat_model": "",
+            },
+            "requests_per_minute": 0,
+            "embedding_batch_size": 100,
+            "fallback_models": [],
+            "fallback_retries_per_model": 2,
+            "batch_model": "",
+            "batch_poll_interval_seconds": 30,
+            "batch_max_wait_seconds": 1800,
+        }
+        settings.ANALYSIS_CONFIG = {}
+        client = LLMClient()
+        ok = LLMResponse(content="{}", model="gpt-4o")
+        # What the SDK raises once its own retries on a 500/503 are exhausted.
+        server_error = InternalServerError(
+            "The server had an error while processing your request.",
+            response=MagicMock(status_code=500, headers={}, request=MagicMock()),
+            body=None,
+        )
+
+        def chat(prompt, **kwargs):
+            if prompt == "p1":
+                raise server_error
+            return ok
+
+        with patch.object(client, "chat", side_effect=chat):
+            results = client.chat_concurrent(["p0", "p1", "p2"], max_workers=1)
+
+        assert results == [ok, None, ok]

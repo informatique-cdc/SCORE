@@ -24,6 +24,7 @@ from openai import (
     APITimeoutError,
     AzureOpenAI,
     BadRequestError,
+    InternalServerError,
     OpenAI,
     RateLimitError,
 )
@@ -409,7 +410,13 @@ class LLMClient:
                     max_tokens=max_tokens,
                     json_mode=json_mode,
                 )
-            except (RateLimitError, APIConnectionError, APITimeoutError, ValueError) as exc:
+            except (
+                RateLimitError,
+                APIConnectionError,
+                APITimeoutError,
+                InternalServerError,  # 5xx left after the SDK's own retries
+                ValueError,
+            ) as exc:
                 logger.warning("Concurrent chat call %d failed: %s", idx, exc)
                 return idx, None
             except BadRequestError as exc:
