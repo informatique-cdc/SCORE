@@ -9,8 +9,9 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_BROKER_BACKEND=redis
     volumes:
-      - db-data:/app/db.sqlite3
-      - vec-data:/app/vec.sqlite3
+      # Base SQLite, index vectoriel et broker vivent dans data/ (settings.DATA_DIR) :
+      # le web et les workers doivent monter le même volume.
+      - score-data:/app/data
       - media-data:/app/media
     depends_on:
       - redis
@@ -23,8 +24,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_BROKER_BACKEND=redis
     volumes:
-      - db-data:/app/db.sqlite3
-      - vec-data:/app/vec.sqlite3
+      - score-data:/app/data
       - media-data:/app/media
     depends_on:
       - redis
@@ -37,7 +37,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_BROKER_BACKEND=redis
     volumes:
-      - db-data:/app/db.sqlite3
+      - score-data:/app/data
     depends_on:
       - redis
 
@@ -49,7 +49,6 @@ services:
       - redis-data:/data
 
 volumes:
-  db-data:
-  vec-data:
+  score-data:
   media-data:
   redis-data:
